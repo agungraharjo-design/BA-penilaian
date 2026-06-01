@@ -6,9 +6,7 @@ import { supabase, subscribeToSession } from '@/lib/supabase'
 import { Session, RUBRIC_CRITERIA } from '@/types'
 import {
   calcTotalSkorXBobot, calcNilaiAkhir, calcGrade,
-  getTodayFormatted, generateId,
 } from '@/lib/utils'
-import Image from 'next/image'
 
 type Tab = 'berita-acara' | 'penilaian-1' | 'penilaian-2' | 'penilaian-3' | 'rekap-nilai' | 'daftar-hadir' | 'preview'
 
@@ -136,7 +134,7 @@ function BeritaAcaraForm({ session, onUpdate }: { session: Session; onUpdate: (s
   return (
     <div className="space-y-6">
       <div className="text-center border-b-2 border-black pb-4">
-        <img src="/kop-surat.jpg" alt="KOP UPN Veteran Jakarta" className="mx-auto mb-2 max-h-20 object-contain w-full" />
+        <img src="/kop-surat.jpg" alt="KOP UPN Veteran Jakarta" className="mx-auto mb-2 max-h-24 w-auto max-w-full" />
         <h1 className="text-xl font-bold uppercase">Berita Acara Sidang Skripsi</h1>
         <p className="text-sm">PROGRAM STUDI KESEHATAN MASYARAKAT PROGRAM SARJANA</p>
         <p className="text-sm">FAKULTAS ILMU KESEHATAN UPN &ldquo;VETERAN&rdquo; JAKARTA</p>
@@ -255,7 +253,7 @@ function BeritaAcaraForm({ session, onUpdate }: { session: Session; onUpdate: (s
       </div>
 
       {/* Dekan signature */}
-      <div className="text-right mt-8">
+      <div className="text-right mt-8 avoid-break">
         <p>Depok,{' '}
           <input
             value={session.tanggal_ba}
@@ -307,7 +305,7 @@ function PenilaianForm({
   return (
     <div className="space-y-4">
       <div className="text-center border-b-2 border-black pb-4">
-        <img src="/kop-surat.jpg" alt="KOP UPN Veteran Jakarta" className="mx-auto mb-2 max-h-20 object-contain w-full" />
+        <img src="/kop-surat.jpg" alt="KOP UPN Veteran Jakarta" className="mx-auto mb-2 max-h-24 w-auto max-w-full" />
         <h1 className="text-xl font-bold uppercase">Formulir Penilaian Sidang Skripsi</h1>
         <p className="text-sm">PROGRAM STUDI KESEHATAN MASYARAKAT PROGRAM SARJANA</p>
         <p className="text-sm">FAKULTAS ILMU KESEHATAN UPN &ldquo;VETERAN&rdquo; JAKARTA</p>
@@ -349,14 +347,14 @@ function PenilaianForm({
       </div>
 
       {/* Rubric table */}
-      <table className="template-table text-xs">
+      <table className="template-table text-sm">
         <thead>
           <tr>
             <th className="w-8">NO</th>
             <th>PARAMETER PENILAIAN</th>
-            <th className="w-20">SKOR NILAI (1—4)</th>
-            <th className="w-12">BOBOT</th>
-            <th className="w-20">SKOR NILAI × BOBOT</th>
+            <th className="w-24">SKOR NILAI (1—4)</th>
+            <th className="w-14">BOBOT</th>
+            <th className="w-24">SKOR NILAI × BOBOT</th>
           </tr>
         </thead>
         <tbody>
@@ -365,9 +363,9 @@ function PenilaianForm({
             return (
               <tr key={c.no}>
                 <td className="text-center align-top">{c.no}.</td>
-                <td className="text-[11px] leading-tight">
+                <td className="text-xs leading-snug py-1.5">
                   <div className="font-semibold">{c.label}</div>
-                  <div className="whitespace-pre-line text-[10px] text-gray-600">{c.detail}</div>
+                  <div className="whitespace-pre-line text-[11px] text-gray-700">{c.detail}</div>
                 </td>
                 <td className="text-center">
                   <input
@@ -377,7 +375,7 @@ function PenilaianForm({
                     step={1}
                     value={scores[i] ?? ''}
                     onChange={(e) => setScore(i, e.target.value)}
-                    className="w-16 text-center border border-gray-300 rounded px-1 py-0.5"
+                    className="w-16 text-center border border-gray-300 rounded px-1 py-1"
                   />
                 </td>
                 <td className="text-center">{c.bobot}</td>
@@ -411,7 +409,7 @@ function PenilaianForm({
       </p>
 
       {/* Signature */}
-      <div className="mt-6">
+      <div className="mt-6 avoid-break">
         <div className="flex">
           <span className="w-32">Hari, Tanggal</span><span className="w-4">:</span>
           <input
@@ -459,7 +457,7 @@ function RekapNilaiForm({ session, onUpdate }: { session: Session; onUpdate: (s:
   return (
     <div className="space-y-4">
       <div className="text-center border-b-2 border-black pb-4">
-        <img src="/kop-surat.jpg" alt="KOP UPN Veteran Jakarta" className="mx-auto mb-2 max-h-20 object-contain w-full" />
+        <img src="/kop-surat.jpg" alt="KOP UPN Veteran Jakarta" className="mx-auto mb-2 max-h-24 w-auto max-w-full" />
         <h1 className="text-xl font-bold uppercase">Rekapitulasi Nilai Sidang Skripsi</h1>
         <p className="text-sm">PROGRAM STUDI KESEHATAN MASYARAKAT PROGRAM SARJANA</p>
         <p className="text-sm">FAKULTAS ILMU KESEHATAN UPN &ldquo;VETERAN&rdquo; JAKARTA</p>
@@ -529,7 +527,7 @@ function RekapNilaiForm({ session, onUpdate }: { session: Session; onUpdate: (s:
       </table>
 
       {/* Signature */}
-      <div className="text-right mt-8">
+      <div className="text-right mt-8 avoid-break">
         <p>Depok,{' '}
           <input value={session.tanggal_ba} onChange={(e) => onUpdate({ ...session, tanggal_ba: e.target.value })} className="border-b border-gray-400 bg-transparent w-40 text-center" />
         </p>
@@ -568,7 +566,7 @@ function DaftarHadirForm({ session, onUpdate }: { session: Session; onUpdate: (s
       {/* DAFTAR HADIR PESERTA */}
       <div>
         <div className="text-center border-b-2 border-black pb-4">
-          <img src="/kop-surat.jpg" alt="KOP UPN Veteran Jakarta" className="mx-auto mb-2 max-h-20 object-contain w-full" />
+          <img src="/kop-surat.jpg" alt="KOP UPN Veteran Jakarta" className="mx-auto mb-2 max-h-24 w-auto max-w-full" />
           <h1 className="text-xl font-bold uppercase">Daftar Hadir Peserta Sidang Skripsi</h1>
           <p className="text-sm">PROGRAM STUDI KESEHATAN MASYARAKAT PROGRAM SARJANA</p>
           <p className="text-sm">FAKULTAS ILMU KESEHATAN UPN &ldquo;VETERAN&rdquo; JAKARTA</p>
@@ -600,7 +598,7 @@ function DaftarHadirForm({ session, onUpdate }: { session: Session; onUpdate: (s
           <h1 className="text-xl font-bold uppercase">Daftar Hadir Mahasiswa Sebagai Audiens Sidang Skripsi</h1>
           <p className="text-sm">PROGRAM STUDI KESEHATAN MASYARAKAT PROGRAM SARJANA</p>
           <p className="text-sm">FAKULTAS ILMU KESEHATAN UPN &ldquo;VETERAN&rdquo; JAKARTA</p>
-          <img src="/kop-surat.jpg" alt="KOP UPN Veteran Jakarta" className="mx-auto mb-2 max-h-20 object-contain w-full" />
+          <img src="/kop-surat.jpg" alt="KOP UPN Veteran Jakarta" className="mx-auto mb-2 max-h-24 w-auto max-w-full" />
           <p className="text-sm font-semibold">
             SEMESTER <input value={session.semester} onChange={(e) => onUpdate({ ...session, semester: e.target.value })} className="bg-transparent border-b border-gray-400 w-20 text-center font-bold" /> T.A. <input value={session.ta} onChange={(e) => onUpdate({ ...session, ta: e.target.value })} className="bg-transparent border-b border-gray-400 w-28 text-center font-bold" />
           </p>
@@ -641,32 +639,114 @@ function PreviewAll({ session }: { session: Session }) {
 
     if (!previewRef.current) return
 
-    const canvas = await html2canvas(previewRef.current, {
-      scale: 2,
-      useCORS: true,
-      logging: false,
-    })
+    const original = previewRef.current
+    const docFrag = original.cloneNode(true) as HTMLElement
 
-    const imgData = canvas.toDataURL('image/png')
+    // Create offscreen container with A4-like dimensions for per-section rendering
+    const offscreen = document.createElement('div')
+    offscreen.style.position = 'absolute'
+    offscreen.style.left = '-9999px'
+    offscreen.style.top = '0'
+    offscreen.style.width = '210mm'
+    offscreen.style.background = 'white'
+    offscreen.style.fontFamily = "'Times New Roman', Georgia, serif"
+    offscreen.style.fontSize = '12pt'
+    offscreen.style.lineHeight = '1.5'
+    offscreen.style.padding = '25mm 30mm'
+    document.body.appendChild(offscreen)
+
     const pdf = new jsPDF('p', 'mm', 'a4')
     const pdfWidth = pdf.internal.pageSize.getWidth()
     const pdfHeight = pdf.internal.pageSize.getHeight()
-    const imgWidth = pdfWidth
-    const imgHeight = (canvas.height * pdfWidth) / canvas.width
 
-    let heightLeft = imgHeight
-    let position = 0
+    // Split content into sections at each .page-break element
+    const children = Array.from(docFrag.children)
+    const sections: HTMLElement[] = []
+    let currentParts: HTMLElement[] = []
 
-    pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
-    heightLeft -= pdfHeight
-
-    while (heightLeft > 0) {
-      position = heightLeft - imgHeight + pdfHeight
-      pdf.addPage()
-      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
-      heightLeft -= pdfHeight
+    for (const child of children) {
+      const el = child as HTMLElement
+      if (el.classList.contains('page-break') && currentParts.length > 0) {
+        // Finalize current section
+        const section = document.createElement('div')
+        section.style.width = '100%'
+        currentParts.forEach(c => section.appendChild(c.cloneNode(true)))
+        sections.push(section)
+        currentParts = [el.cloneNode(true) as HTMLElement]
+      } else {
+        currentParts.push(el.cloneNode(true) as HTMLElement)
+      }
+    }
+    if (currentParts.length > 0) {
+      const section = document.createElement('div')
+      section.style.width = '100%'
+      currentParts.forEach(c => section.appendChild(c))
+      sections.push(section)
     }
 
+    // If no sections were split (no .page-break found), treat entire content as one section
+    if (sections.length === 0) {
+      const section = document.createElement('div')
+      section.style.width = '100%'
+      children.forEach(c => section.appendChild(c.cloneNode(true)))
+      sections.push(section)
+    }
+
+    for (let sIdx = 0; sIdx < sections.length; sIdx++) {
+      // Clear and render this section in the offscreen container
+      offscreen.innerHTML = ''
+      offscreen.appendChild(sections[sIdx])
+
+      // Wait a tick for layout
+      await new Promise(r => setTimeout(r, 50))
+
+      const canvas = await html2canvas(offscreen, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        width: offscreen.scrollWidth,
+        height: offscreen.scrollHeight,
+      })
+
+      const imgData = canvas.toDataURL('image/png')
+      const imgWidth = pdfWidth
+      const imgHeight = (canvas.height * pdfWidth) / canvas.width
+
+      // If this section fits on one page, add directly
+      if (imgHeight <= pdfHeight) {
+        if (sIdx > 0) pdf.addPage()
+        pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight)
+      } else {
+        // Section is taller than one page — tile across pages
+        let remainingHeight = imgHeight
+        let yOffset = 0
+        let firstPageForSection = true
+
+        while (remainingHeight > 0) {
+          if (!firstPageForSection || sIdx > 0) pdf.addPage()
+          firstPageForSection = false
+
+          const pageImgHeight = Math.min(pdfHeight, imgHeight - yOffset)
+          const srcY = (yOffset / pdfWidth) * canvas.width
+          const srcH = (pageImgHeight / pdfWidth) * canvas.width
+
+          // Use canvas cropping: create a temporary canvas for this page slice
+          const tempCanvas = document.createElement('canvas')
+          tempCanvas.width = canvas.width
+          tempCanvas.height = canvas.width * (pageImgHeight / pdfWidth)
+          const ctx = tempCanvas.getContext('2d')!
+          ctx.drawImage(canvas, 0, srcY, tempCanvas.width, tempCanvas.height, 0, 0, tempCanvas.width, tempCanvas.height)
+
+          const pageImgData = tempCanvas.toDataURL('image/png')
+          pdf.addImage(pageImgData, 'PNG', 0, 0, pdfWidth, pageImgHeight)
+
+          yOffset += pdfHeight
+          remainingHeight -= pdfHeight
+        }
+      }
+    }
+
+    document.body.removeChild(offscreen)
     pdf.save(`BA_Sidang_${session.nama.replace(/\s+/g, '_')}_${session.nim}.pdf`)
   }
 
@@ -697,10 +777,10 @@ function PreviewAll({ session }: { session: Session }) {
         <span className="text-xs text-gray-500 self-center ml-2 font-sans">(PDF akan sesuai dengan template asli)</span>
       </div>
 
-      <div ref={previewRef} className="print-area bg-white p-8 space-y-12" style={{ fontFamily: "'Times New Roman', Georgia, serif" }}>
+      <div ref={previewRef} className="print-area bg-white p-8 md:p-12 print:p-0 space-y-10 print:space-y-0" style={{ fontFamily: "'Times New Roman', Georgia, serif" }}>
         {/* ===== BERITA ACARA ===== */}
         <div className="text-center border-b-2 border-black pb-4">
-          <img src="/kop-surat.jpg" alt="KOP UPN Veteran Jakarta" className="mx-auto mb-2 max-h-20 object-contain w-full" />
+          <img src="/kop-surat.jpg" alt="KOP UPN Veteran Jakarta" className="mx-auto mb-2 max-h-24 w-auto max-w-full" />
           <h1 className="text-xl font-bold text-center uppercase">Berita Acara Sidang Skripsi</h1>
           <p className="text-sm text-center">PROGRAM STUDI KESEHATAN MASYARAKAT PROGRAM SARJANA</p>
           <p className="text-sm text-center">FAKULTAS ILMU KESEHATAN UPN &ldquo;VETERAN&rdquo; JAKARTA</p>
@@ -747,7 +827,7 @@ function PreviewAll({ session }: { session: Session }) {
           </div>
         )}
 
-        <div className="text-right mt-10">
+        <div className="text-right mt-10 avoid-break">
           <p>Depok, {session.tanggal_ba || '______________'}</p>
           <p>Dekan</p>
           <div className="h-16"></div>
@@ -763,7 +843,7 @@ function PreviewAll({ session }: { session: Session }) {
           return (
             <div key={examIdx} className="mt-12 page-break">
               <div className="text-center border-b-2 border-black pb-4">
-                <img src="/kop-surat.jpg" alt="KOP UPN Veteran Jakarta" className="mx-auto mb-2 max-h-20 object-contain w-full" />
+                <img src="/kop-surat.jpg" alt="KOP UPN Veteran Jakarta" className="mx-auto mb-2 max-h-24 w-auto max-w-full" />
                 <h1 className="text-xl font-bold text-center uppercase">Formulir Penilaian Sidang Skripsi</h1>
                 <p className="text-sm text-center">PROGRAM STUDI KESEHATAN MASYARAKAT PROGRAM SARJANA</p>
                 <p className="text-sm text-center">FAKULTAS ILMU KESEHATAN UPN &ldquo;VETERAN&rdquo; JAKARTA</p>
@@ -779,9 +859,9 @@ function PreviewAll({ session }: { session: Session }) {
               </table>
               <p className="text-sm mt-1"><span className="font-semibold">Judul Skripsi:</span> {session.judul_skripsi}</p>
 
-              <table className="template-table text-xs mt-3">
+              <table className="template-table text-sm mt-3">
                 <thead>
-                  <tr><th className="w-8">NO</th><th>PARAMETER PENILAIAN</th><th className="w-20">SKOR NILAI (1—4)</th><th className="w-12">BOBOT</th><th className="w-20">SKOR NILAI × BOBOT</th></tr>
+                  <tr><th className="w-8">NO</th><th>PARAMETER PENILAIAN</th><th className="w-24">SKOR NILAI (1—4)</th><th className="w-14">BOBOT</th><th className="w-24">SKOR NILAI × BOBOT</th></tr>
                 </thead>
                 <tbody>
                   {RUBRIC_CRITERIA.map((c, i) => {
@@ -789,9 +869,9 @@ function PreviewAll({ session }: { session: Session }) {
                     return (
                       <tr key={c.no}>
                         <td className="text-center align-top">{c.no}.</td>
-                <td className="text-[11px] leading-tight">
+                <td className="text-xs leading-snug py-1.5">
                   <div className="font-semibold">{c.label}</div>
-                  <div className="whitespace-pre-line text-[10px] text-gray-600">{c.detail}</div>
+                  <div className="whitespace-pre-line text-[11px] text-gray-700">{c.detail}</div>
                 </td>
                         <td className="text-center">{scores[i] ?? ''}</td>
                         <td className="text-center">{c.bobot}</td>
@@ -818,7 +898,7 @@ function PreviewAll({ session }: { session: Session }) {
 
               <p className="text-xs mt-1 italic">*Bila presentasi skripsi dilakukan menggunakan Bahasa Inggris, nilai akhir ditambahkan 2—6 poin.</p>
 
-              <div className="mt-6">
+              <div className="mt-6 avoid-break">
                 <p>Hari, Tanggal: {session.hari_tanggal}</p>
                 <div className="flex justify-end mt-12">
                   <div className="text-center w-56">
@@ -836,7 +916,7 @@ function PreviewAll({ session }: { session: Session }) {
         {/* ===== REKAPITULASI NILAI ===== */}
         <div className="mt-12 page-break">
           <div className="text-center border-b-2 border-black pb-4">
-            <img src="/kop-surat.jpg" alt="KOP UPN Veteran Jakarta" className="mx-auto mb-2 max-h-20 object-contain w-full" />
+            <img src="/kop-surat.jpg" alt="KOP UPN Veteran Jakarta" className="mx-auto mb-2 max-h-24 w-auto max-w-full" />
             <h1 className="text-xl font-bold text-center uppercase">Rekapitulasi Nilai Sidang Skripsi</h1>
             <p className="text-sm text-center">PROGRAM STUDI KESEHATAN MASYARAKAT PROGRAM SARJANA</p>
             <p className="text-sm text-center">FAKULTAS ILMU KESEHATAN UPN &ldquo;VETERAN&rdquo; JAKARTA</p>
@@ -879,7 +959,7 @@ function PreviewAll({ session }: { session: Session }) {
             </tbody>
           </table>
 
-          <div className="text-right mt-10">
+          <div className="text-right mt-10 avoid-break">
             <p>Depok, {session.tanggal_ba || '______________'}</p>
             <p>Dekan</p>
             <div className="h-16"></div>

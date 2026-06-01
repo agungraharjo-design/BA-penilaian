@@ -5,13 +5,16 @@
 @media print {
   @page {
     size: A4;
-    margin: 15mm 20mm;
+    margin: 25mm 30mm;
   }
   body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .no-print { display: none !important; }
   .print-only { display: block !important; }
   .print-only-inline { display: inline !important; }
-  .page-break { page-break-before: always; }
+  .page-break { page-break-before: always; break-before: page; }
+  .avoid-break { page-break-inside: avoid; break-inside: avoid; }
+  p, h1, h2, h3, li { orphans: 3; widows: 3; }
+  img { max-width: 100% !important; height: auto !important; }
 }
 
 @media screen {
