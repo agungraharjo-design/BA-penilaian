@@ -136,9 +136,19 @@ function SignatureUpload({ value, onChange, label }: { value?: string; onChange:
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
-    const reader = new FileReader()
-    reader.onload = () => onChange(reader.result as string)
-    reader.readAsDataURL(file)
+    // Compress & resize to keep DB row small
+    const img = new Image()
+    img.onload = () => {
+      const MAX_W = 200
+      const c = document.createElement('canvas')
+      const scale = Math.min(1, MAX_W / img.width)
+      c.width = Math.round(img.width * scale)
+      c.height = Math.round(img.height * scale)
+      const ctx = c.getContext('2d')!
+      ctx.drawImage(img, 0, 0, c.width, c.height)
+      onChange(c.toDataURL('image/jpeg', 0.6))
+    }
+    img.src = URL.createObjectURL(file)
   }
 
   return (
