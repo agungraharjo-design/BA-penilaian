@@ -129,6 +129,36 @@ export default function SessionPage() {
   )
 }
 
+// ─── SIGNATURE UPLOAD ───────────────────────────────────────────
+function SignatureUpload({ value, onChange, label }: { value?: string; onChange: (v: string) => void; label?: string }) {
+  const fileRef = useRef<HTMLInputElement>(null)
+
+  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = () => onChange(reader.result as string)
+    reader.readAsDataURL(file)
+  }
+
+  return (
+    <div className="flex flex-col items-center gap-1">
+      {value ? (
+        <img src={value} alt={label || 'Tanda Tangan'} className="max-h-14 max-w-28 object-contain" />
+      ) : (
+        <span className="text-[10px] text-gray-400 italic">(upload)</span>
+      )}
+      <input type="file" accept="image/*" ref={fileRef} onChange={handleFile} className="hidden" />
+      <button type="button" onClick={() => fileRef.current?.click()} className="text-[10px] text-blue-700 underline">
+        {value ? 'Ganti' : 'Upload'}
+      </button>
+      {value && (
+        <button type="button" onClick={() => onChange('')} className="text-[10px] text-red-600 underline">Hapus</button>
+      )}
+    </div>
+  )
+}
+
 // ─── BERITA ACARA ──────────────────────────────────────────────
 function BeritaAcaraForm({ session, onUpdate }: { session: Session; onUpdate: (s: Session) => void }) {
   return (
@@ -218,25 +248,31 @@ function BeritaAcaraForm({ session, onUpdate }: { session: Session; onUpdate: (s
             </tr>
           </thead>
           <tbody>
-            {[
-              { no: 1, field: 'penguji1', jabatan: 'Penguji I/Ketua Penguji' },
-              { no: 2, field: 'penguji2', jabatan: 'Penguji II/Anggota Penguji' },
-              { no: 3, field: 'penguji3', jabatan: 'Penguji III/Anggota Penguji' },
-            ].map((p) => (
-              <tr key={p.no}>
-                <td className="text-center">{p.no}</td>
-                <td>
-                  <input
-                    value={(session as any)[p.field] || ''}
-                    onChange={(e) => onUpdate({ ...session, [p.field]: e.target.value })}
-                    className="w-full bg-transparent"
-                    placeholder="Nama dosen"
-                  />
-                </td>
-                <td>{p.jabatan}</td>
-                <td className="h-10"></td>
-              </tr>
-            ))}
+              {[
+                { no: 1, field: 'penguji1', jabatan: 'Penguji I/Ketua Penguji', ttdField: 'ttd_penguji1' as const },
+                { no: 2, field: 'penguji2', jabatan: 'Penguji II/Anggota Penguji', ttdField: 'ttd_penguji2' as const },
+                { no: 3, field: 'penguji3', jabatan: 'Penguji III/Anggota Penguji', ttdField: 'ttd_penguji3' as const },
+              ].map((p) => (
+                <tr key={p.no}>
+                  <td className="text-center">{p.no}</td>
+                  <td>
+                    <input
+                      value={(session as any)[p.field] || ''}
+                      onChange={(e) => onUpdate({ ...session, [p.field]: e.target.value })}
+                      className="w-full bg-transparent"
+                      placeholder="Nama dosen"
+                    />
+                  </td>
+                  <td>{p.jabatan}</td>
+                  <td className="text-center align-middle">
+                    <SignatureUpload
+                      value={(session as any)[p.ttdField]}
+                      onChange={(v) => onUpdate({ ...session, [p.ttdField]: v })}
+                      label={p.jabatan}
+                    />
+                  </td>
+                </tr>
+              ))}
           </tbody>
         </table>
       </div>
@@ -262,7 +298,8 @@ function BeritaAcaraForm({ session, onUpdate }: { session: Session; onUpdate: (s
           />
         </p>
         <p className="mt-1">Dekan</p>
-        <div className="h-16"></div>
+        <SignatureUpload value={session.ttd_dekan} onChange={(v) => onUpdate({ ...session, ttd_dekan: v })} label="Dekan" />
+        <div className="h-8"></div>
         <input
           value={session.dekan}
           onChange={(e) => onUpdate({ ...session, dekan: e.target.value })}
@@ -420,7 +457,13 @@ function PenilaianForm({
         </div>
         <div className="flex mt-8 justify-end">
           <div className="text-center w-56">
-            <p className="mb-16">Tanda Tangan</p>
+            <SignatureUpload
+              value={(session as any)[`ttd_penguji${examinerIndex + 1}`]}
+              onChange={(v) => onUpdate({ ...session, [`ttd_penguji${examinerIndex + 1}`]: v } as any)}
+              label={label}
+            />
+            <div className="h-8"></div>
+            <p>Tanda Tangan</p>
             <p className="border-t border-black pt-1 font-semibold">{label}</p>
           </div>
         </div>
@@ -532,7 +575,7 @@ function RekapNilaiForm({ session, onUpdate }: { session: Session; onUpdate: (s:
           <input value={session.tanggal_ba} onChange={(e) => onUpdate({ ...session, tanggal_ba: e.target.value })} className="border-b border-gray-400 bg-transparent w-40 text-center" />
         </p>
         <p>Dekan</p>
-        <div className="h-16"></div>
+        <SignatureUpload value={session.ttd_dekan} onChange={(v) => onUpdate({ ...session, ttd_dekan: v })} label="Dekan" />
         <p className="font-semibold">{session.dekan}</p>
         <p className="text-sm">NIP. {session.nip_dekan}</p>
       </div>
@@ -652,7 +695,7 @@ function PreviewAll({ session }: { session: Session }) {
     offscreen.style.fontFamily = "'Times New Roman', Georgia, serif"
     offscreen.style.fontSize = '12pt'
     offscreen.style.lineHeight = '1.5'
-    offscreen.style.padding = '15mm 30mm 25mm'
+    offscreen.style.padding = '5mm 30mm 25mm'
     document.body.appendChild(offscreen)
 
     const pdf = new jsPDF('p', 'mm', 'a4')
@@ -813,9 +856,9 @@ function PreviewAll({ session }: { session: Session }) {
           <table className="template-table mt-1">
             <thead><tr><th className="w-12">NO</th><th>DOSEN PENGUJI</th><th>JABATAN DALAM SIDANG</th><th className="w-24">TANDA TANGAN</th></tr></thead>
             <tbody>
-              <tr><td className="text-center">1</td><td>{session.penguji1 || '______________'}</td><td>Penguji I/Ketua Penguji</td><td className="h-10"></td></tr>
-              <tr><td className="text-center">2</td><td>{session.penguji2 || '______________'}</td><td>Penguji II/Anggota Penguji</td><td className="h-10"></td></tr>
-              <tr><td className="text-center">3</td><td>{session.penguji3 || '______________'}</td><td>Penguji III/Anggota Penguji</td><td className="h-10"></td></tr>
+              <tr><td className="text-center">1</td><td>{session.penguji1 || '______________'}</td><td>Penguji I/Ketua Penguji</td><td className="text-center align-middle">{session.ttd_penguji1 ? <img src={session.ttd_penguji1} alt="TTD" className="max-h-12 max-w-24 mx-auto object-contain" /> : ''}</td></tr>
+              <tr><td className="text-center">2</td><td>{session.penguji2 || '______________'}</td><td>Penguji II/Anggota Penguji</td><td className="text-center align-middle">{session.ttd_penguji2 ? <img src={session.ttd_penguji2} alt="TTD" className="max-h-12 max-w-24 mx-auto object-contain" /> : ''}</td></tr>
+              <tr><td className="text-center">3</td><td>{session.penguji3 || '______________'}</td><td>Penguji III/Anggota Penguji</td><td className="text-center align-middle">{session.ttd_penguji3 ? <img src={session.ttd_penguji3} alt="TTD" className="max-h-12 max-w-24 mx-auto object-contain" /> : ''}</td></tr>
             </tbody>
           </table>
         </div>
@@ -830,7 +873,7 @@ function PreviewAll({ session }: { session: Session }) {
         <div className="text-right mt-10 avoid-break">
           <p>Depok, {session.tanggal_ba || '______________'}</p>
           <p>Dekan</p>
-          <div className="h-16"></div>
+          {session.ttd_dekan ? <img src={session.ttd_dekan} alt="TTD Dekan" className="max-h-16 max-w-32 mx-auto my-2 object-contain" /> : <div className="h-16"></div>}
           <p className="font-bold">{session.dekan}</p>
           <p className="text-sm">NIP. {session.nip_dekan}</p>
         </div>
@@ -902,8 +945,11 @@ function PreviewAll({ session }: { session: Session }) {
                 <p>Hari, Tanggal: {session.hari_tanggal}</p>
                 <div className="flex justify-end mt-12">
                   <div className="text-center w-56">
+                    {session[`ttd_penguji${examIdx + 1}` as keyof Session] ? (
+                      <img src={session[`ttd_penguji${examIdx + 1}` as keyof Session] as string} alt="TTD" className="max-h-14 max-w-28 mx-auto object-contain" />
+                    ) : <div className="h-14"></div>}
                     <p>Tanda Tangan</p>
-                    <div className="h-14"></div>
+                    <div className="h-2"></div>
                     <p className="border-t border-black pt-1 font-bold">{labels[examIdx]}</p>
                     <p className="text-sm">{namaPenguji[examIdx]}</p>
                   </div>
@@ -962,7 +1008,7 @@ function PreviewAll({ session }: { session: Session }) {
           <div className="text-right mt-10 avoid-break">
             <p>Depok, {session.tanggal_ba || '______________'}</p>
             <p>Dekan</p>
-            <div className="h-16"></div>
+            {session.ttd_dekan ? <img src={session.ttd_dekan} alt="TTD Dekan" className="max-h-16 max-w-32 mx-auto my-2 object-contain" /> : <div className="h-16"></div>}
             <p className="font-bold">{session.dekan}</p>
             <p className="text-sm">NIP. {session.nip_dekan}</p>
           </div>

@@ -110,6 +110,10 @@ export interface Session {
   rekap_entries: RekapEntry[]
   peserta_hadir: { nama: string; nim: string }[]
   audience_hadir: { nama: string; nim: string }[]
+  ttd_penguji1?: string
+  ttd_penguji2?: string
+  ttd_penguji3?: string
+  ttd_dekan?: string
   created_at?: string
   updated_at?: string
 }
