@@ -761,14 +761,14 @@ function PreviewAll({ session }: { session: Session }) {
       await new Promise(r => setTimeout(r, 50))
 
       const canvas = await html2canvas(offscreen, {
-        scale: 2,
+        scale: 1.5,
         useCORS: true,
         logging: false,
         width: offscreen.scrollWidth,
         height: offscreen.scrollHeight,
       })
 
-      const imgData = canvas.toDataURL('image/png')
+      const imgData = canvas.toDataURL('image/jpeg', 0.7)
       const imgWidth = pdfWidth
       const imgHeight = (canvas.height * pdfWidth) / canvas.width
 
@@ -797,8 +797,8 @@ function PreviewAll({ session }: { session: Session }) {
           const ctx = tempCanvas.getContext('2d')!
           ctx.drawImage(canvas, 0, srcY, tempCanvas.width, tempCanvas.height, 0, 0, tempCanvas.width, tempCanvas.height)
 
-          const pageImgData = tempCanvas.toDataURL('image/png')
-          pdf.addImage(pageImgData, 'PNG', 0, 0, pdfWidth, pageImgHeight)
+          const pageImgData = tempCanvas.toDataURL('image/jpeg', 0.7)
+          pdf.addImage(pageImgData, 'JPEG', 0, 0, pdfWidth, pageImgHeight)
 
           yOffset += pdfHeight
           remainingHeight -= pdfHeight
