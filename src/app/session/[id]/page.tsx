@@ -534,15 +534,21 @@ function RekapNilaiForm({ session, onUpdate }: { session: Session; onUpdate: (s:
           </thead>
           <tbody>
             {[
-              { no: 1, field: 'penguji1', jabatan: 'Penguji I/Ketua Penguji' },
-              { no: 2, field: 'penguji2', jabatan: 'Penguji II/Anggota Penguji' },
-              { no: 3, field: 'penguji3', jabatan: 'Penguji III/Anggota Penguji' },
+              { no: 1, field: 'penguji1', jabatan: 'Penguji I/Ketua Penguji', ttdField: 'ttd_penguji1' as const },
+              { no: 2, field: 'penguji2', jabatan: 'Penguji II/Anggota Penguji', ttdField: 'ttd_penguji2' as const },
+              { no: 3, field: 'penguji3', jabatan: 'Penguji III/Anggota Penguji', ttdField: 'ttd_penguji3' as const },
             ].map((p) => (
               <tr key={p.no}>
                 <td className="text-center">{p.no}</td>
                 <td><input value={(session as any)[p.field] || ''} onChange={(e) => onUpdate({ ...session, [p.field]: e.target.value })} className="w-full bg-transparent" /></td>
                 <td>{p.jabatan}</td>
-                <td className="h-8"></td>
+                <td className="text-center align-middle">
+                  <SignatureUpload
+                    value={(session as any)[p.ttdField]}
+                    onChange={(v) => onUpdate({ ...session, [p.ttdField]: v })}
+                    label={p.jabatan}
+                  />
+                </td>
               </tr>
             ))}
           </tbody>
@@ -989,9 +995,9 @@ function PreviewAll({ session }: { session: Session }) {
           <table className="template-table text-sm">
             <thead><tr><th className="w-12">NO</th><th>DOSEN PENGUJI</th><th>JABATAN DALAM SIDANG</th><th className="w-24">TANDA TANGAN</th></tr></thead>
             <tbody>
-              <tr><td className="text-center">1</td><td>{session.penguji1 || '______________'}</td><td>Penguji I/Ketua Penguji</td><td className="h-8"></td></tr>
-              <tr><td className="text-center">2</td><td>{session.penguji2 || '______________'}</td><td>Penguji II/Anggota Penguji</td><td className="h-8"></td></tr>
-              <tr><td className="text-center">3</td><td>{session.penguji3 || '______________'}</td><td>Penguji III/Anggota Penguji</td><td className="h-8"></td></tr>
+              <tr><td className="text-center">1</td><td>{session.penguji1 || '______________'}</td><td>Penguji I/Ketua Penguji</td><td className="text-center align-middle">{session.ttd_penguji1 ? <img src={session.ttd_penguji1} alt="TTD" className="max-h-12 max-w-24 mx-auto object-contain" /> : ''}</td></tr>
+              <tr><td className="text-center">2</td><td>{session.penguji2 || '______________'}</td><td>Penguji II/Anggota Penguji</td><td className="text-center align-middle">{session.ttd_penguji2 ? <img src={session.ttd_penguji2} alt="TTD" className="max-h-12 max-w-24 mx-auto object-contain" /> : ''}</td></tr>
+              <tr><td className="text-center">3</td><td>{session.penguji3 || '______________'}</td><td>Penguji III/Anggota Penguji</td><td className="text-center align-middle">{session.ttd_penguji3 ? <img src={session.ttd_penguji3} alt="TTD" className="max-h-12 max-w-24 mx-auto object-contain" /> : ''}</td></tr>
             </tbody>
           </table>
 
