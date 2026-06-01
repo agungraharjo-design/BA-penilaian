@@ -1,0 +1,53 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@media print {
+  @page {
+    size: A4;
+    margin: 15mm 20mm;
+  }
+  body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .no-print { display: none !important; }
+  .print-only { display: block !important; }
+  .print-only-inline { display: inline !important; }
+}
+
+.print-only, .print-only-inline { display: none; }
+
+body {
+  font-family: 'Times New Roman', Georgia, serif;
+}
+
+/* Template-style table borders */
+.template-table {
+  border-collapse: collapse;
+  width: 100%;
+  font-family: 'Times New Roman', Georgia, serif;
+}
+.template-table th,
+.template-table td {
+  border: 1px solid black;
+  padding: 3px 6px;
+  vertical-align: top;
+}
+.template-table th {
+  background-color: #f0f0f0;
+  text-align: center;
+  font-weight: bold;
+}
+
+/* Exact signature lines */
+.signature-line {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 8px;
+}
+.signature-space {
+  min-height: 60px;
+}
+
+/* Scrollbar styling */
+.sync-indicator {
+  @apply fixed bottom-4 right-4 z-50 flex items-center gap-2 px-3 py-2 rounded-full text-xs font-medium shadow-lg;
+}
