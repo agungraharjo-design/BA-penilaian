@@ -79,11 +79,11 @@ export interface RekapitulasiNilai {
   entries: {
     nama: string
     nim: string
-    nilaiPengujiI: number | null
-    nilaiPengujiII: number | null
-    nilaiPengujiIII: number | null
+    nilai_penguji_i: number | null
+    nilai_penguji_ii: number | null
+    nilai_penguji_iii: number | null
     jumlah: number | null
-    nilaiAkhir: number | null
+    nilai_akhir: number | null
   }[]
 }
 
@@ -91,9 +91,9 @@ export interface Session {
   id: string
   nama: string
   nim: string
-  judulSkripsi: string
+  judul_skripsi: string
   pembimbing: string
-  hariTanggal: string
+  hari_tanggal: string
   waktu: string
   tempat: string
   semester: string
@@ -104,15 +104,12 @@ export interface Session {
   decision: Decision
   catatan: string
   dekan: string
-  nipDekan: string
-  tanggalBa: string
-  // Penilaian scores for each examiner
-  skorPenguji: (number | null)[][] // [examinerIndex][criterionIndex]
-  // Rekap
-  rekapEntries: RekapEntry[]
-  // Daftar hadir
-  pesertaHadir: { nama: string; nim: string }[]
-  audienceHadir: { nama: string; nim: string }[]
+  nip_dekan: string
+  tanggal_ba: string
+  skor_penguji: (number | null)[][]
+  rekap_entries: RekapEntry[]
+  peserta_hadir: { nama: string; nim: string }[]
+  audience_hadir: { nama: string; nim: string }[]
   created_at?: string
   updated_at?: string
 }
@@ -120,9 +117,9 @@ export interface Session {
 export interface RekapEntry {
   nama: string
   nim: string
-  nilaiI: number | null
-  nilaiII: number | null
-  nilaiIII: number | null
+  nilai_i: number | null
+  nilai_ii: number | null
+  nilai_iii: number | null
 }
 
 export const RUBRIC_CRITERIA = [

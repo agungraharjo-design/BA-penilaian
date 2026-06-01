@@ -144,8 +144,8 @@ function BeritaAcaraForm({ session, onUpdate }: { session: Session; onUpdate: (s
       <p>
         Hari ini,{' '}
         <input
-          value={session.tanggalBa}
-          onChange={(e) => onUpdate({ ...session, tanggalBa: e.target.value })}
+          value={session.tanggal_ba}
+          onChange={(e) => onUpdate({ ...session, tanggal_ba: e.target.value })}
           className="border-b border-gray-400 bg-transparent px-1 font-semibold w-56"
         />
         , telah dilaksanakan sidang skripsi bagi mahasiswa:
@@ -170,8 +170,8 @@ function BeritaAcaraForm({ session, onUpdate }: { session: Session; onUpdate: (s
       <p className="font-semibold ml-4">
         Judul Penelitian:{' '}
         <input
-          value={session.judulSkripsi}
-          onChange={(e) => onUpdate({ ...session, judulSkripsi: e.target.value })}
+          value={session.judul_skripsi}
+          onChange={(e) => onUpdate({ ...session, judul_skripsi: e.target.value })}
           className="w-full border-b border-gray-400 bg-transparent"
         />
       </p>
@@ -254,8 +254,8 @@ function BeritaAcaraForm({ session, onUpdate }: { session: Session; onUpdate: (s
       <div className="text-right mt-8">
         <p>Depok,{' '}
           <input
-            value={session.tanggalBa}
-            onChange={(e) => onUpdate({ ...session, tanggalBa: e.target.value })}
+            value={session.tanggal_ba}
+            onChange={(e) => onUpdate({ ...session, tanggal_ba: e.target.value })}
             className="border-b border-gray-400 bg-transparent w-40 text-center"
           />
         </p>
@@ -268,8 +268,8 @@ function BeritaAcaraForm({ session, onUpdate }: { session: Session; onUpdate: (s
         />
         <br />
         <input
-          value={session.nipDekan}
-          onChange={(e) => onUpdate({ ...session, nipDekan: e.target.value })}
+          value={session.nip_dekan}
+          onChange={(e) => onUpdate({ ...session, nip_dekan: e.target.value })}
           className="border-b border-gray-400 bg-transparent text-center text-sm"
         />
       </div>
@@ -283,17 +283,17 @@ function PenilaianForm({
 }: {
   session: Session; onUpdate: (s: Session) => void; examinerIndex: number; label: string
 }) {
-  const scores = session.skorPenguji[examinerIndex]
+  const scores = session.skor_penguji[examinerIndex]
 
   const setScore = (criterionIdx: number, value: string) => {
     const v = value === '' ? null : Math.min(4, Math.max(1, Number(value)))
-    const newScores = [...session.skorPenguji]
+    const newScores = [...session.skor_penguji]
     newScores[examinerIndex] = [
       ...newScores[examinerIndex].slice(0, criterionIdx),
       v,
       ...newScores[examinerIndex].slice(criterionIdx + 1),
     ]
-    onUpdate({ ...session, skorPenguji: newScores })
+    onUpdate({ ...session, skor_penguji: newScores })
   }
 
   const totalSkorXBobot = calcTotalSkorXBobot(scores, RUBRIC_CRITERIA.map(c => c.bobot))
@@ -321,7 +321,7 @@ function PenilaianForm({
         </div>
         <div className="flex">
           <span className="w-36">Hari, Tanggal Sidang</span><span className="w-4">:</span>
-          <input value={session.hariTanggal} onChange={(e) => onUpdate({ ...session, hariTanggal: e.target.value })} className="flex-1 border-b border-gray-400 bg-transparent" />
+          <input value={session.hari_tanggal} onChange={(e) => onUpdate({ ...session, hari_tanggal: e.target.value })} className="flex-1 border-b border-gray-400 bg-transparent" />
         </div>
         <div className="flex">
           <span className="w-36">Waktu Sidang</span><span className="w-4">:</span>
@@ -338,7 +338,7 @@ function PenilaianForm({
       </div>
       <div className="flex">
         <span className="w-36">Judul Skripsi</span><span className="w-4">:</span>
-        <input value={session.judulSkripsi} onChange={(e) => onUpdate({ ...session, judulSkripsi: e.target.value })} className="flex-1 border-b border-gray-400 bg-transparent" />
+        <input value={session.judul_skripsi} onChange={(e) => onUpdate({ ...session, judul_skripsi: e.target.value })} className="flex-1 border-b border-gray-400 bg-transparent" />
       </div>
 
       {/* Rubric table */}
@@ -405,8 +405,8 @@ function PenilaianForm({
         <div className="flex">
           <span className="w-32">Hari, Tanggal</span><span className="w-4">:</span>
           <input
-            value={session.hariTanggal}
-            onChange={(e) => onUpdate({ ...session, hariTanggal: e.target.value })}
+            value={session.hari_tanggal}
+            onChange={(e) => onUpdate({ ...session, hari_tanggal: e.target.value })}
             className="flex-1 border-b border-gray-400 bg-transparent"
           />
         </div>
@@ -423,18 +423,18 @@ function PenilaianForm({
 
 // ─── REKAPITULASI NILAI ──────────────────────────────────────
 function RekapNilaiForm({ session, onUpdate }: { session: Session; onUpdate: (s: Session) => void }) {
-  const entries = session.rekapEntries || [{ nama: session.nama, nim: session.nim, nilaiI: null, nilaiII: null, nilaiIII: null }]
-  const rekap = session.rekapEntries && session.rekapEntries.length > 0 ? session.rekapEntries : session.rekapEntries
+  const entries = session.rekap_entries || [{ nama: session.nama, nim: session.nim, nilai_i: null, nilai_ii: null, nilai_iii: null }]
+  const rekap = session.rekap_entries && session.rekap_entries.length > 0 ? session.rekap_entries : session.rekap_entries
 
   const updateEntry = (idx: number, field: string, value: any) => {
     const newEntries = [...entries]
     newEntries[idx] = { ...newEntries[idx], [field]: value }
-    onUpdate({ ...session, rekapEntries: newEntries })
+    onUpdate({ ...session, rekap_entries: newEntries })
   }
 
   // Calculate scores from penilaian for each examiner
   const calcExaminerTotal = (examIdx: number) => {
-    const scores = session.skorPenguji[examIdx]
+    const scores = session.skor_penguji[examIdx]
     const total = calcTotalSkorXBobot(scores, RUBRIC_CRITERIA.map(c => c.bobot))
     return total > 0 ? calcNilaiAkhir(total) : null
   }
@@ -456,7 +456,7 @@ function RekapNilaiForm({ session, onUpdate }: { session: Session; onUpdate: (s:
       </div>
 
       <div className="grid grid-cols-3 gap-x-6 gap-y-1 text-sm">
-        <div className="flex"><span className="w-36">Hari, Tanggal Sidang</span><span className="w-4">:</span><input value={session.hariTanggal} onChange={(e) => onUpdate({ ...session, hariTanggal: e.target.value })} className="flex-1 border-b border-gray-400 bg-transparent" /></div>
+        <div className="flex"><span className="w-36">Hari, Tanggal Sidang</span><span className="w-4">:</span><input value={session.hari_tanggal} onChange={(e) => onUpdate({ ...session, hari_tanggal: e.target.value })} className="flex-1 border-b border-gray-400 bg-transparent" /></div>
         <div className="flex"><span className="w-28">Waktu Sidang</span><span className="w-4">:</span><input value={session.waktu} onChange={(e) => onUpdate({ ...session, waktu: e.target.value })} className="flex-1 border-b border-gray-400 bg-transparent" /></div>
         <div className="flex"><span className="w-28">Tempat Sidang</span><span className="w-4">:</span><input value={session.tempat} onChange={(e) => onUpdate({ ...session, tempat: e.target.value })} className="flex-1 border-b border-gray-400 bg-transparent" /></div>
       </div>
@@ -518,12 +518,12 @@ function RekapNilaiForm({ session, onUpdate }: { session: Session; onUpdate: (s:
       {/* Signature */}
       <div className="text-right mt-8">
         <p>Depok,{' '}
-          <input value={session.tanggalBa} onChange={(e) => onUpdate({ ...session, tanggalBa: e.target.value })} className="border-b border-gray-400 bg-transparent w-40 text-center" />
+          <input value={session.tanggal_ba} onChange={(e) => onUpdate({ ...session, tanggal_ba: e.target.value })} className="border-b border-gray-400 bg-transparent w-40 text-center" />
         </p>
         <p>Dekan</p>
         <div className="h-16"></div>
         <p className="font-semibold">{session.dekan}</p>
-        <p className="text-sm">NIP. {session.nipDekan}</p>
+        <p className="text-sm">NIP. {session.nip_dekan}</p>
       </div>
     </div>
   )
@@ -531,23 +531,23 @@ function RekapNilaiForm({ session, onUpdate }: { session: Session; onUpdate: (s:
 
 // ─── DAFTAR HADIR ────────────────────────────────────────────
 function DaftarHadirForm({ session, onUpdate }: { session: Session; onUpdate: (s: Session) => void }) {
-  const peserta = session.pesertaHadir || [{ nama: session.nama, nim: session.nim }]
-  const audience = session.audienceHadir || []
+  const peserta = session.peserta_hadir || [{ nama: session.nama, nim: session.nim }]
+  const audience = session.audience_hadir || []
 
   const updatePeserta = (idx: number, field: string, value: string) => {
     const newP = [...peserta]
     newP[idx] = { ...newP[idx], [field]: value }
-    onUpdate({ ...session, pesertaHadir: newP })
+    onUpdate({ ...session, peserta_hadir: newP })
   }
 
   const updateAudience = (idx: number, field: string, value: string) => {
     const newA = [...audience]
     newA[idx] = { ...newA[idx], [field]: value }
-    onUpdate({ ...session, audienceHadir: newA })
+    onUpdate({ ...session, audience_hadir: newA })
   }
 
   const addAudience = () => {
-    onUpdate({ ...session, audienceHadir: [...audience, { nama: '', nim: '' }] })
+    onUpdate({ ...session, audience_hadir: [...audience, { nama: '', nim: '' }] })
   }
 
   return (
@@ -653,7 +653,7 @@ function PreviewAll({ session }: { session: Session }) {
 
   const calculateAll = () => {
     const scoresByExaminer = [0, 1, 2].map(idx => {
-      const scores = session.skorPenguji[idx]
+      const scores = session.skor_penguji[idx]
       const totalSkorXBobot = calcTotalSkorXBobot(scores, RUBRIC_CRITERIA.map(c => c.bobot))
       const nilaiAkhir = calcNilaiAkhir(totalSkorXBobot)
       return { totalSkorXBobot, nilaiAkhir }
@@ -688,7 +688,7 @@ function PreviewAll({ session }: { session: Session }) {
         </div>
 
         <p className="text-justify">
-          Hari ini, {session.tanggalBa || '______________'}, telah dilaksanakan sidang skripsi bagi mahasiswa:
+          Hari ini, {session.tanggal_ba || '______________'}, telah dilaksanakan sidang skripsi bagi mahasiswa:
         </p>
 
         <table className="w-full">
@@ -699,7 +699,7 @@ function PreviewAll({ session }: { session: Session }) {
         </table>
 
         <p>Dengan judul penelitian sebagai berikut :</p>
-        <p className="font-bold ml-4">Judul Penelitian: {session.judulSkripsi || '________________________________________'}</p>
+        <p className="font-bold ml-4">Judul Penelitian: {session.judul_skripsi || '________________________________________'}</p>
 
         <p className="mt-4">
           Dinyatakan bahwa{' '}
@@ -728,16 +728,16 @@ function PreviewAll({ session }: { session: Session }) {
         )}
 
         <div className="text-right mt-10">
-          <p>Depok, {session.tanggalBa || '______________'}</p>
+          <p>Depok, {session.tanggal_ba || '______________'}</p>
           <p>Dekan</p>
           <div className="h-16"></div>
           <p className="font-bold">{session.dekan}</p>
-          <p className="text-sm">NIP. {session.nipDekan}</p>
+          <p className="text-sm">NIP. {session.nip_dekan}</p>
         </div>
 
         {/* ===== FORM PENILAIAN (3 examiners) ===== */}
         {[0, 1, 2].map((examIdx) => {
-          const scores = session.skorPenguji[examIdx]
+          const scores = session.skor_penguji[examIdx]
           const labels = ['Penguji I/Ketua Penguji', 'Penguji II/Anggota Penguji', 'Penguji III/Anggota Penguji']
           const namaPenguji = [session.penguji1, session.penguji2, session.penguji3]
           return (
@@ -752,11 +752,11 @@ function PreviewAll({ session }: { session: Session }) {
               <table className="w-full mt-2 text-sm">
                 <tbody>
                   <tr><td className="w-36">Nama Peserta</td><td className="w-4">:</td><td>{session.nama}</td><td className="w-36">NIM</td><td className="w-4">:</td><td>{session.nim}</td></tr>
-                  <tr><td>Hari, Tanggal Sidang</td><td>:</td><td>{session.hariTanggal}</td><td>Waktu Sidang</td><td>:</td><td>{session.waktu}</td></tr>
+                  <tr><td>Hari, Tanggal Sidang</td><td>:</td><td>{session.hari_tanggal}</td><td>Waktu Sidang</td><td>:</td><td>{session.waktu}</td></tr>
                   <tr><td>Tempat Sidang</td><td>:</td><td>{session.tempat}</td><td>Dosen Pembimbing</td><td>:</td><td>{session.pembimbing}</td></tr>
                 </tbody>
               </table>
-              <p className="text-sm mt-1"><span className="font-semibold">Judul Skripsi:</span> {session.judulSkripsi}</p>
+              <p className="text-sm mt-1"><span className="font-semibold">Judul Skripsi:</span> {session.judul_skripsi}</p>
 
               <table className="template-table text-xs mt-3">
                 <thead>
@@ -795,7 +795,7 @@ function PreviewAll({ session }: { session: Session }) {
               <p className="text-xs mt-1 italic">*Bila presentasi skripsi dilakukan menggunakan Bahasa Inggris, nilai akhir ditambahkan 2—6 poin.</p>
 
               <div className="mt-6">
-                <p>Hari, Tanggal: {session.hariTanggal}</p>
+                <p>Hari, Tanggal: {session.hari_tanggal}</p>
                 <div className="flex justify-end mt-12">
                   <div className="text-center w-56">
                     <p>Tanda Tangan</p>
@@ -820,7 +820,7 @@ function PreviewAll({ session }: { session: Session }) {
 
           <table className="w-full mt-2 text-sm">
             <tbody>
-              <tr><td className="w-36">Hari, Tanggal Sidang</td><td className="w-4">:</td><td>{session.hariTanggal}</td><td className="w-28">Waktu Sidang</td><td className="w-4">:</td><td>{session.waktu}</td><td className="w-28">Tempat Sidang</td><td className="w-4">:</td><td>{session.tempat}</td></tr>
+              <tr><td className="w-36">Hari, Tanggal Sidang</td><td className="w-4">:</td><td>{session.hari_tanggal}</td><td className="w-28">Waktu Sidang</td><td className="w-4">:</td><td>{session.waktu}</td><td className="w-28">Tempat Sidang</td><td className="w-4">:</td><td>{session.tempat}</td></tr>
             </tbody>
           </table>
 
@@ -855,11 +855,11 @@ function PreviewAll({ session }: { session: Session }) {
           </table>
 
           <div className="text-right mt-10">
-            <p>Depok, {session.tanggalBa || '______________'}</p>
+            <p>Depok, {session.tanggal_ba || '______________'}</p>
             <p>Dekan</p>
             <div className="h-16"></div>
             <p className="font-bold">{session.dekan}</p>
-            <p className="text-sm">NIP. {session.nipDekan}</p>
+            <p className="text-sm">NIP. {session.nip_dekan}</p>
           </div>
         </div>
       </div>

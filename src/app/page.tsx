@@ -37,9 +37,9 @@ export default function Home() {
       id,
       nama: nama.trim(),
       nim: nim.trim(),
-      judulSkripsi: '',
+      judul_skripsi: '',
       pembimbing: '',
-      hariTanggal: getTodayFormatted(),
+      hari_tanggal: getTodayFormatted(),
       waktu: '09.00',
       tempat: '305 Gedung A',
       semester: 'Genap',
@@ -50,16 +50,16 @@ export default function Home() {
       decision: 'lulus_perbaikan',
       catatan: '',
       dekan: 'Dr. Sri Yani, SST. FT. Ftr., M.Si.',
-      nipDekan: '197406102021212005',
-      tanggalBa: getTodayFormatted(),
-      skorPenguji: [
+      nip_dekan: '197406102021212005',
+      tanggal_ba: getTodayFormatted(),
+      skor_penguji: [
         [null, null, null, null, null, null, null, null, null, null],
         [null, null, null, null, null, null, null, null, null, null],
         [null, null, null, null, null, null, null, null, null, null],
       ],
-      rekapEntries: [{ nama: nama.trim(), nim: nim.trim(), nilaiI: null, nilaiII: null, nilaiIII: null }],
-      pesertaHadir: [{ nama: nama.trim(), nim: nim.trim() }],
-      audienceHadir: [],
+      rekap_entries: [{ nama: nama.trim(), nim: nim.trim(), nilai_i: null, nilai_ii: null, nilai_iii: null }],
+      peserta_hadir: [{ nama: nama.trim(), nim: nim.trim() }],
+      audience_hadir: [],
     }
     const { error } = await supabase.from('sessions').insert(session)
     if (!error) {
@@ -128,7 +128,7 @@ export default function Home() {
                   <span className="font-semibold">{s.nama}</span>
                   <span className="text-gray-500 ml-3">({s.nim})</span>
                   <span className="text-gray-400 text-sm ml-4">
-                    {s.judulSkripsi ? s.judulSkripsi.substring(0, 60) + (s.judulSkripsi.length > 60 ? '...' : '') : '—'}
+                    {s.judul_skripsi ? s.judul_skripsi.substring(0, 60) + (s.judul_skripsi.length > 60 ? '...' : '') : '—'}
                   </span>
                 </div>
                 <span className="text-xs text-gray-400">{new Date(s.created_at || '').toLocaleDateString('id-ID')}</span>
