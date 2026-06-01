@@ -806,7 +806,28 @@ function PreviewAll({ session }: { session: Session }) {
     }
 
     document.body.removeChild(offscreen)
-    pdf.save(`BA_Sidang_${session.nama.replace(/\s+/g, '_')}_${session.nim}.pdf`)
+
+    const fileName = `BA_Sidang_${session.nama.replace(/\s+/g, '_')}_${session.nim}.pdf`
+    pdf.save(fileName)
+
+    // Upload to Supabase Storage for persistence
+    try {
+      const blob = pdf.output('blob')
+      const storagePath = `${session.id}/${fileName}`
+      const { error: uploadError } = await supabase.storage
+        .from('pdf-archive')
+        .upload(storagePath, blob, { contentType: 'application/pdf', upsert: true })
+
+      if (!uploadError) {
+        const { data: { publicUrl } } = supabase.storage
+          .from('pdf-archive')
+          .getPublicUrl(storagePath)
+
+        await supabase.from('sessions').update({ pdf_url: publicUrl }).eq('id', session.id)
+      }
+    } catch {
+      // Storage not available (build mock or setup incomplete) – silent fail
+    }
   }
 
   const calculateAll = () => {
@@ -833,6 +854,11 @@ function PreviewAll({ session }: { session: Session }) {
         <button onClick={handleDownloadPDF} className="bg-green-800 text-white px-6 py-2 rounded hover:bg-green-700 font-sans text-sm font-medium flex items-center gap-2">
           ⬇ Download PDF
         </button>
+        {session.pdf_url && (
+          <a href={session.pdf_url} target="_blank" rel="noopener noreferrer" className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-500 font-sans text-sm font-medium flex items-center gap-2 no-print">
+            📄 PDF Tersimpan
+          </a>
+        )}
         <span className="text-xs text-gray-500 self-center ml-2 font-sans">(PDF akan sesuai dengan template asli)</span>
       </div>
 

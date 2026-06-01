@@ -19,6 +19,12 @@ function createSupabaseClient() {
         subscribe: () => ({ unsubscribe: () => {} }),
       }),
       removeChannel: () => {},
+      storage: {
+        from: () => ({
+          upload: () => Promise.resolve({ data: null, error: new Error('mock') }),
+          getPublicUrl: () => ({ data: { publicUrl: '' } }),
+        }),
+      },
     } as any
   }
   return createClient(supabaseUrl, supabaseAnonKey, {

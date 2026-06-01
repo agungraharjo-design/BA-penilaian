@@ -114,6 +114,7 @@ export interface Session {
   ttd_penguji2?: string
   ttd_penguji3?: string
   ttd_dekan?: string
+  pdf_url?: string
   created_at?: string
   updated_at?: string
 }
