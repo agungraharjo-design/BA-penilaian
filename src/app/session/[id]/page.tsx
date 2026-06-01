@@ -687,6 +687,7 @@ function DaftarHadirForm({ session, onUpdate }: { session: Session; onUpdate: (s
 // ─── PREVIEW & PDF ───────────────────────────────────────────
 function PreviewAll({ session }: { session: Session }) {
   const previewRef = useRef<HTMLDivElement>(null)
+  const [pdfStatus, setPdfStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
 
   const handlePrint = () => {
     window.print()
@@ -811,6 +812,7 @@ function PreviewAll({ session }: { session: Session }) {
     pdf.save(fileName)
 
     // Upload to Supabase Storage for persistence
+    setPdfStatus('saving')
     try {
       const blob = pdf.output('blob')
       const storagePath = `${session.id}/${fileName}`
@@ -818,15 +820,25 @@ function PreviewAll({ session }: { session: Session }) {
         .from('pdf-archive')
         .upload(storagePath, blob, { contentType: 'application/pdf', upsert: true })
 
-      if (!uploadError) {
+      if (uploadError) {
+        console.error('Storage upload error:', uploadError)
+        setPdfStatus('error')
+      } else {
         const { data: { publicUrl } } = supabase.storage
           .from('pdf-archive')
           .getPublicUrl(storagePath)
 
-        await supabase.from('sessions').update({ pdf_url: publicUrl }).eq('id', session.id)
+        const { error: updateError } = await supabase.from('sessions').update({ pdf_url: publicUrl }).eq('id', session.id)
+        if (updateError) {
+          console.error('DB update error:', updateError)
+          setPdfStatus('error')
+        } else {
+          setPdfStatus('saved')
+        }
       }
-    } catch {
-      // Storage not available (build mock or setup incomplete) – silent fail
+    } catch (err) {
+      console.error('PDF storage error:', err)
+      setPdfStatus('error')
     }
   }
 
@@ -851,11 +863,17 @@ function PreviewAll({ session }: { session: Session }) {
         <button onClick={handlePrint} className="bg-blue-900 text-white px-6 py-2 rounded hover:bg-blue-800 font-sans text-sm font-medium flex items-center gap-2">
           🖨 Cetak / Print
         </button>
-        <button onClick={handleDownloadPDF} className="bg-green-800 text-white px-6 py-2 rounded hover:bg-green-700 font-sans text-sm font-medium flex items-center gap-2">
-          ⬇ Download PDF
+        <button onClick={handleDownloadPDF} disabled={pdfStatus === 'saving'} className="bg-green-800 text-white px-6 py-2 rounded hover:bg-green-700 font-sans text-sm font-medium flex items-center gap-2 disabled:opacity-50">
+          {pdfStatus === 'saving' ? '⏳ Menyimpan...' : '⬇ Download PDF'}
         </button>
-        {session.pdf_url && (
-          <a href={session.pdf_url} target="_blank" rel="noopener noreferrer" className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-500 font-sans text-sm font-medium flex items-center gap-2 no-print">
+        {pdfStatus === 'saved' && (
+          <span className="text-green-700 text-sm font-sans self-center">✓ Tersimpan</span>
+        )}
+        {pdfStatus === 'error' && (
+          <span className="text-red-600 text-sm font-sans self-center">⚠ Gagal simpan ke database</span>
+        )}
+        {(session.pdf_url || pdfStatus === 'saved') && (
+          <a href={session.pdf_url || '#'} target="_blank" rel="noopener noreferrer" className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-500 font-sans text-sm font-medium flex items-center gap-2 no-print">
             📄 PDF Tersimpan
           </a>
         )}
