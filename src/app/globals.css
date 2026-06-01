@@ -11,6 +11,11 @@
   .no-print { display: none !important; }
   .print-only { display: block !important; }
   .print-only-inline { display: inline !important; }
+  .page-break { page-break-before: always; }
+}
+
+@media screen {
+  .page-break { margin-top: 48px; border-top: 2px dashed #ccc; padding-top: 24px; }
 }
 
 .print-only, .print-only-inline { display: none; }

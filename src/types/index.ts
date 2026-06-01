@@ -122,17 +122,34 @@ export interface RekapEntry {
   nilai_iii: number | null
 }
 
-export const RUBRIC_CRITERIA = [
-  { no: 1, label: 'Abstrak', bobot: 6 },
-  { no: 2, label: 'Tema dan Judul', bobot: 8 },
-  { no: 3, label: 'Pendahuluan', bobot: 8 },
-  { no: 4, label: 'Tinjauan Pustaka', bobot: 10 },
-  { no: 5, label: 'Metode Penelitian', bobot: 15 },
-  { no: 6, label: 'Hasil Penelitian dan Pembahasan', bobot: 20 },
-  { no: 7, label: 'Penutup', bobot: 8 },
-  { no: 8, label: 'Daftar Pustaka', bobot: 5 },
-  { no: 9, label: 'Lampiran', bobot: 5 },
-  { no: 10, label: 'Presentasi dan Responsi', bobot: 15 },
+export interface RubricCriterion {
+  no: number
+  label: string
+  bobot: number
+  detail: string
+}
+
+export const RUBRIC_CRITERIA: RubricCriterion[] = [
+  { no: 1, label: 'Abstrak', bobot: 6,
+    detail: 'a.\tMenggunakan format abstrak sesuai dengan format universitas;\nb.\tMeringkas latar belakang penelitian\nc.\tMeringkas metode penelitian yang digunakan;\nd.\tMenyampaikan ringkasan hasil dan pembahasan;\ne.\tMenyampaikan ringkasan kesimpulan dan rekomendasi/saran penelitian.' },
+  { no: 2, label: 'Tema dan Judul', bobot: 8,
+    detail: 'a.\tTema penelitian terbaru dan relevan dengan bidang ilmu\nb.\tMencantumkan variabel-variabel serta waktu, tempat, dan subjek penelitian' },
+  { no: 3, label: 'Pendahuluan', bobot: 8,
+    detail: 'a.\tMerumuskan latar belakang dan masalah penelitian\nb.\tMenentukan tujuan dan manfaat penelitian' },
+  { no: 4, label: 'Tinjauan Pustaka', bobot: 10,
+    detail: 'a.\tMenelusuri kepustakaan yang relevan dengan judul, bersumber dari buku, jurnal terakreditasi nasional dan internasional\nb.\tMenyajikan kerangka teori yang komprehensif\nc.\tMenyusun daftar studi literatur atau penelitian terdahulu' },
+  { no: 5, label: 'Metode Penelitian', bobot: 15,
+    detail: 'a.\tMerumuskan desain penelitian sesuai dengan pertanyaan penelitian;\nb.\tMenyusun prosedur pengambilan sampel (pemilihan populasi, kriteria sampel, pemilihan sampel);\nc.\tMenyusun prosedur pengumpulan data (perizinan, lokasi);\nd.\tMenyusun dan mengembangkan instrumen penelitian;\ne.\tMenyusun definisi operasional penelitian;\nf.\tMenyajikan perangkat dan tahapan analisis data yang telah dilakukan;\ng.\tMenyajikan kerangka konsep dan hipotesis;\nh.\tMenjelaskan prinsip etik dalam proses penelitian.' },
+  { no: 6, label: 'Hasil Penelitian dan Pembahasan', bobot: 20,
+    detail: 'a.\tMenjelaskan hasil penelitian dengan sistematis (sesuai dengan tujuan penelitian);\nb.\tMenyajikan data hasil penelitian dan interpretasi data dengan jelas dan informatif;\nc.\tMembahas temuan utama penelitian berdasarkan literatur dan penelitian terdahulu, baik yang sejalan maupun yang tidak sejalan dengan hasil penelitian.' },
+  { no: 7, label: 'Penutup', bobot: 8,
+    detail: 'a.\tMerumuskan kesimpulan sesuai dengan hasil penelitian;\nb.\tMenyusun saran teoritis dan aplikatif sesuai dengan hasil penelitian yang berimplikasi pada bidang keilmuan.' },
+  { no: 8, label: 'Daftar Pustaka', bobot: 5,
+    detail: 'a.\tMenyajikan daftar pustaka yang digunakan mengikuti format universitas;\nb.\tMelengkapi sumber pustaka dengan proses akses internet yang digunakan;\nc.\tMenggunakan aplikasi pengelolaan daftar pustaka.\nd.\tBersumber dari buku, jurnal terakreditasi nasional dan internasional dengan tahun kepustakaan ≤ 5 tahun terakhir' },
+  { no: 9, label: 'Lampiran', bobot: 5,
+    detail: 'a.\tMelampirkan linimasa pengerjaan skripsi (time schedule);\nb.\tMelampirkan instrumen penelitian;\nc.\tMelampirkan surat lolos kaji etik\nd.\tMelampirkan dokumen perizinan\ne.\tMelampirkan dokumentasi foto pelaksanaan penelitian\nf.\tMelampirkan output analisis data (jika ada)' },
+  { no: 10, label: 'Presentasi dan Responsi', bobot: 15,
+    detail: 'a.\tMenyajikan laporan hasil penelitian dalam waktu 10—15 menit;\nb.\tMenggunakan bahan tayang yang menarik dan informatif\nc.\tMelakukan presentasi dengan suara dan intonasi yang jelas;\nd.\tMenggunakan bahasa yang baku/formal;\ne.\tMenunjukkan sikap yang baik dalam melakukan presentasi dan merespons masukan;\nf.\tMenunjukkan kemampuan argumentasi yang baik;\ng.\tMenguasai materi hasil penelitian.' },
 ]
 
 export const RUBRIC_WEIGHTS = RUBRIC_CRITERIA.map(c => c.bobot)

@@ -8,6 +8,7 @@ import {
   calcTotalSkorXBobot, calcNilaiAkhir, calcGrade,
   getTodayFormatted, generateId,
 } from '@/lib/utils'
+import Image from 'next/image'
 
 type Tab = 'berita-acara' | 'penilaian-1' | 'penilaian-2' | 'penilaian-3' | 'rekap-nilai' | 'daftar-hadir' | 'preview'
 
@@ -135,10 +136,13 @@ function BeritaAcaraForm({ session, onUpdate }: { session: Session; onUpdate: (s
   return (
     <div className="space-y-6">
       <div className="text-center border-b-2 border-black pb-4">
+        <img src="/kop-surat.jpg" alt="KOP UPN Veteran Jakarta" className="mx-auto mb-2 max-h-20 object-contain w-full" />
         <h1 className="text-xl font-bold uppercase">Berita Acara Sidang Skripsi</h1>
         <p className="text-sm">PROGRAM STUDI KESEHATAN MASYARAKAT PROGRAM SARJANA</p>
         <p className="text-sm">FAKULTAS ILMU KESEHATAN UPN &ldquo;VETERAN&rdquo; JAKARTA</p>
-        <p className="text-sm font-semibold">SEMESTER GENAP T.A. 2025/2026</p>
+        <p className="text-sm font-semibold">
+          SEMESTER <input value={session.semester} onChange={(e) => onUpdate({ ...session, semester: e.target.value })} className="bg-transparent border-b border-gray-400 w-20 text-center font-bold" /> T.A. <input value={session.ta} onChange={(e) => onUpdate({ ...session, ta: e.target.value })} className="bg-transparent border-b border-gray-400 w-28 text-center font-bold" />
+        </p>
       </div>
 
       <p>
@@ -303,10 +307,13 @@ function PenilaianForm({
   return (
     <div className="space-y-4">
       <div className="text-center border-b-2 border-black pb-4">
+        <img src="/kop-surat.jpg" alt="KOP UPN Veteran Jakarta" className="mx-auto mb-2 max-h-20 object-contain w-full" />
         <h1 className="text-xl font-bold uppercase">Formulir Penilaian Sidang Skripsi</h1>
         <p className="text-sm">PROGRAM STUDI KESEHATAN MASYARAKAT PROGRAM SARJANA</p>
         <p className="text-sm">FAKULTAS ILMU KESEHATAN UPN &ldquo;VETERAN&rdquo; JAKARTA</p>
-        <p className="text-sm font-semibold">SEMESTER GENAP T.A. 2025/2026</p>
+        <p className="text-sm font-semibold">
+          SEMESTER <input value={session.semester} onChange={(e) => onUpdate({ ...session, semester: e.target.value })} className="bg-transparent border-b border-gray-400 w-20 text-center font-bold" /> T.A. <input value={session.ta} onChange={(e) => onUpdate({ ...session, ta: e.target.value })} className="bg-transparent border-b border-gray-400 w-28 text-center font-bold" />
+        </p>
       </div>
 
       {/* Student info row */}
@@ -358,7 +365,10 @@ function PenilaianForm({
             return (
               <tr key={c.no}>
                 <td className="text-center align-top">{c.no}.</td>
-                <td className="text-[11px] leading-tight">{c.label}</td>
+                <td className="text-[11px] leading-tight">
+                  <div className="font-semibold">{c.label}</div>
+                  <div className="whitespace-pre-line text-[10px] text-gray-600">{c.detail}</div>
+                </td>
                 <td className="text-center">
                   <input
                     type="number"
@@ -449,10 +459,13 @@ function RekapNilaiForm({ session, onUpdate }: { session: Session; onUpdate: (s:
   return (
     <div className="space-y-4">
       <div className="text-center border-b-2 border-black pb-4">
+        <img src="/kop-surat.jpg" alt="KOP UPN Veteran Jakarta" className="mx-auto mb-2 max-h-20 object-contain w-full" />
         <h1 className="text-xl font-bold uppercase">Rekapitulasi Nilai Sidang Skripsi</h1>
         <p className="text-sm">PROGRAM STUDI KESEHATAN MASYARAKAT PROGRAM SARJANA</p>
         <p className="text-sm">FAKULTAS ILMU KESEHATAN UPN &ldquo;VETERAN&rdquo; JAKARTA</p>
-        <p className="text-sm font-semibold">SEMESTER GENAP T.A. 2025/2026</p>
+        <p className="text-sm font-semibold">
+          SEMESTER <input value={session.semester} onChange={(e) => onUpdate({ ...session, semester: e.target.value })} className="bg-transparent border-b border-gray-400 w-20 text-center font-bold" /> T.A. <input value={session.ta} onChange={(e) => onUpdate({ ...session, ta: e.target.value })} className="bg-transparent border-b border-gray-400 w-28 text-center font-bold" />
+        </p>
       </div>
 
       <div className="grid grid-cols-3 gap-x-6 gap-y-1 text-sm">
@@ -555,10 +568,13 @@ function DaftarHadirForm({ session, onUpdate }: { session: Session; onUpdate: (s
       {/* DAFTAR HADIR PESERTA */}
       <div>
         <div className="text-center border-b-2 border-black pb-4">
+          <img src="/kop-surat.jpg" alt="KOP UPN Veteran Jakarta" className="mx-auto mb-2 max-h-20 object-contain w-full" />
           <h1 className="text-xl font-bold uppercase">Daftar Hadir Peserta Sidang Skripsi</h1>
           <p className="text-sm">PROGRAM STUDI KESEHATAN MASYARAKAT PROGRAM SARJANA</p>
           <p className="text-sm">FAKULTAS ILMU KESEHATAN UPN &ldquo;VETERAN&rdquo; JAKARTA</p>
-          <p className="text-sm font-semibold">SEMESTER GENAP T.A. 2025/2026</p>
+          <p className="text-sm font-semibold">
+            SEMESTER <input value={session.semester} onChange={(e) => onUpdate({ ...session, semester: e.target.value })} className="bg-transparent border-b border-gray-400 w-20 text-center font-bold" /> T.A. <input value={session.ta} onChange={(e) => onUpdate({ ...session, ta: e.target.value })} className="bg-transparent border-b border-gray-400 w-28 text-center font-bold" />
+          </p>
         </div>
         <table className="template-table text-sm mt-4">
           <thead>
@@ -584,7 +600,10 @@ function DaftarHadirForm({ session, onUpdate }: { session: Session; onUpdate: (s
           <h1 className="text-xl font-bold uppercase">Daftar Hadir Mahasiswa Sebagai Audiens Sidang Skripsi</h1>
           <p className="text-sm">PROGRAM STUDI KESEHATAN MASYARAKAT PROGRAM SARJANA</p>
           <p className="text-sm">FAKULTAS ILMU KESEHATAN UPN &ldquo;VETERAN&rdquo; JAKARTA</p>
-          <p className="text-sm font-semibold">SEMESTER GENAP T.A. 2025/2026</p>
+          <img src="/kop-surat.jpg" alt="KOP UPN Veteran Jakarta" className="mx-auto mb-2 max-h-20 object-contain w-full" />
+          <p className="text-sm font-semibold">
+            SEMESTER <input value={session.semester} onChange={(e) => onUpdate({ ...session, semester: e.target.value })} className="bg-transparent border-b border-gray-400 w-20 text-center font-bold" /> T.A. <input value={session.ta} onChange={(e) => onUpdate({ ...session, ta: e.target.value })} className="bg-transparent border-b border-gray-400 w-28 text-center font-bold" />
+          </p>
         </div>
         <table className="template-table text-sm mt-4">
           <thead>
@@ -680,11 +699,12 @@ function PreviewAll({ session }: { session: Session }) {
 
       <div ref={previewRef} className="print-area bg-white p-8 space-y-12" style={{ fontFamily: "'Times New Roman', Georgia, serif" }}>
         {/* ===== BERITA ACARA ===== */}
-        <div className="border-b-2 border-black pb-4">
+        <div className="text-center border-b-2 border-black pb-4">
+          <img src="/kop-surat.jpg" alt="KOP UPN Veteran Jakarta" className="mx-auto mb-2 max-h-20 object-contain w-full" />
           <h1 className="text-xl font-bold text-center uppercase">Berita Acara Sidang Skripsi</h1>
           <p className="text-sm text-center">PROGRAM STUDI KESEHATAN MASYARAKAT PROGRAM SARJANA</p>
           <p className="text-sm text-center">FAKULTAS ILMU KESEHATAN UPN &ldquo;VETERAN&rdquo; JAKARTA</p>
-          <p className="text-sm text-center font-bold">SEMESTER GENAP T.A. 2025/2026</p>
+          <p className="text-sm text-center font-bold">SEMESTER {session.semester} T.A. {session.ta}</p>
         </div>
 
         <p className="text-justify">
@@ -742,11 +762,12 @@ function PreviewAll({ session }: { session: Session }) {
           const namaPenguji = [session.penguji1, session.penguji2, session.penguji3]
           return (
             <div key={examIdx} className="mt-12 page-break">
-              <div className="border-b-2 border-black pb-4">
+              <div className="text-center border-b-2 border-black pb-4">
+                <img src="/kop-surat.jpg" alt="KOP UPN Veteran Jakarta" className="mx-auto mb-2 max-h-20 object-contain w-full" />
                 <h1 className="text-xl font-bold text-center uppercase">Formulir Penilaian Sidang Skripsi</h1>
                 <p className="text-sm text-center">PROGRAM STUDI KESEHATAN MASYARAKAT PROGRAM SARJANA</p>
                 <p className="text-sm text-center">FAKULTAS ILMU KESEHATAN UPN &ldquo;VETERAN&rdquo; JAKARTA</p>
-                <p className="text-sm text-center font-bold">SEMESTER GENAP T.A. 2025/2026</p>
+                <p className="text-sm text-center font-bold">SEMESTER {session.semester} T.A. {session.ta}</p>
               </div>
 
               <table className="w-full mt-2 text-sm">
@@ -768,7 +789,10 @@ function PreviewAll({ session }: { session: Session }) {
                     return (
                       <tr key={c.no}>
                         <td className="text-center align-top">{c.no}.</td>
-                        <td className="text-[11px] leading-tight">{c.label}</td>
+                <td className="text-[11px] leading-tight">
+                  <div className="font-semibold">{c.label}</div>
+                  <div className="whitespace-pre-line text-[10px] text-gray-600">{c.detail}</div>
+                </td>
                         <td className="text-center">{scores[i] ?? ''}</td>
                         <td className="text-center">{c.bobot}</td>
                         <td className="text-center font-bold">{skorXBobot ?? ''}</td>
@@ -811,11 +835,12 @@ function PreviewAll({ session }: { session: Session }) {
 
         {/* ===== REKAPITULASI NILAI ===== */}
         <div className="mt-12 page-break">
-          <div className="border-b-2 border-black pb-4">
+          <div className="text-center border-b-2 border-black pb-4">
+            <img src="/kop-surat.jpg" alt="KOP UPN Veteran Jakarta" className="mx-auto mb-2 max-h-20 object-contain w-full" />
             <h1 className="text-xl font-bold text-center uppercase">Rekapitulasi Nilai Sidang Skripsi</h1>
             <p className="text-sm text-center">PROGRAM STUDI KESEHATAN MASYARAKAT PROGRAM SARJANA</p>
             <p className="text-sm text-center">FAKULTAS ILMU KESEHATAN UPN &ldquo;VETERAN&rdquo; JAKARTA</p>
-            <p className="text-sm text-center font-bold">SEMESTER GENAP T.A. 2025/2026</p>
+            <p className="text-sm text-center font-bold">SEMESTER {session.semester} T.A. {session.ta}</p>
           </div>
 
           <table className="w-full mt-2 text-sm">
