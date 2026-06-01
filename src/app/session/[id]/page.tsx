@@ -133,8 +133,8 @@ export default function SessionPage() {
 function BeritaAcaraForm({ session, onUpdate }: { session: Session; onUpdate: (s: Session) => void }) {
   return (
     <div className="space-y-6">
-      <div className="text-center border-b-2 border-black pb-4">
-        <img src="/kop-surat.jpg" alt="KOP UPN Veteran Jakarta" className="mx-auto mb-2 max-h-24 w-auto max-w-full" />
+      <div className="text-center border-b-2 border-black pb-4 pt-2">
+        <img src="/kop-surat.jpg" alt="KOP UPN Veteran Jakarta" style={{ display: 'block', margin: '0 auto 0.5rem', maxWidth: '100%', maxHeight: '100px', width: 'auto', height: 'auto' }} />
         <h1 className="text-xl font-bold uppercase">Berita Acara Sidang Skripsi</h1>
         <p className="text-sm">PROGRAM STUDI KESEHATAN MASYARAKAT PROGRAM SARJANA</p>
         <p className="text-sm">FAKULTAS ILMU KESEHATAN UPN &ldquo;VETERAN&rdquo; JAKARTA</p>
@@ -304,8 +304,8 @@ function PenilaianForm({
 
   return (
     <div className="space-y-4">
-      <div className="text-center border-b-2 border-black pb-4">
-        <img src="/kop-surat.jpg" alt="KOP UPN Veteran Jakarta" className="mx-auto mb-2 max-h-24 w-auto max-w-full" />
+      <div className="text-center border-b-2 border-black pb-4 pt-2">
+        <img src="/kop-surat.jpg" alt="KOP UPN Veteran Jakarta" style={{ display: 'block', margin: '0 auto 0.5rem', maxWidth: '100%', maxHeight: '100px', width: 'auto', height: 'auto' }} />
         <h1 className="text-xl font-bold uppercase">Formulir Penilaian Sidang Skripsi</h1>
         <p className="text-sm">PROGRAM STUDI KESEHATAN MASYARAKAT PROGRAM SARJANA</p>
         <p className="text-sm">FAKULTAS ILMU KESEHATAN UPN &ldquo;VETERAN&rdquo; JAKARTA</p>
@@ -456,8 +456,8 @@ function RekapNilaiForm({ session, onUpdate }: { session: Session; onUpdate: (s:
 
   return (
     <div className="space-y-4">
-      <div className="text-center border-b-2 border-black pb-4">
-        <img src="/kop-surat.jpg" alt="KOP UPN Veteran Jakarta" className="mx-auto mb-2 max-h-24 w-auto max-w-full" />
+      <div className="text-center border-b-2 border-black pb-4 pt-2">
+        <img src="/kop-surat.jpg" alt="KOP UPN Veteran Jakarta" style={{ display: 'block', margin: '0 auto 0.5rem', maxWidth: '100%', maxHeight: '100px', width: 'auto', height: 'auto' }} />
         <h1 className="text-xl font-bold uppercase">Rekapitulasi Nilai Sidang Skripsi</h1>
         <p className="text-sm">PROGRAM STUDI KESEHATAN MASYARAKAT PROGRAM SARJANA</p>
         <p className="text-sm">FAKULTAS ILMU KESEHATAN UPN &ldquo;VETERAN&rdquo; JAKARTA</p>
@@ -565,8 +565,8 @@ function DaftarHadirForm({ session, onUpdate }: { session: Session; onUpdate: (s
     <div className="space-y-8">
       {/* DAFTAR HADIR PESERTA */}
       <div>
-        <div className="text-center border-b-2 border-black pb-4">
-          <img src="/kop-surat.jpg" alt="KOP UPN Veteran Jakarta" className="mx-auto mb-2 max-h-24 w-auto max-w-full" />
+        <div className="text-center border-b-2 border-black pb-4 pt-2">
+          <img src="/kop-surat.jpg" alt="KOP UPN Veteran Jakarta" style={{ display: 'block', margin: '0 auto 0.5rem', maxWidth: '100%', maxHeight: '100px', width: 'auto', height: 'auto' }} />
           <h1 className="text-xl font-bold uppercase">Daftar Hadir Peserta Sidang Skripsi</h1>
           <p className="text-sm">PROGRAM STUDI KESEHATAN MASYARAKAT PROGRAM SARJANA</p>
           <p className="text-sm">FAKULTAS ILMU KESEHATAN UPN &ldquo;VETERAN&rdquo; JAKARTA</p>
@@ -594,11 +594,11 @@ function DaftarHadirForm({ session, onUpdate }: { session: Session; onUpdate: (s
 
       {/* DAFTAR HADIR AUDIENS */}
       <div>
-        <div className="text-center border-b-2 border-black pb-4">
+        <div className="text-center border-b-2 border-black pb-4 pt-2">
           <h1 className="text-xl font-bold uppercase">Daftar Hadir Mahasiswa Sebagai Audiens Sidang Skripsi</h1>
           <p className="text-sm">PROGRAM STUDI KESEHATAN MASYARAKAT PROGRAM SARJANA</p>
           <p className="text-sm">FAKULTAS ILMU KESEHATAN UPN &ldquo;VETERAN&rdquo; JAKARTA</p>
-          <img src="/kop-surat.jpg" alt="KOP UPN Veteran Jakarta" className="mx-auto mb-2 max-h-24 w-auto max-w-full" />
+          <img src="/kop-surat.jpg" alt="KOP UPN Veteran Jakarta" style={{ display: 'block', margin: '0 auto 0.5rem', maxWidth: '100%', maxHeight: '100px', width: 'auto', height: 'auto' }} />
           <p className="text-sm font-semibold">
             SEMESTER <input value={session.semester} onChange={(e) => onUpdate({ ...session, semester: e.target.value })} className="bg-transparent border-b border-gray-400 w-20 text-center font-bold" /> T.A. <input value={session.ta} onChange={(e) => onUpdate({ ...session, ta: e.target.value })} className="bg-transparent border-b border-gray-400 w-28 text-center font-bold" />
           </p>
@@ -652,7 +652,7 @@ function PreviewAll({ session }: { session: Session }) {
     offscreen.style.fontFamily = "'Times New Roman', Georgia, serif"
     offscreen.style.fontSize = '12pt'
     offscreen.style.lineHeight = '1.5'
-    offscreen.style.padding = '25mm 30mm'
+    offscreen.style.padding = '30mm 30mm 25mm'
     document.body.appendChild(offscreen)
 
     const pdf = new jsPDF('p', 'mm', 'a4')
@@ -779,8 +779,8 @@ function PreviewAll({ session }: { session: Session }) {
 
       <div ref={previewRef} className="print-area bg-white p-8 md:p-12 print:p-0 space-y-10 print:space-y-0" style={{ fontFamily: "'Times New Roman', Georgia, serif" }}>
         {/* ===== BERITA ACARA ===== */}
-        <div className="text-center border-b-2 border-black pb-4">
-          <img src="/kop-surat.jpg" alt="KOP UPN Veteran Jakarta" className="mx-auto mb-2 max-h-24 w-auto max-w-full" />
+        <div className="text-center border-b-2 border-black pb-4 pt-2">
+          <img src="/kop-surat.jpg" alt="KOP UPN Veteran Jakarta" style={{ display: 'block', margin: '0 auto 0.5rem', maxWidth: '100%', maxHeight: '100px', width: 'auto', height: 'auto' }} />
           <h1 className="text-xl font-bold text-center uppercase">Berita Acara Sidang Skripsi</h1>
           <p className="text-sm text-center">PROGRAM STUDI KESEHATAN MASYARAKAT PROGRAM SARJANA</p>
           <p className="text-sm text-center">FAKULTAS ILMU KESEHATAN UPN &ldquo;VETERAN&rdquo; JAKARTA</p>
@@ -841,9 +841,9 @@ function PreviewAll({ session }: { session: Session }) {
           const labels = ['Penguji I/Ketua Penguji', 'Penguji II/Anggota Penguji', 'Penguji III/Anggota Penguji']
           const namaPenguji = [session.penguji1, session.penguji2, session.penguji3]
           return (
-            <div key={examIdx} className="mt-12 page-break">
-              <div className="text-center border-b-2 border-black pb-4">
-                <img src="/kop-surat.jpg" alt="KOP UPN Veteran Jakarta" className="mx-auto mb-2 max-h-24 w-auto max-w-full" />
+            <div key={examIdx} className="page-break">
+              <div className="text-center border-b-2 border-black pb-4 pt-2">
+                <img src="/kop-surat.jpg" alt="KOP UPN Veteran Jakarta" style={{ display: 'block', margin: '0 auto 0.5rem', maxWidth: '100%', maxHeight: '100px', width: 'auto', height: 'auto' }} />
                 <h1 className="text-xl font-bold text-center uppercase">Formulir Penilaian Sidang Skripsi</h1>
                 <p className="text-sm text-center">PROGRAM STUDI KESEHATAN MASYARAKAT PROGRAM SARJANA</p>
                 <p className="text-sm text-center">FAKULTAS ILMU KESEHATAN UPN &ldquo;VETERAN&rdquo; JAKARTA</p>
@@ -914,9 +914,9 @@ function PreviewAll({ session }: { session: Session }) {
         })}
 
         {/* ===== REKAPITULASI NILAI ===== */}
-        <div className="mt-12 page-break">
-          <div className="text-center border-b-2 border-black pb-4">
-            <img src="/kop-surat.jpg" alt="KOP UPN Veteran Jakarta" className="mx-auto mb-2 max-h-24 w-auto max-w-full" />
+        <div className="page-break">
+          <div className="text-center border-b-2 border-black pb-4 pt-2">
+            <img src="/kop-surat.jpg" alt="KOP UPN Veteran Jakarta" style={{ display: 'block', margin: '0 auto 0.5rem', maxWidth: '100%', maxHeight: '100px', width: 'auto', height: 'auto' }} />
             <h1 className="text-xl font-bold text-center uppercase">Rekapitulasi Nilai Sidang Skripsi</h1>
             <p className="text-sm text-center">PROGRAM STUDI KESEHATAN MASYARAKAT PROGRAM SARJANA</p>
             <p className="text-sm text-center">FAKULTAS ILMU KESEHATAN UPN &ldquo;VETERAN&rdquo; JAKARTA</p>

@@ -5,7 +5,7 @@
 @media print {
   @page {
     size: A4;
-    margin: 25mm 30mm;
+    margin: 30mm 30mm 25mm;
   }
   body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .no-print { display: none !important; }
