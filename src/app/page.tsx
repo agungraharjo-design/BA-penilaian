@@ -50,8 +50,8 @@ export default function Home() {
       penguji3: '',
       decision: 'lulus_perbaikan',
       catatan: '',
-      dekan: 'Dr. Suparni, S.T., MKKK.',
-      nip_dekan: '197705072024212008',
+      koordinator: 'Dr. Suparni, S.T., MKKK.',
+      nip_koordinator: '197705072024212008',
       tanggal_ba: getTodayFormatted(),
       skor_penguji: [
         [null, null, null, null, null, null, null, null, null, null],

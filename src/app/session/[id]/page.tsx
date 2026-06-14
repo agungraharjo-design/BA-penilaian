@@ -307,17 +307,17 @@ function BeritaAcaraForm({ session, onUpdate }: { session: Session; onUpdate: (s
           />
         </p>
         <p className="mt-4">Koordinator Program Studi Kesehatan Masyarakat Program Sarjana</p>
-        <SignatureUpload value={session.ttd_dekan} onChange={(v) => onUpdate({ ...session, ttd_dekan: v })} label="Koordinator Prodi" />
+        <SignatureUpload value={session.ttd_koordinator} onChange={(v) => onUpdate({ ...session, ttd_koordinator: v })} label="Koordinator Prodi" />
         <div className="h-8"></div>
         <input
-          value={session.dekan}
-          onChange={(e) => onUpdate({ ...session, dekan: e.target.value })}
+          value={session.koordinator}
+          onChange={(e) => onUpdate({ ...session, koordinator: e.target.value })}
           className="border-b border-gray-400 bg-transparent text-center font-semibold"
         />
         <br />
         <input
-          value={session.nip_dekan}
-          onChange={(e) => onUpdate({ ...session, nip_dekan: e.target.value })}
+          value={session.nip_koordinator}
+          onChange={(e) => onUpdate({ ...session, nip_koordinator: e.target.value })}
           className="border-b border-gray-400 bg-transparent text-center text-sm"
         />
         <p className="text-xs text-gray-500 mt-2">*) Coret yang tidak perlu</p>
@@ -932,9 +932,9 @@ function PreviewAll({ session }: { session: Session }) {
           <p>Jakarta, {session.tanggal_ba || '______________'}</p>
           <p className="mt-4">Koordinator Program Studi Kesehatan Masyarakat</p>
           <p>Program Sarjana</p>
-          {session.ttd_dekan ? <img src={session.ttd_dekan} alt="TTD Koordinator" className="max-h-16 max-w-32 ml-auto my-2 object-contain" /> : <div className="h-16"></div>}
-          <p className="font-bold">{session.dekan}</p>
-          <p className="text-sm">NIP. {session.nip_dekan}</p>
+          {session.ttd_koordinator ? <img src={session.ttd_koordinator} alt="TTD Koordinator" className="max-h-16 max-w-32 ml-auto my-2 object-contain" /> : <div className="h-16"></div>}
+          <p className="font-bold">{session.koordinator}</p>
+          <p className="text-sm">NIP. {session.nip_koordinator}</p>
         </div>
 
         {/* ===== FORM PENILAIAN (3 examiners) ===== */}

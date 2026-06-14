@@ -40,8 +40,8 @@ export interface BeritaAcara {
   examiners: Examiner[]
   decision: Decision
   catatan: string
-  dekan: string
-  nipDekan: string
+  koordinator: string
+  nipKoordinator: string
   tanggal: string
 }
 
@@ -104,8 +104,8 @@ export interface Session {
   penguji3: string
   decision: Decision
   catatan: string
-  dekan: string
-  nip_dekan: string
+  koordinator: string
+  nip_koordinator: string
   tanggal_ba: string
   skor_penguji: (number | null)[][]
   rekap_entries: RekapEntry[]
@@ -114,7 +114,7 @@ export interface Session {
   ttd_penguji1?: string
   ttd_penguji2?: string
   ttd_penguji3?: string
-  ttd_dekan?: string
+  ttd_koordinator?: string
   pdf_url?: string
   created_at?: string
   updated_at?: string

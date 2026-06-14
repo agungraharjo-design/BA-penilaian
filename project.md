@@ -73,15 +73,15 @@ All form data lives in a single wide table. Each row = one thesis defense sessio
 | `penguji1/2/3`    | `text`                    | Examiner names                      |
 | `decision`        | `text`                    | `lulus_perbaikan` or `tidak_lulus_ulang` |
 | `catatan`         | `text`                    | Notes (Hasil Pelaksanaan)           |
-| `dekan`           | `text`                    | Koordinator Prodi name (was Dean)   |
-| `nip_dekan`       | `text`                    | Koordinator Prodi NIP (was Dean NIP)|
+| `koordinator`     | `text`                    | Koordinator Prodi name (was Dean)   |
+| `nip_koordinator` | `text`                    | Koordinator Prodi NIP (was Dean NIP)|
 | `tanggal_ba`      | `text`                    | Date for BA signature               |
 | `skor_penguji`    | `jsonb`                   | `[[s1..s10], [s1..s10], [s1..s10]]` |
 | `rekap_entries`   | `jsonb`                   | Array of `{nama, nim, ...}`         |
 | `peserta_hadir`   | `jsonb`                   | Attendance list (peserta)           |
 | `audience_hadir`  | `jsonb`                   | Attendance list (audience)          |
 | `ttd_penguji1/2/3`| `text`                    | Base64 PNG signature images         |
-| `ttd_dekan`       | `text`                    | Base64 PNG koordinator signature    |
+| `ttd_koordinator`  | `text`                    | Base64 PNG koordinator signature    |
 | `pdf_url`         | `text`                    | Public URL of saved PDF in Storage  |
 | `created_at`      | `timestamptz`             | Auto-set                            |
 | `updated_at`      | `timestamptz`             | Updated on each upsert              |
