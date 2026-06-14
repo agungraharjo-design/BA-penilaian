@@ -38,6 +38,7 @@ export default function Home() {
       nama: nama.trim(),
       nim: nim.trim(),
       judul_skripsi: '',
+      peminatan: '',
       pembimbing: '',
       hari_tanggal: getTodayFormatted(),
       waktu: '09.00',
@@ -49,8 +50,8 @@ export default function Home() {
       penguji3: '',
       decision: 'lulus_perbaikan',
       catatan: '',
-      dekan: 'Dr. Sri Yani, SST. FT. Ftr., M.Si.',
-      nip_dekan: '197406102021212005',
+      dekan: 'Arfian Hamzah, S.Ft., Ftr., M.Erg., AIFO.',
+      nip_dekan: '198904272019031011',
       tanggal_ba: getTodayFormatted(),
       skor_penguji: [
         [null, null, null, null, null, null, null, null, null, null],

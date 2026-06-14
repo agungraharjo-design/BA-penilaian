@@ -62,6 +62,7 @@ All form data lives in a single wide table. Each row = one thesis defense sessio
 | `id`              | `uuid` PK                 | Client-generated via `crypto.randomUUID()` |
 | `nama`            | `text`                    | Student name                        |
 | `nim`             | `text`                    | Student ID                          |
+| `peminatan`       | `text`                    | Peminatan (Epidemiologi/Kesling/KKIA/Promkes) |
 | `judul_skripsi`   | `text`                    | Thesis title                        |
 | `pembimbing`      | `text`                    | Advisor name                        |
 | `hari_tanggal`    | `text`                    | Day, date of defense                |
@@ -71,16 +72,16 @@ All form data lives in a single wide table. Each row = one thesis defense sessio
 | `ta`              | `text`                    | Editable academic year field        |
 | `penguji1/2/3`    | `text`                    | Examiner names                      |
 | `decision`        | `text`                    | `lulus_perbaikan` or `tidak_lulus_ulang` |
-| `catatan`         | `text`                    | Notes                               |
-| `dekan`           | `text`                    | Dean name                           |
-| `nip_dekan`       | `text`                    | Dean NIP                            |
+| `catatan`         | `text`                    | Notes (Hasil Pelaksanaan)           |
+| `dekan`           | `text`                    | Koordinator Prodi name (was Dean)   |
+| `nip_dekan`       | `text`                    | Koordinator Prodi NIP (was Dean NIP)|
 | `tanggal_ba`      | `text`                    | Date for BA signature               |
 | `skor_penguji`    | `jsonb`                   | `[[s1..s10], [s1..s10], [s1..s10]]` |
 | `rekap_entries`   | `jsonb`                   | Array of `{nama, nim, ...}`         |
 | `peserta_hadir`   | `jsonb`                   | Attendance list (peserta)           |
 | `audience_hadir`  | `jsonb`                   | Attendance list (audience)          |
 | `ttd_penguji1/2/3`| `text`                    | Base64 PNG signature images         |
-| `ttd_dekan`       | `text`                    | Base64 PNG dean signature           |
+| `ttd_dekan`       | `text`                    | Base64 PNG koordinator signature    |
 | `pdf_url`         | `text`                    | Public URL of saved PDF in Storage  |
 | `created_at`      | `timestamptz`             | Auto-set                            |
 | `updated_at`      | `timestamptz`             | Updated on each upsert              |
@@ -92,6 +93,7 @@ CREATE TABLE sessions (
   id UUID PRIMARY KEY,
   nama TEXT NOT NULL,
   nim TEXT NOT NULL,
+  peminatan TEXT DEFAULT '',
   judul_skripsi TEXT DEFAULT '',
   pembimbing TEXT DEFAULT '',
   hari_tanggal TEXT DEFAULT '',
@@ -163,6 +165,8 @@ Defined in `src/types/index.ts` as `RUBRIC_CRITERIA` array — 10 criteria with 
 
 Final score formula: `(∑(skor × bobot) / 400) × 100`
 
+Rekap: `Rerata = (Penguji I + II + III) / 3`, `Total (55%) = Rerata × 0.55`
+
 ---
 
 ## PDF Generation Details
@@ -190,9 +194,9 @@ Final score formula: `(∑(skor × bobot) / 400) × 100`
 | `/session/[id]`     | `SessionPage`    | 7-tab form interface + Preview       |
 
 ### Tabs
-1. **Berita Acara** — Minutes, decision, examiner table, dekan signature
+1. **Laporan Sidang Skripsi** — Minutes, decision, examiner table, koordinator prodi signature
 2. **Penilaian Penguji I/II/III** — Rubric scoring (skor 1-4) per examiner
-3. **Rekapitulasi Nilai** — Aggregated scores + grades
+3. **Rekapitulasi Nilai** — Aggregated scores + Rerata + 55% grade
 4. **Daftar Hadir** — Participant + audience attendance tables
 5. **Preview & PDF** — WYSIWYG print preview + Cetak/Download buttons
 
@@ -201,8 +205,8 @@ Final score formula: `(∑(skor × bobot) / 400) × 100`
 ## Signature Upload
 
 The `SignatureUpload` component allows uploading signature images for:
-- Each penguji (in Tim Penguji table of BA, Penilaian, and Rekap forms)
-- Dekan (in BA and Rekap forms)
+- Each penguji (in Tim Penguji table of Laporan Sidang, Penilaian, and Rekap forms)
+- Koordinator Prodi (in Laporan Sidang form)
 
 **Storage flow:**
 1. User selects image file

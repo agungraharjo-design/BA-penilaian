@@ -91,6 +91,7 @@ export interface Session {
   id: string
   nama: string
   nim: string
+  peminatan: string
   judul_skripsi: string
   pembimbing: string
   hari_tanggal: string
