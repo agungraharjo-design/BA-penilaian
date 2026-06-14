@@ -50,8 +50,8 @@ export default function Home() {
       penguji3: '',
       decision: 'lulus_perbaikan',
       catatan: '',
-      dekan: 'Arfian Hamzah, S.Ft., Ftr., M.Erg., AIFO.',
-      nip_dekan: '198904272019031011',
+      dekan: 'Dr. Suparni, S.T., MKKK.',
+      nip_dekan: '197705072024212008',
       tanggal_ba: getTodayFormatted(),
       skor_penguji: [
         [null, null, null, null, null, null, null, null, null, null],
