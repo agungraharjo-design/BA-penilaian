@@ -267,16 +267,15 @@ function BeritaAcaraForm({ session, onUpdate }: { session: Session; onUpdate: (s
             <tr>
               <th className="w-12">NO</th>
               <th>NAMA PENGUJI</th>
-              <th className="w-28">NIP</th>
               <th>JABATAN</th>
               <th className="w-24">TANDA TANGAN</th>
             </tr>
           </thead>
           <tbody>
               {[
-                { no: 1, field: 'penguji1', nipField: 'nip_penguji1', jabatan: 'Ketua Penguji', ttdField: 'ttd_penguji1' as const },
-                { no: 2, field: 'penguji2', nipField: 'nip_penguji2', jabatan: 'Anggota Penguji I', ttdField: 'ttd_penguji2' as const },
-                { no: 3, field: 'penguji3', nipField: 'nip_penguji3', jabatan: 'Anggota Penguji II', ttdField: 'ttd_penguji3' as const },
+                { no: 1, field: 'penguji1', jabatan: 'Ketua Penguji', ttdField: 'ttd_penguji1' as const },
+                { no: 2, field: 'penguji2', jabatan: 'Anggota Penguji I', ttdField: 'ttd_penguji2' as const },
+                { no: 3, field: 'penguji3', jabatan: 'Anggota Penguji II', ttdField: 'ttd_penguji3' as const },
               ].map((p) => (
                 <tr key={p.no}>
                   <td className="text-center">{p.no}.</td>
@@ -286,14 +285,6 @@ function BeritaAcaraForm({ session, onUpdate }: { session: Session; onUpdate: (s
                       onChange={(e) => onUpdate({ ...session, [p.field]: e.target.value })}
                       className="w-full bg-transparent"
                       placeholder="Nama dosen"
-                    />
-                  </td>
-                  <td>
-                    <input
-                      value={(session as any)[p.nipField] || ''}
-                      onChange={(e) => onUpdate({ ...session, [p.nipField]: e.target.value })}
-                      className="w-full bg-transparent text-sm"
-                      placeholder="NIP"
                     />
                   </td>
                   <td>{p.jabatan}</td>
@@ -975,11 +966,11 @@ function PreviewAll({ session }: { session: Session }) {
         <div className="mt-6">
           <h3 className="font-bold text-center">TIM PENGUJI</h3>
           <table className="template-table mt-1">
-            <thead><tr><th className="w-12">NO</th><th>NAMA PENGUJI</th><th className="w-28">NIP</th><th>JABATAN</th><th className="w-24">TANDA TANGAN</th></tr></thead>
+            <thead><tr><th className="w-12">NO</th><th>NAMA PENGUJI</th><th>JABATAN</th><th className="w-24">TANDA TANGAN</th></tr></thead>
             <tbody>
-              <tr><td className="text-center">1.</td><td>{session.penguji1 || '______________'}</td><td>{session.nip_penguji1 || '______________'}</td><td>Ketua Penguji</td><td className="text-center align-middle">{session.ttd_penguji1 ? <img src={session.ttd_penguji1} alt="TTD" className="max-h-12 max-w-24 mx-auto object-contain" /> : ''}</td></tr>
-              <tr><td className="text-center">2.</td><td>{session.penguji2 || '______________'}</td><td>{session.nip_penguji2 || '______________'}</td><td>Anggota Penguji I</td><td className="text-center align-middle">{session.ttd_penguji2 ? <img src={session.ttd_penguji2} alt="TTD" className="max-h-12 max-w-24 mx-auto object-contain" /> : ''}</td></tr>
-              <tr><td className="text-center">3.</td><td>{session.penguji3 || '______________'}</td><td>{session.nip_penguji3 || '______________'}</td><td>Anggota Penguji II</td><td className="text-center align-middle">{session.ttd_penguji3 ? <img src={session.ttd_penguji3} alt="TTD" className="max-h-12 max-w-24 mx-auto object-contain" /> : ''}</td></tr>
+              <tr><td className="text-center">1.</td><td>{session.penguji1 || '______________'}</td><td>Ketua Penguji</td><td className="text-center align-middle">{session.ttd_penguji1 ? <img src={session.ttd_penguji1} alt="TTD" className="max-h-12 max-w-24 mx-auto object-contain" /> : ''}</td></tr>
+              <tr><td className="text-center">2.</td><td>{session.penguji2 || '______________'}</td><td>Anggota Penguji I</td><td className="text-center align-middle">{session.ttd_penguji2 ? <img src={session.ttd_penguji2} alt="TTD" className="max-h-12 max-w-24 mx-auto object-contain" /> : ''}</td></tr>
+              <tr><td className="text-center">3.</td><td>{session.penguji3 || '______________'}</td><td>Anggota Penguji II</td><td className="text-center align-middle">{session.ttd_penguji3 ? <img src={session.ttd_penguji3} alt="TTD" className="max-h-12 max-w-24 mx-auto object-contain" /> : ''}</td></tr>
               <tr><td className="text-center">3.</td><td>{session.penguji3 || '______________'}</td><td>Anggota Penguji II</td><td className="text-center align-middle">{session.ttd_penguji3 ? <img src={session.ttd_penguji3} alt="TTD" className="max-h-12 max-w-24 mx-auto object-contain" /> : ''}</td></tr>
             </tbody>
           </table>
