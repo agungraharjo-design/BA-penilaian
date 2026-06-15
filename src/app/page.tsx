@@ -12,6 +12,8 @@ export default function Home() {
   const [loading, setLoading] = useState(true)
   const [nama, setNama] = useState('')
   const [nim, setNim] = useState('')
+  const [defaultSemester, setDefaultSemester] = useState('Genap')
+  const [defaultTa, setDefaultTa] = useState('2025/2026')
 
   useEffect(() => {
     loadSessions()
@@ -43,11 +45,14 @@ export default function Home() {
       hari_tanggal: getTodayFormatted(),
       waktu: '09.00',
       tempat: '305 Gedung A',
-      semester: 'Genap',
-      ta: '2025/2026',
+      semester: defaultSemester,
+      ta: defaultTa,
       penguji1: '',
+      nip_penguji1: '',
       penguji2: '',
+      nip_penguji2: '',
       penguji3: '',
+      nip_penguji3: '',
       decision: 'lulus_perbaikan',
       catatan: '',
       koordinator: 'Dr. Suparni, S.T., MKKK.',
@@ -77,7 +82,7 @@ export default function Home() {
         <p className="text-center text-sm text-gray-600 mb-6">
           Program Studi Kesehatan Masyarakat Program Sarjana<br />
           Fakultas Ilmu Kesehatan UPN "Veteran" Jakarta<br />
-          Semester Genap T.A. 2025/2026
+          Semester <input value={defaultSemester} onChange={(e) => setDefaultSemester(e.target.value)} className="bg-transparent border-b border-gray-400 w-20 text-center text-sm font-bold" /> T.A. <input value={defaultTa} onChange={(e) => setDefaultTa(e.target.value)} className="bg-transparent border-b border-gray-400 w-28 text-center text-sm font-bold" />
         </p>
 
         <div className="border-t pt-6">

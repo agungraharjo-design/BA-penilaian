@@ -213,7 +213,7 @@ function BeritaAcaraForm({ session, onUpdate }: { session: Session; onUpdate: (s
           <tr>
             <td>Peminatan</td>
             <td>:</td>
-            <td><input value={session.peminatan} onChange={(e) => onUpdate({ ...session, peminatan: e.target.value })} className="w-full border-b border-gray-400 bg-transparent" placeholder="Epidemiologi/Kesling/KKIA/Promkes" /></td>
+            <td><input value={session.peminatan} onChange={(e) => onUpdate({ ...session, peminatan: e.target.value })} className="w-full border-b border-gray-400 bg-transparent" placeholder="K3 /Kesling/Epidemiologi/ AKK/Kesehatan Reproduksi" /></td>
           </tr>
         </tbody>
       </table>
@@ -255,6 +255,10 @@ function BeritaAcaraForm({ session, onUpdate }: { session: Session; onUpdate: (s
         </label>
       </div>
 
+      <p className="italic text-sm text-justify">
+        Demikian laporan sidang ini dibuat sebagai laporan selama sidang berlangsung untuk diketahui dan dipergunakan sebagaimana mestinya.
+      </p>
+
       {/* Tim Penguji Table */}
       <div>
         <h3 className="font-bold text-center mb-1">TIM PENGUJI</h3>
@@ -263,15 +267,16 @@ function BeritaAcaraForm({ session, onUpdate }: { session: Session; onUpdate: (s
             <tr>
               <th className="w-12">NO</th>
               <th>NAMA PENGUJI</th>
+              <th className="w-28">NIP</th>
               <th>JABATAN</th>
               <th className="w-24">TANDA TANGAN</th>
             </tr>
           </thead>
           <tbody>
               {[
-                { no: 1, field: 'penguji1', jabatan: 'Ketua Penguji', ttdField: 'ttd_penguji1' as const },
-                { no: 2, field: 'penguji2', jabatan: 'Anggota Penguji I', ttdField: 'ttd_penguji2' as const },
-                { no: 3, field: 'penguji3', jabatan: 'Anggota Penguji II', ttdField: 'ttd_penguji3' as const },
+                { no: 1, field: 'penguji1', nipField: 'nip_penguji1', jabatan: 'Ketua Penguji', ttdField: 'ttd_penguji1' as const },
+                { no: 2, field: 'penguji2', nipField: 'nip_penguji2', jabatan: 'Anggota Penguji I', ttdField: 'ttd_penguji2' as const },
+                { no: 3, field: 'penguji3', nipField: 'nip_penguji3', jabatan: 'Anggota Penguji II', ttdField: 'ttd_penguji3' as const },
               ].map((p) => (
                 <tr key={p.no}>
                   <td className="text-center">{p.no}.</td>
@@ -281,6 +286,14 @@ function BeritaAcaraForm({ session, onUpdate }: { session: Session; onUpdate: (s
                       onChange={(e) => onUpdate({ ...session, [p.field]: e.target.value })}
                       className="w-full bg-transparent"
                       placeholder="Nama dosen"
+                    />
+                  </td>
+                  <td>
+                    <input
+                      value={(session as any)[p.nipField] || ''}
+                      onChange={(e) => onUpdate({ ...session, [p.nipField]: e.target.value })}
+                      className="w-full bg-transparent text-sm"
+                      placeholder="NIP"
                     />
                   </td>
                   <td>{p.jabatan}</td>
@@ -390,7 +403,7 @@ function PenilaianForm({
       </div>
       <div className="flex">
         <span className="w-36">Peminatan</span><span className="w-4">:</span>
-        <input value={session.peminatan} onChange={(e) => onUpdate({ ...session, peminatan: e.target.value })} className="flex-1 border-b border-gray-400 bg-transparent" placeholder="Epidemiologi/Kesling/KKIA/Promkes" />
+        <input value={session.peminatan} onChange={(e) => onUpdate({ ...session, peminatan: e.target.value })} className="flex-1 border-b border-gray-400 bg-transparent" placeholder="K3 /Kesling/Epidemiologi/ AKK/Kesehatan Reproduksi" />
       </div>
       <div className="flex">
         <span className="w-36">Judul Skripsi</span><span className="w-4">:</span>
@@ -469,18 +482,19 @@ function PenilaianForm({
             className="flex-1 border-b border-gray-400 bg-transparent"
           />
         </div>
-        <div className="flex mt-8 justify-end">
-          <div className="text-center w-56">
-            <SignatureUpload
-              value={(session as any)[`ttd_penguji${examinerIndex + 1}`]}
-              onChange={(v) => onUpdate({ ...session, [`ttd_penguji${examinerIndex + 1}`]: v } as any)}
-              label={label}
-            />
-            <div className="h-8"></div>
-            <p>Tanda Tangan</p>
-            <p className="border-t border-black pt-1 font-semibold">{label}</p>
+          <div className="flex mt-8 justify-end">
+            <div className="text-center w-56">
+              <SignatureUpload
+                value={(session as any)[`ttd_penguji${examinerIndex + 1}`]}
+                onChange={(v) => onUpdate({ ...session, [`ttd_penguji${examinerIndex + 1}`]: v } as any)}
+                label={label}
+              />
+              <div className="h-6"></div>
+              <p>Tanda Tangan</p>
+              <p className="border-t border-black pt-1 font-semibold">{label}</p>
+              <p className="text-xs">{session[`nip_penguji${examinerIndex + 1}` as keyof Session] as string || ''}</p>
+            </div>
           </div>
-        </div>
       </div>
     </div>
   )
@@ -509,7 +523,6 @@ function RekapNilaiForm({ session, onUpdate }: { session: Session; onUpdate: (s:
   const jumlah = [nilaiI, nilaiII, nilaiIII].reduce((s: number, v) => s + (v ?? 0), 0)
   const count = [nilaiI, nilaiII, nilaiIII].filter(v => v !== null).length
   const rataRata = count > 0 ? jumlah / count : null
-  const total55 = rataRata !== null ? rataRata * 0.55 : null
 
   return (
     <div className="space-y-4">
@@ -525,7 +538,7 @@ function RekapNilaiForm({ session, onUpdate }: { session: Session; onUpdate: (s:
 
       <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-sm">
         <div className="flex"><span className="w-36">Dosen Pembimbing</span><span className="w-4">:</span><input value={session.pembimbing} onChange={(e) => onUpdate({ ...session, pembimbing: e.target.value })} className="flex-1 border-b border-gray-400 bg-transparent" /></div>
-        <div className="flex"><span className="w-28">Peminatan</span><span className="w-4">:</span><input value={session.peminatan} onChange={(e) => onUpdate({ ...session, peminatan: e.target.value })} className="flex-1 border-b border-gray-400 bg-transparent" placeholder="Epidemiologi/Kesling/KKIA/Promkes" /></div>
+        <div className="flex"><span className="w-28">Peminatan</span><span className="w-4">:</span><input value={session.peminatan} onChange={(e) => onUpdate({ ...session, peminatan: e.target.value })} className="flex-1 border-b border-gray-400 bg-transparent" placeholder="K3 /Kesling/Epidemiologi/ AKK/Kesehatan Reproduksi" /></div>
       </div>
 
       <div className="grid grid-cols-3 gap-x-6 gap-y-1 text-sm">
@@ -549,7 +562,6 @@ function RekapNilaiForm({ session, onUpdate }: { session: Session; onUpdate: (s:
             <th className="w-16">NILAI<br/>PENGUJI II<br/>(Anggota I)</th>
             <th className="w-16">NILAI<br/>PENGUJI III<br/>(Anggota II)</th>
             <th className="w-16">RERATA<br/>NILAI SIDANG<br/>SKRIPSI</th>
-            <th className="w-16">TOTAL HASIL<br/>SIDANG<br/>SKRIPSI (55%)</th>
           </tr>
         </thead>
         <tbody>
@@ -562,19 +574,18 @@ function RekapNilaiForm({ session, onUpdate }: { session: Session; onUpdate: (s:
               <td className="text-center">{nilaiII !== null ? nilaiII.toFixed(2) : ''}</td>
               <td className="text-center">{nilaiIII !== null ? nilaiIII.toFixed(2) : ''}</td>
               <td className="text-center font-bold">{rataRata !== null ? rataRata.toFixed(2) : ''}</td>
-              <td className="text-center font-bold">{total55 !== null ? total55.toFixed(2) : ''}</td>
             </tr>
           ))}
         </tbody>
       </table>
 
-      {/* Signature by 3 examiners */}
+      {/* Signature by 3 examiners with NIP */}
       <div className="mt-8 avoid-break">
         <div className="flex justify-between text-center">
           {[
-            { label: 'Ketua Penguji', nama: session.penguji1, ttd: session.ttd_penguji1 },
-            { label: 'Anggota Penguji I', nama: session.penguji2, ttd: session.ttd_penguji2 },
-            { label: 'Anggota Penguji II', nama: session.penguji3, ttd: session.ttd_penguji3 },
+            { label: 'Ketua Penguji', nama: session.penguji1, nip: session.nip_penguji1, ttd: session.ttd_penguji1 },
+            { label: 'Anggota Penguji I', nama: session.penguji2, nip: session.nip_penguji2, ttd: session.ttd_penguji2 },
+            { label: 'Anggota Penguji II', nama: session.penguji3, nip: session.nip_penguji3, ttd: session.ttd_penguji3 },
           ].map((p, i) => (
             <div key={i} className="w-48">
               <p className="text-sm mb-1">{p.label}</p>
@@ -585,7 +596,7 @@ function RekapNilaiForm({ session, onUpdate }: { session: Session; onUpdate: (s:
               />
               <div className="h-8"></div>
               <p className="border-t border-black pt-1 font-semibold text-sm">{p.nama || '....................'}</p>
-              <p className="text-xs">NIP. ..........................</p>
+              <p className="text-xs">NIP. {p.nip || '..........................'}</p>
             </div>
           ))}
         </div>
@@ -620,6 +631,48 @@ function DaftarHadirForm({ session, onUpdate }: { session: Session; onUpdate: (s
 
   return (
     <div className="space-y-8">
+      {/* DAFTAR HADIR PENGUJI SIDANG SKRIPSI */}
+      <div>
+        <div className="text-center border-b-2 border-black pb-4">
+          <img src="/kop-surat-resize.png" alt="KOP UPN Veteran Jakarta" style={{ display: 'block', margin: '0 auto 0.5rem', maxWidth: '100%', maxHeight: '100px', width: 'auto', height: 'auto' }} />
+          <h1 className="text-xl font-bold uppercase">Daftar Hadir Penguji Sidang Skripsi</h1>
+          <p className="text-sm">PROGRAM STUDI KESEHATAN MASYARAKAT PROGRAM SARJANA</p>
+          <p className="text-sm">FAKULTAS ILMU KESEHATAN UPN &ldquo;VETERAN&rdquo; JAKARTA</p>
+          <p className="text-sm font-semibold">
+            T.A. <input value={session.ta} onChange={(e) => onUpdate({ ...session, ta: e.target.value })} className="bg-transparent border-b border-gray-400 w-28 text-center font-bold" />
+          </p>
+        </div>
+        <table className="w-full mt-2 text-sm">
+          <tbody>
+            <tr><td className="w-32">Nama Mahasiswa</td><td className="w-4">:</td><td><input value={session.nama} onChange={(e) => onUpdate({ ...session, nama: e.target.value })} className="w-full border-b border-gray-400 bg-transparent" /></td></tr>
+            <tr><td>NIM</td><td>:</td><td><input value={session.nim} onChange={(e) => onUpdate({ ...session, nim: e.target.value })} className="w-full border-b border-gray-400 bg-transparent" /></td></tr>
+            <tr><td>Tanggal Ujian</td><td>:</td><td><input value={session.hari_tanggal} onChange={(e) => onUpdate({ ...session, hari_tanggal: e.target.value })} className="w-full border-b border-gray-400 bg-transparent" /></td></tr>
+            <tr><td>Peminatan</td><td>:</td><td><input value={session.peminatan} onChange={(e) => onUpdate({ ...session, peminatan: e.target.value })} className="w-full border-b border-gray-400 bg-transparent" placeholder="K3 /Kesling/Epidemiologi/ AKK/Kesehatan Reproduksi" /></td></tr>
+          </tbody>
+        </table>
+        <table className="template-table text-sm mt-4">
+          <thead>
+            <tr><th className="w-8">NO</th><th className="w-28">NIP</th><th>NAMA PENGUJI</th><th>JABATAN</th><th className="w-24">TANDA TANGAN</th></tr>
+          </thead>
+          <tbody>
+            {[
+              { no: 1, field: 'penguji1', nipField: 'nip_penguji1', jabatan: 'Ketua Penguji', ttdField: 'ttd_penguji1' as const },
+              { no: 2, field: 'penguji2', nipField: 'nip_penguji2', jabatan: 'Anggota Penguji I', ttdField: 'ttd_penguji2' as const },
+              { no: 3, field: 'penguji3', nipField: 'nip_penguji3', jabatan: 'Anggota Penguji II', ttdField: 'ttd_penguji3' as const },
+            ].map((p) => (
+              <tr key={p.no}>
+                <td className="text-center">{p.no}.</td>
+                <td><input value={(session as any)[p.nipField] || ''} onChange={(e) => onUpdate({ ...session, [p.nipField]: e.target.value })} className="w-full bg-transparent" placeholder="NIP" /></td>
+                <td><input value={(session as any)[p.field] || ''} onChange={(e) => onUpdate({ ...session, [p.field]: e.target.value })} className="w-full bg-transparent" placeholder="Nama dosen" /></td>
+                <td>{p.jabatan}</td>
+                <td className="text-center align-middle">
+                  <SignatureUpload value={(session as any)[p.ttdField]} onChange={(v) => onUpdate({ ...session, [p.ttdField]: v })} label={p.jabatan} />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
       {/* DAFTAR HADIR PESERTA */}
       <div>
         <div className="text-center border-b-2 border-black pb-4">
@@ -851,7 +904,7 @@ function PreviewAll({ session }: { session: Session }) {
     const count = scoresByExaminer.filter(e => e.nilaiAkhir > 0).length
     const rataRata = count > 0 ? jumlah / count : 0
     const total55 = rataRata * 0.55
-    return { scoresByExaminer, jumlah, rataRata, total55 }
+    return { scoresByExaminer, jumlah, rataRata }
   }
 
   const calc = calculateAll()
@@ -910,19 +963,23 @@ function PreviewAll({ session }: { session: Session }) {
         )}
 
         <p className="mt-4">
-          Dinyatakan yang bersangkutan{' '}
-          {session.decision === 'lulus_perbaikan'
-            ? '✓ Lulus'
-            : '✓ Tidak Lulus'}
+          Dinyatakan yang bersangkutan:<br />
+          <span className="ml-4">{session.decision === 'lulus_perbaikan' ? '✓' : '○'} Lulus</span><br />
+          <span className="ml-4">{session.decision === 'tidak_lulus_ulang' ? '✓' : '○'} Tidak Lulus</span>
+        </p>
+
+        <p className="italic text-sm text-justify mt-4">
+          Demikian laporan sidang ini dibuat sebagai laporan selama sidang berlangsung untuk diketahui dan dipergunakan sebagaimana mestinya.
         </p>
 
         <div className="mt-6">
           <h3 className="font-bold text-center">TIM PENGUJI</h3>
           <table className="template-table mt-1">
-            <thead><tr><th className="w-12">NO</th><th>NAMA PENGUJI</th><th>JABATAN</th><th className="w-24">TANDA TANGAN</th></tr></thead>
+            <thead><tr><th className="w-12">NO</th><th>NAMA PENGUJI</th><th className="w-28">NIP</th><th>JABATAN</th><th className="w-24">TANDA TANGAN</th></tr></thead>
             <tbody>
-              <tr><td className="text-center">1.</td><td>{session.penguji1 || '______________'}</td><td>Ketua Penguji</td><td className="text-center align-middle">{session.ttd_penguji1 ? <img src={session.ttd_penguji1} alt="TTD" className="max-h-12 max-w-24 mx-auto object-contain" /> : ''}</td></tr>
-              <tr><td className="text-center">2.</td><td>{session.penguji2 || '______________'}</td><td>Anggota Penguji I</td><td className="text-center align-middle">{session.ttd_penguji2 ? <img src={session.ttd_penguji2} alt="TTD" className="max-h-12 max-w-24 mx-auto object-contain" /> : ''}</td></tr>
+              <tr><td className="text-center">1.</td><td>{session.penguji1 || '______________'}</td><td>{session.nip_penguji1 || '______________'}</td><td>Ketua Penguji</td><td className="text-center align-middle">{session.ttd_penguji1 ? <img src={session.ttd_penguji1} alt="TTD" className="max-h-12 max-w-24 mx-auto object-contain" /> : ''}</td></tr>
+              <tr><td className="text-center">2.</td><td>{session.penguji2 || '______________'}</td><td>{session.nip_penguji2 || '______________'}</td><td>Anggota Penguji I</td><td className="text-center align-middle">{session.ttd_penguji2 ? <img src={session.ttd_penguji2} alt="TTD" className="max-h-12 max-w-24 mx-auto object-contain" /> : ''}</td></tr>
+              <tr><td className="text-center">3.</td><td>{session.penguji3 || '______________'}</td><td>{session.nip_penguji3 || '______________'}</td><td>Anggota Penguji II</td><td className="text-center align-middle">{session.ttd_penguji3 ? <img src={session.ttd_penguji3} alt="TTD" className="max-h-12 max-w-24 mx-auto object-contain" /> : ''}</td></tr>
               <tr><td className="text-center">3.</td><td>{session.penguji3 || '______________'}</td><td>Anggota Penguji II</td><td className="text-center align-middle">{session.ttd_penguji3 ? <img src={session.ttd_penguji3} alt="TTD" className="max-h-12 max-w-24 mx-auto object-contain" /> : ''}</td></tr>
             </tbody>
           </table>
@@ -1012,6 +1069,7 @@ function PreviewAll({ session }: { session: Session }) {
                     <div className="h-2"></div>
                     <p className="border-t border-black pt-1 font-bold">{labels[examIdx]}</p>
                     <p className="text-sm">{namaPenguji[examIdx]}</p>
+                    <p className="text-xs">NIP. {session[`nip_penguji${examIdx + 1}` as keyof Session] as string || ''}</p>
                   </div>
                 </div>
               </div>
@@ -1042,7 +1100,7 @@ function PreviewAll({ session }: { session: Session }) {
               <tr>
                 <th className="w-8">NO</th><th>NAMA</th><th className="w-20">NIM</th>
                 <th className="w-16">NILAI<br/>PENGUJI I<br/>(Ketua)</th><th className="w-16">NILAI<br/>PENGUJI II<br/>(Anggota I)</th><th className="w-16">NILAI<br/>PENGUJI III<br/>(Anggota II)</th>
-                <th className="w-16">RERATA<br/>NILAI SIDANG<br/>SKRIPSI</th><th className="w-16">TOTAL HASIL<br/>SIDANG<br/>SKRIPSI (55%)</th>
+                <th className="w-16">RERATA<br/>NILAI SIDANG<br/>SKRIPSI</th>
               </tr>
             </thead>
             <tbody>
@@ -1052,7 +1110,6 @@ function PreviewAll({ session }: { session: Session }) {
                 <td className="text-center">{calc.scoresByExaminer[1].nilaiAkhir > 0 ? calc.scoresByExaminer[1].nilaiAkhir.toFixed(2) : ''}</td>
                 <td className="text-center">{calc.scoresByExaminer[2].nilaiAkhir > 0 ? calc.scoresByExaminer[2].nilaiAkhir.toFixed(2) : ''}</td>
                 <td className="text-center font-bold">{calc.rataRata > 0 ? calc.rataRata.toFixed(2) : ''}</td>
-                <td className="text-center font-bold">{calc.total55 > 0 ? calc.total55.toFixed(2) : ''}</td>
               </tr>
             </tbody>
           </table>
@@ -1060,16 +1117,16 @@ function PreviewAll({ session }: { session: Session }) {
           <div className="mt-10 avoid-break">
             <div className="flex justify-between text-center">
               {[
-                { label: 'Ketua Penguji', nama: session.penguji1, ttd: session.ttd_penguji1 },
-                { label: 'Anggota Penguji I', nama: session.penguji2, ttd: session.ttd_penguji2 },
-                { label: 'Anggota Penguji II', nama: session.penguji3, ttd: session.ttd_penguji3 },
+                { label: 'Ketua Penguji', nama: session.penguji1, nip: session.nip_penguji1, ttd: session.ttd_penguji1 },
+                { label: 'Anggota Penguji I', nama: session.penguji2, nip: session.nip_penguji2, ttd: session.ttd_penguji2 },
+                { label: 'Anggota Penguji II', nama: session.penguji3, nip: session.nip_penguji3, ttd: session.ttd_penguji3 },
               ].map((p, i) => (
                 <div key={i} className="w-48">
                   <p className="text-sm mb-1">{p.label}</p>
                   {p.ttd ? <img src={p.ttd} alt="TTD" className="max-h-14 max-w-28 mx-auto object-contain" /> : <div className="h-14"></div>}
                   <div className="h-8"></div>
                   <p className="border-t border-black pt-1 font-semibold text-sm">{p.nama || '....................'}</p>
-                  <p className="text-xs">NIP. ..........................</p>
+                  <p className="text-xs">NIP. {p.nip || '..........................'}</p>
                 </div>
               ))}
             </div>

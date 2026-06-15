@@ -100,8 +100,11 @@ export interface Session {
   semester: string
   ta: string
   penguji1: string
+  nip_penguji1: string
   penguji2: string
+  nip_penguji2: string
   penguji3: string
+  nip_penguji3: string
   decision: Decision
   catatan: string
   koordinator: string
