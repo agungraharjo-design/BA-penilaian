@@ -1033,7 +1033,6 @@ function PreviewAll({ session }: { session: Session }) {
               <tr><td className="text-center">1.</td><td>{session.penguji1 || '______________'}</td><td>Ketua Penguji</td><td className="text-center align-middle">{session.ttd_penguji1 ? <img src={session.ttd_penguji1} alt="TTD" className="max-h-12 max-w-24 mx-auto object-contain" /> : ''}</td></tr>
               <tr><td className="text-center">2.</td><td>{session.penguji2 || '______________'}</td><td>Anggota Penguji I</td><td className="text-center align-middle">{session.ttd_penguji2 ? <img src={session.ttd_penguji2} alt="TTD" className="max-h-12 max-w-24 mx-auto object-contain" /> : ''}</td></tr>
               <tr><td className="text-center">3.</td><td>{session.penguji3 || '______________'}</td><td>Anggota Penguji II</td><td className="text-center align-middle">{session.ttd_penguji3 ? <img src={session.ttd_penguji3} alt="TTD" className="max-h-12 max-w-24 mx-auto object-contain" /> : ''}</td></tr>
-              <tr><td className="text-center">3.</td><td>{session.penguji3 || '______________'}</td><td>Anggota Penguji II</td><td className="text-center align-middle">{session.ttd_penguji3 ? <img src={session.ttd_penguji3} alt="TTD" className="max-h-12 max-w-24 mx-auto object-contain" /> : ''}</td></tr>
             </tbody>
           </table>
         </div>
