@@ -7,6 +7,7 @@ import { Session, RUBRIC_CRITERIA } from '@/types'
 import {
   calcTotalSkorXBobot, calcNilaiAkhir, calcGrade,
 } from '@/lib/utils'
+import { useAuth } from '@/app/components/AuthProvider'
 
 type Tab = 'berita-acara' | 'penilaian-1' | 'penilaian-2' | 'penilaian-3' | 'rekap-nilai' | 'daftar-hadir' | 'preview'
 
@@ -14,9 +15,10 @@ export default function SessionPage() {
   const params = useParams()
   const sessionId = params.id as string
 
+  const { isDosen } = useAuth()
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState<Tab>('berita-acara')
+  const [activeTab, setActiveTab] = useState<Tab>(isDosen ? 'berita-acara' : 'daftar-hadir')
   const [saving, setSaving] = useState(false)
   const [lastSaved, setLastSaved] = useState<Date | null>(null)
   const [syncStatus, setSyncStatus] = useState<'live' | 'saving' | 'offline'>('live')
@@ -60,7 +62,7 @@ export default function SessionPage() {
   if (loading) return <div className="flex items-center justify-center min-h-[60vh] text-gray-500 font-serif text-lg">Memuat data sidang...</div>
   if (!session) return <div className="flex items-center justify-center min-h-[60vh] text-red-500 font-serif text-lg">Sidang tidak ditemukan</div>
 
-  const tabs: { key: Tab; label: string }[] = [
+  const allTabs: { key: Tab; label: string }[] = [
     { key: 'berita-acara', label: 'Berita Acara' },
     { key: 'penilaian-1', label: 'Penilaian Penguji I' },
     { key: 'penilaian-2', label: 'Penilaian Penguji II' },
@@ -69,6 +71,8 @@ export default function SessionPage() {
     { key: 'daftar-hadir', label: 'Daftar Hadir' },
     { key: 'preview', label: 'Preview & PDF' },
   ]
+  // Mahasiswa hanya bisa melihat Daftar Hadir
+  const tabs = isDosen ? allTabs : allTabs.filter(t => t.key === 'daftar-hadir')
 
   const updateField = (field: string, value: any) => {
     if (!session) return
@@ -119,7 +123,7 @@ export default function SessionPage() {
           <RekapNilaiForm session={session} onUpdate={autoSave} />
         )}
         {activeTab === 'daftar-hadir' && (
-          <DaftarHadirForm session={session} onUpdate={autoSave} />
+          <DaftarHadirForm session={session} onUpdate={autoSave} isDosen={isDosen} sessionId={sessionId} />
         )}
         {activeTab === 'preview' && (
           <PreviewAll session={session} />
@@ -600,70 +604,107 @@ function RekapNilaiForm({ session, onUpdate }: { session: Session; onUpdate: (s:
 }
 
 // ─── DAFTAR HADIR ────────────────────────────────────────────
-function DaftarHadirForm({ session, onUpdate }: { session: Session; onUpdate: (s: Session) => void }) {
-  const peserta = session.peserta_hadir || [{ nama: session.nama, nim: session.nim }]
-  const audience = session.audience_hadir || []
+function DaftarHadirForm({ session, onUpdate, isDosen, sessionId }: { session: Session; onUpdate: (s: Session) => void; isDosen: boolean; sessionId: string }) {
+  // For mahasiswa, use local state + API to avoid RLS rejection
+  const [localPeserta, setLocalPeserta] = useState(session.peserta_hadir || [{ nama: session.nama, nim: session.nim }])
+  const [localAudience, setLocalAudience] = useState(session.audience_hadir || [])
+  const saveTimer = useRef<NodeJS.Timeout | null>(null)
+
+  // Sync local state when session changes (e.g., from realtime)
+  useEffect(() => {
+    setLocalPeserta(session.peserta_hadir || [{ nama: session.nama, nim: session.nim }])
+    setLocalAudience(session.audience_hadir || [])
+  }, [session.peserta_hadir, session.audience_hadir, session.nama, session.nim])
+
+  const peserta = isDosen ? (session.peserta_hadir || [{ nama: session.nama, nim: session.nim }]) : localPeserta
+  const audience = isDosen ? (session.audience_hadir || []) : localAudience
+
+  const persistAttendance = async (newPeserta: typeof localPeserta, newAudience: typeof localAudience) => {
+    if (isDosen) {
+      onUpdate({ ...session, peserta_hadir: newPeserta, audience_hadir: newAudience })
+    } else {
+      // Get auth token and call API
+      const { data: { session: authSession } } = await (supabase.auth as any).getSession()
+      const token = authSession?.access_token
+      if (token) {
+        await fetch('/api/attendance', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify({ sessionId, peserta_hadir: newPeserta, audience_hadir: newAudience }),
+        })
+      }
+    }
+  }
 
   const updatePeserta = (idx: number, field: string, value: string) => {
     const newP = [...peserta]
     newP[idx] = { ...newP[idx], [field]: value }
-    onUpdate({ ...session, peserta_hadir: newP })
+    if (!isDosen) setLocalPeserta(newP)
+    if (saveTimer.current) clearTimeout(saveTimer.current)
+    saveTimer.current = setTimeout(() => persistAttendance(newP, audience), 800)
   }
 
   const updateAudience = (idx: number, field: string, value: string) => {
     const newA = [...audience]
     newA[idx] = { ...newA[idx], [field]: value }
-    onUpdate({ ...session, audience_hadir: newA })
+    if (!isDosen) setLocalAudience(newA)
+    if (saveTimer.current) clearTimeout(saveTimer.current)
+    saveTimer.current = setTimeout(() => persistAttendance(peserta, newA), 800)
   }
 
   const addAudience = () => {
-    onUpdate({ ...session, audience_hadir: [...audience, { nama: '', nim: '' }] })
+    const newA = [...audience, { nama: '', nim: '' }]
+    if (!isDosen) setLocalAudience(newA)
+    if (saveTimer.current) clearTimeout(saveTimer.current)
+    saveTimer.current = setTimeout(() => persistAttendance(peserta, newA), 800)
   }
 
   return (
     <div className="space-y-8">
-      {/* DAFTAR HADIR PENGUJI SIDANG SKRIPSI */}
-      <div>
-        <div className="text-center border-b-2 border-black pb-4">
-          <img src="/kop-surat-resize.png" alt="KOP UPN Veteran Jakarta" style={{ display: 'block', margin: '0 auto 0.5rem', maxWidth: '100%', maxHeight: '100px', width: 'auto', height: 'auto' }} />
-          <h1 className="text-xl font-bold uppercase">Daftar Hadir Penguji Sidang Skripsi</h1>
-          <p className="text-sm">PROGRAM STUDI KESEHATAN MASYARAKAT PROGRAM SARJANA</p>
-          <p className="text-sm">FAKULTAS ILMU KESEHATAN UPN &ldquo;VETERAN&rdquo; JAKARTA</p>
-          <p className="text-sm font-semibold">
-            T.A. <input value={session.ta} onChange={(e) => onUpdate({ ...session, ta: e.target.value })} className="bg-transparent border-b border-gray-400 w-28 text-center font-bold" />
-          </p>
+      {/* DAFTAR HADIR PENGUJI SIDANG SKRIPSI — only for dosen */}
+      {isDosen && (
+        <div>
+          <div className="text-center border-b-2 border-black pb-4">
+            <img src="/kop-surat-resize.png" alt="KOP UPN Veteran Jakarta" style={{ display: 'block', margin: '0 auto 0.5rem', maxWidth: '100%', maxHeight: '100px', width: 'auto', height: 'auto' }} />
+            <h1 className="text-xl font-bold uppercase">Daftar Hadir Penguji Sidang Skripsi</h1>
+            <p className="text-sm">PROGRAM STUDI KESEHATAN MASYARAKAT PROGRAM SARJANA</p>
+            <p className="text-sm">FAKULTAS ILMU KESEHATAN UPN &ldquo;VETERAN&rdquo; JAKARTA</p>
+            <p className="text-sm font-semibold">
+              T.A. <input value={session.ta} onChange={(e) => onUpdate({ ...session, ta: e.target.value })} className="bg-transparent border-b border-gray-400 w-28 text-center font-bold" />
+            </p>
+          </div>
+          <table className="w-full mt-2 text-sm">
+            <tbody>
+              <tr><td className="w-32">Nama Mahasiswa</td><td className="w-4">:</td><td><input value={session.nama} onChange={(e) => onUpdate({ ...session, nama: e.target.value })} className="w-full border-b border-gray-400 bg-transparent" /></td></tr>
+              <tr><td>NIM</td><td>:</td><td><input value={session.nim} onChange={(e) => onUpdate({ ...session, nim: e.target.value })} className="w-full border-b border-gray-400 bg-transparent" /></td></tr>
+              <tr><td>Tanggal Ujian</td><td>:</td><td><input value={session.hari_tanggal} onChange={(e) => onUpdate({ ...session, hari_tanggal: e.target.value })} className="w-full border-b border-gray-400 bg-transparent" /></td></tr>
+              <tr><td>Peminatan</td><td>:</td><td><input value={session.peminatan} onChange={(e) => onUpdate({ ...session, peminatan: e.target.value })} className="w-full border-b border-gray-400 bg-transparent" placeholder="K3 /Kesling/Epidemiologi/ AKK/Kesehatan Reproduksi" /></td></tr>
+            </tbody>
+          </table>
+          <table className="template-table text-sm mt-4">
+            <thead>
+              <tr><th className="w-8">NO</th><th className="w-28">NIP</th><th>NAMA PENGUJI</th><th>JABATAN</th><th className="w-24">TANDA TANGAN</th></tr>
+            </thead>
+            <tbody>
+              {[
+                { no: 1, field: 'penguji1', nipField: 'nip_penguji1', jabatan: 'Ketua Penguji', ttdField: 'ttd_penguji1' as const },
+                { no: 2, field: 'penguji2', nipField: 'nip_penguji2', jabatan: 'Anggota Penguji I', ttdField: 'ttd_penguji2' as const },
+                { no: 3, field: 'penguji3', nipField: 'nip_penguji3', jabatan: 'Anggota Penguji II', ttdField: 'ttd_penguji3' as const },
+              ].map((p) => (
+                <tr key={p.no}>
+                  <td className="text-center">{p.no}.</td>
+                  <td><input value={(session as any)[p.nipField] || ''} onChange={(e) => onUpdate({ ...session, [p.nipField]: e.target.value })} className="w-full bg-transparent" placeholder="NIP" /></td>
+                  <td><input value={(session as any)[p.field] || ''} onChange={(e) => onUpdate({ ...session, [p.field]: e.target.value })} className="w-full bg-transparent" placeholder="Nama dosen" /></td>
+                  <td>{p.jabatan}</td>
+                  <td className="text-center align-middle">
+                    <SignatureUpload value={(session as any)[p.ttdField]} onChange={(v) => onUpdate({ ...session, [p.ttdField]: v })} label={p.jabatan} />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
-        <table className="w-full mt-2 text-sm">
-          <tbody>
-            <tr><td className="w-32">Nama Mahasiswa</td><td className="w-4">:</td><td><input value={session.nama} onChange={(e) => onUpdate({ ...session, nama: e.target.value })} className="w-full border-b border-gray-400 bg-transparent" /></td></tr>
-            <tr><td>NIM</td><td>:</td><td><input value={session.nim} onChange={(e) => onUpdate({ ...session, nim: e.target.value })} className="w-full border-b border-gray-400 bg-transparent" /></td></tr>
-            <tr><td>Tanggal Ujian</td><td>:</td><td><input value={session.hari_tanggal} onChange={(e) => onUpdate({ ...session, hari_tanggal: e.target.value })} className="w-full border-b border-gray-400 bg-transparent" /></td></tr>
-            <tr><td>Peminatan</td><td>:</td><td><input value={session.peminatan} onChange={(e) => onUpdate({ ...session, peminatan: e.target.value })} className="w-full border-b border-gray-400 bg-transparent" placeholder="K3 /Kesling/Epidemiologi/ AKK/Kesehatan Reproduksi" /></td></tr>
-          </tbody>
-        </table>
-        <table className="template-table text-sm mt-4">
-          <thead>
-            <tr><th className="w-8">NO</th><th className="w-28">NIP</th><th>NAMA PENGUJI</th><th>JABATAN</th><th className="w-24">TANDA TANGAN</th></tr>
-          </thead>
-          <tbody>
-            {[
-              { no: 1, field: 'penguji1', nipField: 'nip_penguji1', jabatan: 'Ketua Penguji', ttdField: 'ttd_penguji1' as const },
-              { no: 2, field: 'penguji2', nipField: 'nip_penguji2', jabatan: 'Anggota Penguji I', ttdField: 'ttd_penguji2' as const },
-              { no: 3, field: 'penguji3', nipField: 'nip_penguji3', jabatan: 'Anggota Penguji II', ttdField: 'ttd_penguji3' as const },
-            ].map((p) => (
-              <tr key={p.no}>
-                <td className="text-center">{p.no}.</td>
-                <td><input value={(session as any)[p.nipField] || ''} onChange={(e) => onUpdate({ ...session, [p.nipField]: e.target.value })} className="w-full bg-transparent" placeholder="NIP" /></td>
-                <td><input value={(session as any)[p.field] || ''} onChange={(e) => onUpdate({ ...session, [p.field]: e.target.value })} className="w-full bg-transparent" placeholder="Nama dosen" /></td>
-                <td>{p.jabatan}</td>
-                <td className="text-center align-middle">
-                  <SignatureUpload value={(session as any)[p.ttdField]} onChange={(v) => onUpdate({ ...session, [p.ttdField]: v })} label={p.jabatan} />
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      )}
       {/* DAFTAR HADIR PESERTA */}
       <div>
         <div className="text-center border-b-2 border-black pb-4">
@@ -672,7 +713,7 @@ function DaftarHadirForm({ session, onUpdate }: { session: Session; onUpdate: (s
           <p className="text-sm">PROGRAM STUDI KESEHATAN MASYARAKAT PROGRAM SARJANA</p>
           <p className="text-sm">FAKULTAS ILMU KESEHATAN UPN &ldquo;VETERAN&rdquo; JAKARTA</p>
           <p className="text-sm font-semibold">
-            SEMESTER <input value={session.semester} onChange={(e) => onUpdate({ ...session, semester: e.target.value })} className="bg-transparent border-b border-gray-400 w-20 text-center font-bold" /> T.A. <input value={session.ta} onChange={(e) => onUpdate({ ...session, ta: e.target.value })} className="bg-transparent border-b border-gray-400 w-28 text-center font-bold" />
+            SEMESTER {isDosen ? <input value={session.semester} onChange={(e) => onUpdate({ ...session, semester: e.target.value })} className="bg-transparent border-b border-gray-400 w-20 text-center font-bold" /> : <span className="font-bold">{session.semester}</span>} T.A. {isDosen ? <input value={session.ta} onChange={(e) => onUpdate({ ...session, ta: e.target.value })} className="bg-transparent border-b border-gray-400 w-28 text-center font-bold" /> : <span className="font-bold">{session.ta}</span>}
           </p>
         </div>
         <table className="template-table text-sm mt-4">
@@ -701,7 +742,7 @@ function DaftarHadirForm({ session, onUpdate }: { session: Session; onUpdate: (s
           <p className="text-sm">FAKULTAS ILMU KESEHATAN UPN &ldquo;VETERAN&rdquo; JAKARTA</p>
           <img src="/kop-surat-resize.png" alt="KOP UPN Veteran Jakarta" style={{ display: 'block', margin: '0 auto 0.5rem', maxWidth: '100%', maxHeight: '100px', width: 'auto', height: 'auto' }} />
           <p className="text-sm font-semibold">
-            SEMESTER <input value={session.semester} onChange={(e) => onUpdate({ ...session, semester: e.target.value })} className="bg-transparent border-b border-gray-400 w-20 text-center font-bold" /> T.A. <input value={session.ta} onChange={(e) => onUpdate({ ...session, ta: e.target.value })} className="bg-transparent border-b border-gray-400 w-28 text-center font-bold" />
+            SEMESTER {isDosen ? <input value={session.semester} onChange={(e) => onUpdate({ ...session, semester: e.target.value })} className="bg-transparent border-b border-gray-400 w-20 text-center font-bold" /> : <span className="font-bold">{session.semester}</span>} T.A. {isDosen ? <input value={session.ta} onChange={(e) => onUpdate({ ...session, ta: e.target.value })} className="bg-transparent border-b border-gray-400 w-28 text-center font-bold" /> : <span className="font-bold">{session.ta}</span>}
           </p>
         </div>
         <table className="template-table text-sm mt-4">

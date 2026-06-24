@@ -5,9 +5,11 @@ import { supabase } from '@/lib/supabase'
 import { Session } from '@/types'
 import { generateId, getTodayFormatted } from '@/lib/utils'
 import { useRouter } from 'next/navigation'
+import { useAuth } from '@/app/components/AuthProvider'
 
 export default function Home() {
   const router = useRouter()
+  const { isDosen } = useAuth()
   const [sessions, setSessions] = useState<Session[]>([])
   const [loading, setLoading] = useState(true)
   const [nama, setNama] = useState('')
@@ -85,35 +87,37 @@ export default function Home() {
           Semester <input value={defaultSemester} onChange={(e) => setDefaultSemester(e.target.value)} className="bg-transparent border-b border-gray-400 w-20 text-center text-sm font-bold" /> T.A. <input value={defaultTa} onChange={(e) => setDefaultTa(e.target.value)} className="bg-transparent border-b border-gray-400 w-28 text-center text-sm font-bold" />
         </p>
 
-        <div className="border-t pt-6">
-          <h2 className="text-lg font-semibold mb-4">Buat Sidang Baru</h2>
-          <div className="flex gap-3 items-end">
-            <div className="flex-1">
-              <label className="block text-sm font-medium mb-1">Nama Mahasiswa</label>
-              <input
-                value={nama}
-                onChange={(e) => setNama(e.target.value)}
-                className="w-full border border-gray-300 rounded px-3 py-2 font-serif"
-                placeholder="Nama lengkap"
-              />
+        {isDosen && (
+          <div className="border-t pt-6">
+            <h2 className="text-lg font-semibold mb-4">Buat Sidang Baru</h2>
+            <div className="flex gap-3 items-end">
+              <div className="flex-1">
+                <label className="block text-sm font-medium mb-1">Nama Mahasiswa</label>
+                <input
+                  value={nama}
+                  onChange={(e) => setNama(e.target.value)}
+                  className="w-full border border-gray-300 rounded px-3 py-2 font-serif"
+                  placeholder="Nama lengkap"
+                />
+              </div>
+              <div className="w-48">
+                <label className="block text-sm font-medium mb-1">NIM</label>
+                <input
+                  value={nim}
+                  onChange={(e) => setNim(e.target.value)}
+                  className="w-full border border-gray-300 rounded px-3 py-2 font-serif"
+                  placeholder="NIM"
+                />
+              </div>
+              <button
+                onClick={createNewSession}
+                className="bg-blue-900 text-white px-6 py-2 rounded hover:bg-blue-800 font-sans text-sm font-medium"
+              >
+                + Buat Sidang Baru
+              </button>
             </div>
-            <div className="w-48">
-              <label className="block text-sm font-medium mb-1">NIM</label>
-              <input
-                value={nim}
-                onChange={(e) => setNim(e.target.value)}
-                className="w-full border border-gray-300 rounded px-3 py-2 font-serif"
-                placeholder="NIM"
-              />
-            </div>
-            <button
-              onClick={createNewSession}
-              className="bg-blue-900 text-white px-6 py-2 rounded hover:bg-blue-800 font-sans text-sm font-medium"
-            >
-              + Buat Sidang Baru
-            </button>
           </div>
-        </div>
+        )}
       </div>
 
       <div className="bg-white rounded-lg shadow-md p-6">
