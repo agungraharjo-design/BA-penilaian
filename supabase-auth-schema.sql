@@ -97,3 +97,8 @@ CREATE POLICY "Dosen can delete sessions"
   USING (
     (SELECT role FROM profiles WHERE id = auth.uid()) = 'dosen'
   );
+
+-- Public (unauthenticated) can update attendance for sessions
+CREATE POLICY "Public can update attendance for sessions"
+  ON sessions FOR UPDATE
+  USING (auth.uid() IS NULL);
