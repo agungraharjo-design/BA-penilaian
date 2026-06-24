@@ -130,8 +130,18 @@ export default function PublicAttendancePage() {
     setPeserta([...peserta, { nama: '', nim: '' }])
   }
 
+  const removePeserta = (idx: number) => {
+    setPeserta(peserta.filter((_, i) => i !== idx))
+    debouncedSave()
+  }
+
   const addAudience = () => {
     setAudience([...audience, { nama: '', nim: '' }])
+  }
+
+  const removeAudience = (idx: number) => {
+    setAudience(audience.filter((_, i) => i !== idx))
+    debouncedSave()
   }
 
   if (loading) return <div className="flex items-center justify-center min-h-[60vh] text-gray-500 font-serif text-lg">Memuat...</div>
@@ -179,7 +189,11 @@ export default function PublicAttendancePage() {
                   <td className="text-center align-middle">
                     <SignatureUpload value={p.ttd} onChange={(v) => updatePeserta(i, 'ttd', v)} />
                   </td>
-                  <td></td>
+                  <td className="text-center">
+                    {peserta.length > 1 && (
+                      <button onClick={() => removePeserta(i)} className="no-print text-red-500 text-xs hover:text-red-700" title="Hapus baris">✕</button>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -202,7 +216,9 @@ export default function PublicAttendancePage() {
                   <td className="text-center align-middle">
                     <SignatureUpload value={a.ttd} onChange={(v) => updateAudience(i, 'ttd', v)} />
                   </td>
-                  <td></td>
+                  <td className="text-center">
+                    <button onClick={() => removeAudience(i)} className="no-print text-red-500 text-xs hover:text-red-700" title="Hapus baris">✕</button>
+                  </td>
                 </tr>
               ))}
             </tbody>

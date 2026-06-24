@@ -680,8 +680,22 @@ function DaftarHadirForm({ session, onUpdate, isDosen, sessionId }: { session: S
     saveTimer.current = setTimeout(() => persistAttendance(newP, audience), 800)
   }
 
+  const removePeserta = (idx: number) => {
+    const newP = peserta.filter((_, i) => i !== idx)
+    if (!isDosen) setLocalPeserta(newP)
+    if (saveTimer.current) clearTimeout(saveTimer.current)
+    saveTimer.current = setTimeout(() => persistAttendance(newP, audience), 800)
+  }
+
   const addAudience = () => {
     const newA = [...audience, { nama: '', nim: '' }]
+    if (!isDosen) setLocalAudience(newA)
+    if (saveTimer.current) clearTimeout(saveTimer.current)
+    saveTimer.current = setTimeout(() => persistAttendance(peserta, newA), 800)
+  }
+
+  const removeAudience = (idx: number) => {
+    const newA = audience.filter((_, i) => i !== idx)
     if (!isDosen) setLocalAudience(newA)
     if (saveTimer.current) clearTimeout(saveTimer.current)
     saveTimer.current = setTimeout(() => persistAttendance(peserta, newA), 800)
@@ -757,7 +771,11 @@ function DaftarHadirForm({ session, onUpdate, isDosen, sessionId }: { session: S
                 <td className="text-center align-middle">
                   <SignatureUpload value={(p as any).ttd} onChange={(v) => updatePeserta(i, 'ttd', v)} />
                 </td>
-                <td></td>
+                <td className="text-center">
+                  {peserta.length > 1 && (
+                    <button onClick={() => removePeserta(i)} className="no-print text-red-500 text-xs hover:text-red-700" title="Hapus baris">✕</button>
+                  )}
+                </td>
               </tr>
             ))}
           </tbody>
@@ -789,7 +807,9 @@ function DaftarHadirForm({ session, onUpdate, isDosen, sessionId }: { session: S
                 <td className="text-center align-middle">
                   <SignatureUpload value={(a as any).ttd} onChange={(v) => updateAudience(i, 'ttd', v)} />
                 </td>
-                <td></td>
+                <td className="text-center">
+                  <button onClick={() => removeAudience(i)} className="no-print text-red-500 text-xs hover:text-red-700" title="Hapus baris">✕</button>
+                </td>
               </tr>
             ))}
           </tbody>
