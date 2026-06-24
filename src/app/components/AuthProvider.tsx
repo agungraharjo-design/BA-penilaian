@@ -2,7 +2,7 @@
 
 import { createClient } from '@/lib/supabase/client'
 import { isDosenEmail } from '@/lib/dosen'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import { useEffect, useState, createContext, useContext } from 'react'
 
 interface User { id: string; email?: string; user_metadata?: { full_name?: string }; aud?: string }
@@ -37,6 +37,8 @@ export const useAuth = () => useContext(AuthContext)
 export default function AuthProvider({ children }: { children: React.ReactNode }) {
   const supabase = createClient()
   const router = useRouter()
+  const pathname = usePathname()
+  const isPublicAttendance = pathname.startsWith('/attendance/')
   const [user, setUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
@@ -128,7 +130,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     )
   }
 
-  if (!user) {
+  if (!user && !isPublicAttendance) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
         <div className="w-full max-w-md bg-white rounded-lg shadow-md p-8">
