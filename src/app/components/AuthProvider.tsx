@@ -72,11 +72,12 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
       if (data.role !== expectedRole) {
         const { data: updated } = await supabase
           .from('profiles')
-          .upsert({ id: u.id, role: expectedRole, full_name: data.full_name || check.nama || u.user_metadata?.full_name || email.split('@')[0] })
+          .update({ role: expectedRole, full_name: data.full_name || check.nama || u.user_metadata?.full_name || email.split('@')[0] })
+          .eq('id', u.id)
           .select()
           .single()
         if (updated) setProfile(updated as UserProfile)
-        else setProfile(data as UserProfile)
+        else setProfile({ ...data, role: expectedRole } as UserProfile)
       } else {
         setProfile(data as UserProfile)
       }
@@ -87,12 +88,14 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
         full_name: check.nama || u.user_metadata?.full_name || email.split('@')[0] || '',
         role: expectedRole,
       } as UserProfile
-      const { data: inserted } = await supabase
+      const { data: inserted, error } = await supabase
         .from('profiles')
-        .upsert(newProfile)
+        .insert(newProfile)
         .select()
         .single()
       if (inserted) setProfile(inserted as UserProfile)
+      // If insert fails (e.g. trigger already created), fallback to reading
+      else setProfile({ id: u.id, email, full_name: newProfile.full_name, role: expectedRole } as UserProfile)
     }
   }
 

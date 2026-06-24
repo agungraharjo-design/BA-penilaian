@@ -20,7 +20,12 @@ CREATE POLICY "Users can view own profile"
   ON profiles FOR SELECT
   USING (auth.uid() = id);
 
--- Users can update their own profile (except role)
+-- Users can insert their own profile (needed for upsert from client)
+CREATE POLICY "Users can insert own profile"
+  ON profiles FOR INSERT
+  WITH CHECK (auth.uid() = id);
+
+-- Users can update their own profile
 CREATE POLICY "Users can update own profile"
   ON profiles FOR UPDATE
   USING (auth.uid() = id)
@@ -87,12 +92,3 @@ CREATE POLICY "Dosen can delete sessions"
   USING (
     (SELECT role FROM profiles WHERE id = auth.uid()) = 'dosen'
   );
-
--- 4. Seed dosen roles into profiles (run AFTER users are created)
--- This is handled by the app on first login, or you can use:
--- UPDATE profiles SET role = 'dosen'
--- WHERE email IN (
---   'chandrayanis@upnvj.ac.id',
---   'putripermatasari@upnvj.ac.id',
---   ...full list from src/lib/dosen.ts...
--- );
