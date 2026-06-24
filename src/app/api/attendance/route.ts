@@ -1,27 +1,14 @@
-import { createAdminClient } from '@/lib/supabase/admin'
-import { createClient as createSupabaseClient } from '@supabase/supabase-js'
+import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 
+// Public attendance API — no auth required
 export async function PATCH(request: Request) {
-  const admin = createAdminClient()
-  if (!admin) {
-    return NextResponse.json({ error: 'Server not configured' }, { status: 500 })
-  }
-
-  // Verify JWT from Authorization header
-  const authHeader = request.headers.get('authorization')?.replace('Bearer ', '')
-  if (!authHeader) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
-  // Use anon client to verify the user's JWT
-  const anonClient = createSupabaseClient(
+  const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL || '',
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
   )
-  const { data: { user }, error: authError } = await (anonClient.auth as any).getUser(authHeader)
-  if (authError || !user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
+    return NextResponse.json({ error: 'Server not configured' }, { status: 500 })
   }
 
   const body = await request.json()
@@ -31,12 +18,11 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: 'sessionId required' }, { status: 400 })
   }
 
-  // Only update the attendance fields
   const updateData: Record<string, any> = {}
   if (peserta_hadir !== undefined) updateData.peserta_hadir = peserta_hadir
   if (audience_hadir !== undefined) updateData.audience_hadir = audience_hadir
 
-  const { error } = await admin
+  const { error } = await supabase
     .from('sessions')
     .update(updateData)
     .eq('id', sessionId)

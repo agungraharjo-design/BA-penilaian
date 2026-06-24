@@ -123,7 +123,28 @@ export default function SessionPage() {
           <RekapNilaiForm session={session} onUpdate={autoSave} />
         )}
         {activeTab === 'daftar-hadir' && (
-          <DaftarHadirForm session={session} onUpdate={autoSave} isDosen={isDosen} sessionId={sessionId} />
+          <div>
+            {isDosen && (
+              <div className="no-print mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-semibold text-blue-900">Link Daftar Hadir untuk Mahasiswa</p>
+                  <p className="text-xs text-blue-700">Bagikan link ini ke mahasiswa untuk mengisi daftar hadir (tanpa login).</p>
+                </div>
+                <button
+                  onClick={() => {
+                    const url = `${window.location.origin}/attendance/${sessionId}`
+                    navigator.clipboard.writeText(url).then(() => {
+                      alert('Link Daftar Hadir disalin!')
+                    })
+                  }}
+                  className="bg-blue-900 text-white px-4 py-2 rounded hover:bg-blue-800 font-sans text-sm font-medium shrink-0"
+                >
+                  Salin Link
+                </button>
+              </div>
+            )}
+            <DaftarHadirForm session={session} onUpdate={autoSave} isDosen={isDosen} sessionId={sessionId} />
+          </div>
         )}
         {activeTab === 'preview' && (
           <PreviewAll session={session} />

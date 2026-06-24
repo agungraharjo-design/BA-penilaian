@@ -3,9 +3,11 @@
 import { useAuth } from './AuthProvider'
 
 export default function NavBar() {
-  const { user, profile, isDosen, signOut } = useAuth()
+  const { user, profile, signOut } = useAuth()
 
-  if (!user) return null
+  const isDosen = profile?.role === 'dosen'
+
+  if (!user || !profile) return null
 
   return (
     <nav className="no-print bg-blue-900 text-white px-6 py-3 shadow-md flex items-center justify-between">
