@@ -74,6 +74,11 @@ CREATE POLICY "Authenticated users can read sessions"
   ON sessions FOR SELECT
   USING (auth.uid() IS NOT NULL);
 
+-- Public (unauthenticated) can read sessions for attendance
+CREATE POLICY "Public can read sessions for attendance"
+  ON sessions FOR SELECT
+  USING (auth.uid() IS NULL);
+
 -- Only dosen can insert/update/delete sessions
 CREATE POLICY "Dosen can insert sessions"
   ON sessions FOR INSERT

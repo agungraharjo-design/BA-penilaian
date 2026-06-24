@@ -112,8 +112,8 @@ export interface Session {
   tanggal_ba: string
   skor_penguji: (number | null)[][]
   rekap_entries: RekapEntry[]
-  peserta_hadir: { nama: string; nim: string }[]
-  audience_hadir: { nama: string; nim: string }[]
+  peserta_hadir: { nama: string; nim: string; ttd?: string }[]
+  audience_hadir: { nama: string; nim: string; ttd?: string }[]
   ttd_penguji1?: string
   ttd_penguji2?: string
   ttd_penguji3?: string

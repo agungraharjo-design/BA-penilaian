@@ -11,8 +11,46 @@ interface Session {
   hari_tanggal: string
   semester: string
   ta: string
-  peserta_hadir: { nama: string; nim: string }[]
-  audience_hadir: { nama: string; nim: string }[]
+  peserta_hadir: { nama: string; nim: string; ttd?: string }[]
+  audience_hadir: { nama: string; nim: string; ttd?: string }[]
+}
+
+function SignatureUpload({ value, onChange }: { value?: string; onChange: (v: string) => void }) {
+  const fileRef = useRef<HTMLInputElement>(null)
+
+  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const img = new Image()
+    img.onload = () => {
+      const MAX_W = 400
+      const c = document.createElement('canvas')
+      const scale = Math.min(1, MAX_W / img.width)
+      c.width = Math.round(img.width * scale)
+      c.height = Math.round(img.height * scale)
+      const ctx = c.getContext('2d')!
+      ctx.drawImage(img, 0, 0, c.width, c.height)
+      onChange(c.toDataURL('image/png'))
+    }
+    img.src = URL.createObjectURL(file)
+  }
+
+  return (
+    <div className="flex flex-col items-center gap-1">
+      {value ? (
+        <img src={value} alt="Tanda Tangan" className="max-h-14 max-w-28 object-contain" />
+      ) : (
+        <span className="text-[10px] text-gray-400 italic">(upload)</span>
+      )}
+      <input type="file" accept="image/*" ref={fileRef} onChange={handleFile} className="hidden" />
+      <button type="button" onClick={() => fileRef.current?.click()} className="text-[10px] text-blue-700 underline">
+        {value ? 'Ganti' : 'Upload'}
+      </button>
+      {value && (
+        <button type="button" onClick={() => onChange('')} className="text-[10px] text-red-600 underline">Hapus</button>
+      )}
+    </div>
+  )
 }
 
 export default function PublicAttendancePage() {
@@ -24,8 +62,8 @@ export default function PublicAttendancePage() {
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
 
-  const [peserta, setPeserta] = useState<{ nama: string; nim: string }[]>([])
-  const [audience, setAudience] = useState<{ nama: string; nim: string }[]>([])
+  const [peserta, setPeserta] = useState<{ nama: string; nim: string; ttd?: string }[]>([])
+  const [audience, setAudience] = useState<{ nama: string; nim: string; ttd?: string }[]>([])
   const saveTimer = useRef<NodeJS.Timeout | null>(null)
 
   useEffect(() => {
@@ -43,7 +81,7 @@ export default function PublicAttendancePage() {
       }
       const data = await res.json()
       setSession(data)
-      setPeserta(data.peserta_hadir || [{ nama: '', nim: '' }])
+      setPeserta(data.peserta_hadir || [{ nama: data.nama, nim: data.nim }])
       setAudience(data.audience_hadir || [])
     } catch {
       setError('Gagal memuat data')
@@ -138,7 +176,9 @@ export default function PublicAttendancePage() {
                   <td className="text-center">{i + 1}.</td>
                   <td><input value={p.nama} onChange={(e) => updatePeserta(i, 'nama', e.target.value)} className="w-full bg-transparent" placeholder="Nama" /></td>
                   <td><input value={p.nim} onChange={(e) => updatePeserta(i, 'nim', e.target.value)} className="w-full bg-transparent" placeholder="NIM" /></td>
-                  <td className="h-8"></td>
+                  <td className="text-center align-middle">
+                    <SignatureUpload value={p.ttd} onChange={(v) => updatePeserta(i, 'ttd', v)} />
+                  </td>
                   <td></td>
                 </tr>
               ))}
@@ -159,7 +199,9 @@ export default function PublicAttendancePage() {
                   <td className="text-center">{i + 1}.</td>
                   <td><input value={a.nama} onChange={(e) => updateAudience(i, 'nama', e.target.value)} className="w-full bg-transparent" placeholder="Nama" /></td>
                   <td><input value={a.nim} onChange={(e) => updateAudience(i, 'nim', e.target.value)} className="w-full bg-transparent" placeholder="NIM" /></td>
-                  <td className="h-8"></td>
+                  <td className="text-center align-middle">
+                    <SignatureUpload value={a.ttd} onChange={(v) => updateAudience(i, 'ttd', v)} />
+                  </td>
                   <td></td>
                 </tr>
               ))}

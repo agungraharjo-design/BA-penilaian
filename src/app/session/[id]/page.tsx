@@ -673,6 +673,13 @@ function DaftarHadirForm({ session, onUpdate, isDosen, sessionId }: { session: S
     saveTimer.current = setTimeout(() => persistAttendance(peserta, newA), 800)
   }
 
+  const addPeserta = () => {
+    const newP = [...peserta, { nama: '', nim: '' }]
+    if (!isDosen) setLocalPeserta(newP)
+    if (saveTimer.current) clearTimeout(saveTimer.current)
+    saveTimer.current = setTimeout(() => persistAttendance(newP, audience), 800)
+  }
+
   const addAudience = () => {
     const newA = [...audience, { nama: '', nim: '' }]
     if (!isDosen) setLocalAudience(newA)
@@ -747,12 +754,15 @@ function DaftarHadirForm({ session, onUpdate, isDosen, sessionId }: { session: S
                 <td className="text-center">{i + 1}.</td>
                 <td><input value={p.nama} onChange={(e) => updatePeserta(i, 'nama', e.target.value)} className="w-full bg-transparent" /></td>
                 <td><input value={p.nim} onChange={(e) => updatePeserta(i, 'nim', e.target.value)} className="w-full bg-transparent" /></td>
-                <td className="h-8"></td>
+                <td className="text-center align-middle">
+                  <SignatureUpload value={(p as any).ttd} onChange={(v) => updatePeserta(i, 'ttd', v)} />
+                </td>
                 <td></td>
               </tr>
             ))}
           </tbody>
         </table>
+        <button onClick={addPeserta} className="no-print mt-2 px-3 py-1 bg-gray-100 border rounded text-sm hover:bg-gray-200 font-sans">+ Tambah baris peserta</button>
       </div>
 
       {/* DAFTAR HADIR AUDIENS */}
@@ -776,7 +786,9 @@ function DaftarHadirForm({ session, onUpdate, isDosen, sessionId }: { session: S
                 <td className="text-center">{i + 1}.</td>
                 <td><input value={a.nama} onChange={(e) => updateAudience(i, 'nama', e.target.value)} className="w-full bg-transparent" placeholder="Nama mahasiswa" /></td>
                 <td><input value={a.nim} onChange={(e) => updateAudience(i, 'nim', e.target.value)} className="w-full bg-transparent" placeholder="NIM" /></td>
-                <td className="h-8"></td>
+                <td className="text-center align-middle">
+                  <SignatureUpload value={(a as any).ttd} onChange={(v) => updateAudience(i, 'ttd', v)} />
+                </td>
                 <td></td>
               </tr>
             ))}
