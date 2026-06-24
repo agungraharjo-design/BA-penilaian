@@ -86,14 +86,23 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
 
   async function signInWithGoogle() {
     setAuthLoading(true)
-    const { error } = await (supabase.auth as any).signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
-      },
-    })
-    if (error) {
-      setAuthError(error.message)
+    setAuthError('')
+    try {
+      console.log('Supabase URL:', process.env.NEXT_PUBLIC_SUPABASE_URL)
+      const { error } = await (supabase.auth as any).signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+        },
+      })
+      if (error) {
+        console.error('Google sign-in error:', error)
+        setAuthError('Gagal: ' + error.message)
+        setAuthLoading(false)
+      }
+    } catch (err: any) {
+      console.error('Google sign-in exception:', err)
+      setAuthError('Terjadi kesalahan: ' + (err.message || 'unknown'))
       setAuthLoading(false)
     }
   }

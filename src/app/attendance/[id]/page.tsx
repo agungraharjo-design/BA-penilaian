@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useRef } from 'react'
 import { useParams } from 'next/navigation'
-import { supabase } from '@/lib/supabase'
 
 interface Session {
   id: string
@@ -25,7 +24,6 @@ export default function PublicAttendancePage() {
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
 
-  // Local state for peserta & audience
   const [peserta, setPeserta] = useState<{ nama: string; nim: string }[]>([])
   const [audience, setAudience] = useState<{ nama: string; nim: string }[]>([])
   const saveTimer = useRef<NodeJS.Timeout | null>(null)
@@ -36,31 +34,37 @@ export default function PublicAttendancePage() {
   }, [sessionId])
 
   async function loadSession() {
-    const { data, error } = await supabase
-      .from('sessions')
-      .select('id, nama, nim, peminatan, hari_tanggal, semester, ta, peserta_hadir, audience_hadir')
-      .eq('id', sessionId)
-      .single()
-    if (data) {
-      const s = data as Session
-      setSession(s)
-      setPeserta(s.peserta_hadir || [{ nama: '', nim: '' }])
-      setAudience(s.audience_hadir || [])
-    } else {
-      setError('Sidang tidak ditemukan')
+    try {
+      const res = await fetch(`/api/attendance?id=${sessionId}`)
+      if (!res.ok) {
+        setError('Sidang tidak ditemukan')
+        setLoading(false)
+        return
+      }
+      const data = await res.json()
+      setSession(data)
+      setPeserta(data.peserta_hadir || [{ nama: '', nim: '' }])
+      setAudience(data.audience_hadir || [])
+    } catch {
+      setError('Gagal memuat data')
     }
     setLoading(false)
   }
 
   async function saveAttendance() {
     setSaving(true)
-    const { error } = await supabase
-      .from('sessions')
-      .update({ peserta_hadir: peserta, audience_hadir: audience })
-      .eq('id', sessionId)
-    if (!error) {
-      setSaved(true)
-      setTimeout(() => setSaved(false), 3000)
+    try {
+      const res = await fetch('/api/attendance', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId, peserta_hadir: peserta, audience_hadir: audience }),
+      })
+      if (res.ok) {
+        setSaved(true)
+        setTimeout(() => setSaved(false), 3000)
+      }
+    } catch (err) {
+      console.error('Save error:', err)
     }
     setSaving(false)
   }
@@ -116,14 +120,12 @@ export default function PublicAttendancePage() {
           </tbody>
         </table>
 
-        {/* SAVED indicator */}
         <div className="flex items-center justify-between mb-4">
           <p className="text-xs text-gray-500">Isi data diri Anda pada tabel di bawah, perubahan tersimpan otomatis.</p>
           {saved && <span className="text-xs text-green-700 font-semibold">Tersimpan ✓</span>}
           {saving && <span className="text-xs text-yellow-700 font-semibold">Menyimpan...</span>}
         </div>
 
-        {/* DAFTAR HADIR PESERTA */}
         <div className="mb-8">
           <h2 className="font-bold text-center mb-2">Daftar Hadir Peserta Sidang Skripsi</h2>
           <table className="template-table text-sm">
@@ -145,7 +147,6 @@ export default function PublicAttendancePage() {
           <button onClick={addPeserta} className="no-print mt-2 px-3 py-1 bg-gray-100 border rounded text-sm hover:bg-gray-200 font-sans">+ Tambah baris peserta</button>
         </div>
 
-        {/* DAFTAR HADIR AUDIENS */}
         <div>
           <h2 className="font-bold text-center mb-2">Daftar Hadir Mahasiswa Sebagai Audiens</h2>
           <table className="template-table text-sm">
