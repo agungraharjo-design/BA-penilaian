@@ -1,0 +1,82 @@
+// Jalankan: node seed-dosen.mjs
+// Ganti SERVICE_KEY dengan service_role key dari Supabase Dashboard -> Settings -> API
+
+const SUPABASE_URL = 'https://keshclbfnxnpphefokpg.supabase.co'
+const SERVICE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtlc2hjbGJmbnhucHBoZWZva3BnIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MDI5NDU1MCwiZXhwIjoyMDk1ODcwNTUwfQ.U5PaeWOTdQVDBL5x79919vwvHLyWHwxnDnEsNOoW1MU'
+const DEFAULT_PASSWORD = 'sidangskripsi2026'
+
+const DOSEN_LIST = [
+  { email: 'chandrayanis@upnvj.ac.id', nama: 'Dr. Chandrayani Simanjorang, S.K.M., M.Epid.' },
+  { email: 'putripermatasari@upnvj.ac.id', nama: 'Dr. Putri Permatasari, S.K.M., M.K.M.' },
+  { email: 'dyahutari@upnvj.ac.id', nama: 'Dr. Ns. Dyah Utari, S.Kep., M.K.K.K.' },
+  { email: 'fajarianurcandra@upnvj.ac.id', nama: 'Dr. Fajaria Nurcandra, S.K.M., M.Epid.' },
+  { email: 'agusjoko@upnvj.ac.id', nama: 'Dr. Agus Joko Susanto., S.K.M., M.K.K.K.' },
+  { email: 'afif.amir@upnvj.ac.id', nama: 'Afif Amir Amrullah, S.Kp., M.K.K.K.' },
+  { email: 'marinaerysetiawati@upnvj.ac.id', nama: 'Dra. Marina Ery Setiyawati, M.M.' },
+  { email: 'cahyaarbitera@upnvj.ac.id', nama: 'Cahya Arbitera, S.K.M., M.K.M.' },
+  { email: 'naylakamiliafithri@upnvj.ac.id', nama: 'Nayla Kamilia Fithri, S.K.M., M.P.H.' },
+  { email: 'chahyakharin@upnvj.ac.id', nama: 'Chahya Kharin Herbawani, S.Keb., Bd., M.K.M.' },
+  { email: 'arga.buntara@upnvj.ac.id', nama: 'Arga Buntara, S.K.M., M.P.H.' },
+  { email: 'ulyaqoulankarima@upnvj.ac.id', nama: 'Ulya Qoulan Karima, S.K.M., M.Epid.' },
+  { email: 'adeliasuryani@upnvj.ac.id', nama: 'Adelia Suryani, S.K.M., M.K.M.' },
+  { email: 'agungraharjo@upnvj.ac.id', nama: 'Agung Raharjo, S.K.M., M.K.K.K.' },
+  { email: 'januarariyanto@upnvj.ac.id', nama: 'Dr. Januar Ariyanto, S.K.M., M.Kes.' },
+  { email: 'yunitaraeni@upnvj.ac.id', nama: 'Dr. Yunita Amraeni, S.K.M., M.K.M.' },
+  { email: 'farahuljannah@upnvj.ac.id', nama: 'Farahul Jannah, S.Kep., M.K.K.K.' },
+  { email: 'ismifarah@upnvj.ac.id', nama: 'Ismi Farah Syarifah, M.Sc.' },
+  { email: 'fadliramadhansyah@upnvj.ac.id', nama: 'Muhammad Fadli Ramadhansyah, S.K.M., M.Kes.' },
+  { email: 'promisetyaningrum@upnvj.ac.id', nama: 'Promisetyaningrum Fitria Nurani, S.K.M., M.P.H.' },
+  { email: 'laily.hanifah@upnvj.ac.id', nama: 'Dr. Laily Hanifah, S.K.M, M.Kes.' },
+  { email: 'apriningsih@upnvj.ac.id', nama: 'Dr. Apriningsih, M.K.M.' },
+  { email: 'eenkurnaesih@upnvj.ac.id', nama: 'Dr. Hj. Een Kurnaesih, S.K.M., M.Kes.' },
+  { email: 'riswandywasir@upnvj.ac.id', nama: 'Apt. Riswandy Wasir, S.Farm., M.P.H., PhD.' },
+  { email: 'nsuparni@upnvj.ac.id', nama: 'Dr. Suparni, S.T., M.K.K.' },
+  { email: 'lusytapuri@upnvj.ac.id', nama: 'Dr. Lusyta Puri Ardhiyanti, S.ST., M.Kes.' },
+  { email: 'ayu.adp@upnvj.ac.id', nama: 'Ayu Anggraeni Dyah Purbasari, S.K.M.,MPH(M)' },
+  { email: 'ikamaulidanurrahma@gmail.com', nama: 'Ika Maulida Nurrahma, S.K.M., M.Kes.' },
+  { email: 'fathinahranggaunihardy@gmail.com', nama: 'Dr. Fathinah Ranggauni Hardy, SKM, M.Epid' },
+  { email: 'h.iswanto@upnvj.ac.id', nama: 'Prof. Dr. Acim Heri Iswanto, S.K.M, MARS' },
+]
+
+async function main() {
+  if (SERVICE_KEY === 'ISI_SERVICE_ROLE_KEY_DARI_SUPABASE_DASHBOARD') {
+    console.log('ERROR: Ganti SERVICE_KEY dulu!')
+    console.log('Ambil dari Supabase Dashboard -> Settings -> API -> service_role key')
+    process.exit(1)
+  }
+
+  const headers = {
+    'Content-Type': 'application/json',
+    apikey: SERVICE_KEY,
+    Authorization: `Bearer ${SERVICE_KEY}`,
+  }
+
+  for (const d of DOSEN_LIST) {
+    try {
+      const res = await fetch(`${SUPABASE_URL}/auth/v1/admin/users`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          email: d.email,
+          password: DEFAULT_PASSWORD,
+          email_confirm: true,
+          user_metadata: { full_name: d.nama },
+        }),
+      })
+      const data = await res.json()
+      if (res.ok) {
+        console.log(`✓ ${d.email} (${d.nama})`)
+      } else if (data.msg?.includes('already exists')) {
+        console.log(`- ${d.email} (already exists)`)
+      } else {
+        console.log(`✗ ${d.email}: ${data.msg || res.status}`)
+      }
+    } catch (err) {
+      console.log(`✗ ${d.email}: ${err.message}`)
+    }
+  }
+
+  console.log('\nSelesai! Password default untuk semua: ' + DEFAULT_PASSWORD)
+}
+
+main()

@@ -58,20 +58,34 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
   }, [])
 
   async function loadProfile(u: User) {
+    const email = u.email || ''
+    const check = isDosenEmail(email)
+    const expectedRole = check.isDosen ? 'dosen' : 'mahasiswa'
+
     const { data } = await supabase
       .from('profiles')
       .select('*')
       .eq('id', u.id)
       .single()
+
     if (data) {
-      setProfile(data as UserProfile)
+      if (data.role !== expectedRole) {
+        const { data: updated } = await supabase
+          .from('profiles')
+          .upsert({ id: u.id, role: expectedRole, full_name: data.full_name || check.nama || u.user_metadata?.full_name || email.split('@')[0] })
+          .select()
+          .single()
+        if (updated) setProfile(updated as UserProfile)
+        else setProfile(data as UserProfile)
+      } else {
+        setProfile(data as UserProfile)
+      }
     } else {
-      const check = isDosenEmail(u.email || '')
       const newProfile = {
         id: u.id,
-        email: u.email,
-        full_name: u.user_metadata?.full_name || u.email?.split('@')[0] || '',
-        role: check.isDosen ? 'dosen' : 'mahasiswa',
+        email,
+        full_name: check.nama || u.user_metadata?.full_name || email.split('@')[0] || '',
+        role: expectedRole,
       } as UserProfile
       const { data: inserted } = await supabase
         .from('profiles')
