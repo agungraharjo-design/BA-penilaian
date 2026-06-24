@@ -19,7 +19,7 @@ CREATE TABLE IF NOT EXISTS sessions (
   penguji3 TEXT DEFAULT '',
   decision TEXT DEFAULT 'lulus_perbaikan',
   catatan TEXT DEFAULT '',
-  koordinator TEXT DEFAULT 'Dr. Suparni, S.T., MKKK.',
+  koordinator TEXT DEFAULT 'Dr. Suparni, S.T., M.K.K.K.',
   nip_koordinator TEXT DEFAULT '197705072024212008',
   tanggal_ba TEXT DEFAULT '',
   skor_penguji JSONB DEFAULT '[[null,null,null,null,null,null,null,null,null,null],[null,null,null,null,null,null,null,null,null,null],[null,null,null,null,null,null,null,null,null,null]]',
