@@ -34,6 +34,7 @@ export default function SessionPage() {
         if (!s.skor_penguji) s.skor_penguji = [[null,null,null,null,null,null,null,null,null,null],[null,null,null,null,null,null,null,null,null,null],[null,null,null,null,null,null,null,null,null,null]]
         if (!s.peserta_hadir) s.peserta_hadir = [{ nama: s.nama, nim: s.nim }]
         if (!s.audience_hadir) s.audience_hadir = []
+        lastSavedSkorRef.current = s.skor_penguji
         setSession(s)
       }
     })
@@ -47,13 +48,15 @@ export default function SessionPage() {
       if (!s.skor_penguji) s.skor_penguji = [[null,null,null,null,null,null,null,null,null,null],[null,null,null,null,null,null,null,null,null,null],[null,null,null,null,null,null,null,null,null,null]]
       if (!s.peserta_hadir) s.peserta_hadir = [{ nama: s.nama, nim: s.nim }]
       if (!s.audience_hadir) s.audience_hadir = []
+      lastSavedSkorRef.current = s.skor_penguji
       setSession(s)
     }
     setLoading(false)
   }
 
-  // Auto-save with debounce — use ref to always save the LATEST state
+  // Auto-save with debounce — track last saved skor to detect user changes vs untouched
   const sessionRef = useRef<Session | null>(null)
+  const lastSavedSkorRef = useRef<(number | null)[][] | null>(null)
   const autoSave = useCallback((updated: Session) => {
     setSession(updated)
     sessionRef.current = updated
@@ -63,21 +66,23 @@ export default function SessionPage() {
       if (!toSave) return
       setSyncStatus('saving')
 
-      // Merge skor_penguji with DB state to prevent race condition
+      // Read current DB state for merge
       const { data: currentDb } = await supabase
         .from('sessions')
         .select('skor_penguji')
         .eq('id', sessionId)
         .single()
 
+      // Merge: for each examiner, if local differs from what THIS device last saved,
+      // user modified it → use local (even nulls for deletion).
+      // If same as last saved → user didn't touch it → use DB (may have other device's changes).
       let mergedSkor = toSave.skor_penguji
-      if (currentDb?.skor_penguji && toSave.skor_penguji) {
+      const lastSaved = lastSavedSkorRef.current
+      if (currentDb?.skor_penguji && lastSaved) {
         mergedSkor = toSave.skor_penguji.map((localArr: (number | null)[], i: number) => {
-          const dbArr = currentDb.skor_penguji[i]
-          if (!dbArr) return localArr
-          return localArr.map((localVal: number | null, j: number) => {
-            return localVal !== null ? localVal : dbArr[j]
-          })
+          const userModified = JSON.stringify(localArr) !== JSON.stringify(lastSaved[i])
+          if (userModified) return localArr
+          return currentDb.skor_penguji[i] || localArr
         })
       }
 
@@ -86,6 +91,7 @@ export default function SessionPage() {
         .upsert({ ...toSave, skor_penguji: mergedSkor, updated_at: new Date().toISOString() })
         .eq('id', sessionId)
       if (!error) {
+        lastSavedSkorRef.current = mergedSkor
         setLastSaved(new Date())
         setSyncStatus('live')
         setSession({ ...toSave, skor_penguji: mergedSkor })
