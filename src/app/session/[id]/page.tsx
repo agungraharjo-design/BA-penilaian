@@ -52,19 +52,43 @@ export default function SessionPage() {
     setLoading(false)
   }
 
-  // Auto-save with debounce
+  // Auto-save with debounce — use ref to always save the LATEST state
+  const sessionRef = useRef<Session | null>(null)
   const autoSave = useCallback((updated: Session) => {
     setSession(updated)
+    sessionRef.current = updated
     if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current)
     autoSaveTimer.current = setTimeout(async () => {
+      const toSave = sessionRef.current
+      if (!toSave) return
       setSyncStatus('saving')
+
+      // Merge skor_penguji with DB state to prevent race condition
+      const { data: currentDb } = await supabase
+        .from('sessions')
+        .select('skor_penguji')
+        .eq('id', sessionId)
+        .single()
+
+      let mergedSkor = toSave.skor_penguji
+      if (currentDb?.skor_penguji && toSave.skor_penguji) {
+        mergedSkor = toSave.skor_penguji.map((localArr: (number | null)[], i: number) => {
+          const dbArr = currentDb.skor_penguji[i]
+          if (!dbArr) return localArr
+          return localArr.map((localVal: number | null, j: number) => {
+            return localVal !== null ? localVal : dbArr[j]
+          })
+        })
+      }
+
       const { error } = await supabase
         .from('sessions')
-        .upsert({ ...updated, updated_at: new Date().toISOString() })
+        .upsert({ ...toSave, skor_penguji: mergedSkor, updated_at: new Date().toISOString() })
         .eq('id', sessionId)
       if (!error) {
         setLastSaved(new Date())
         setSyncStatus('live')
+        setSession({ ...toSave, skor_penguji: mergedSkor })
       } else {
         setSyncStatus('offline')
       }
