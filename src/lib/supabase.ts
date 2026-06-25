@@ -1,11 +1,11 @@
 import { createClient } from '@supabase/supabase-js'
+import { createBrowserClient } from '@supabase/ssr'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
 
 function createSupabaseClient() {
   if (!supabaseUrl || !supabaseAnonKey) {
-    // Return a mock client during build/SSR when env vars aren't set
     return {
       from: () => ({
         select: () => Promise.resolve({ data: null, error: null }),
@@ -27,9 +27,7 @@ function createSupabaseClient() {
       },
     } as any
   }
-  return createClient(supabaseUrl, supabaseAnonKey, {
-    realtime: { params: { eventsPerSecond: 10 } },
-  })
+  return createBrowserClient(supabaseUrl, supabaseAnonKey)
 }
 
 export const supabase = createSupabaseClient()

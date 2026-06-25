@@ -29,14 +29,26 @@ export default function SessionPage() {
     if (!sessionId) return
     loadSession()
     const channel = subscribeToSession(sessionId, (updated: any) => {
-      if (updated) setSession(updated as Session)
+      if (updated) {
+        const s = updated as Session
+        if (!s.skor_penguji) s.skor_penguji = [[null,null,null,null],[null,null,null,null],[null,null,null,null]]
+        if (!s.peserta_hadir) s.peserta_hadir = [{ nama: s.nama, nim: s.nim }]
+        if (!s.audience_hadir) s.audience_hadir = []
+        setSession(s)
+      }
     })
     return () => { supabase.removeChannel(channel) }
   }, [sessionId])
 
   async function loadSession() {
     const { data } = await supabase.from('sessions').select('*').eq('id', sessionId).single()
-    if (data) setSession(data as Session)
+    if (data) {
+      const s = data as Session
+      if (!s.skor_penguji) s.skor_penguji = [[null,null,null,null],[null,null,null,null],[null,null,null,null]]
+      if (!s.peserta_hadir) s.peserta_hadir = [{ nama: s.nama, nim: s.nim }]
+      if (!s.audience_hadir) s.audience_hadir = []
+      setSession(s)
+    }
     setLoading(false)
   }
 
