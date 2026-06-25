@@ -57,49 +57,49 @@ export default function SessionPage() {
   // Auto-save with debounce — track last saved skor to detect user changes vs untouched
   const sessionRef = useRef<Session | null>(null)
   const lastSavedSkorRef = useRef<(number | null)[][] | null>(null)
+
+  const saveNow = useCallback(async () => {
+    if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current)
+    const toSave = sessionRef.current
+    if (!toSave) return
+    setSyncStatus('saving')
+
+    const { data: currentDb } = await supabase
+      .from('sessions')
+      .select('skor_penguji')
+      .eq('id', sessionId)
+      .single()
+
+    let mergedSkor = toSave.skor_penguji
+    const lastSaved = lastSavedSkorRef.current
+    if (currentDb?.skor_penguji && lastSaved) {
+      mergedSkor = toSave.skor_penguji.map((localArr: (number | null)[], i: number) => {
+        const userModified = JSON.stringify(localArr) !== JSON.stringify(lastSaved[i])
+        if (userModified) return localArr
+        return currentDb.skor_penguji[i] || localArr
+      })
+    }
+
+    const { error } = await supabase
+      .from('sessions')
+      .upsert({ ...toSave, skor_penguji: mergedSkor, updated_at: new Date().toISOString() })
+      .eq('id', sessionId)
+    if (!error) {
+      lastSavedSkorRef.current = mergedSkor
+      setLastSaved(new Date())
+      setSyncStatus('live')
+      setSession({ ...toSave, skor_penguji: mergedSkor })
+    } else {
+      setSyncStatus('offline')
+    }
+  }, [sessionId])
+
   const autoSave = useCallback((updated: Session) => {
     setSession(updated)
     sessionRef.current = updated
     if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current)
-    autoSaveTimer.current = setTimeout(async () => {
-      const toSave = sessionRef.current
-      if (!toSave) return
-      setSyncStatus('saving')
-
-      // Read current DB state for merge
-      const { data: currentDb } = await supabase
-        .from('sessions')
-        .select('skor_penguji')
-        .eq('id', sessionId)
-        .single()
-
-      // Merge: for each examiner, if local differs from what THIS device last saved,
-      // user modified it → use local (even nulls for deletion).
-      // If same as last saved → user didn't touch it → use DB (may have other device's changes).
-      let mergedSkor = toSave.skor_penguji
-      const lastSaved = lastSavedSkorRef.current
-      if (currentDb?.skor_penguji && lastSaved) {
-        mergedSkor = toSave.skor_penguji.map((localArr: (number | null)[], i: number) => {
-          const userModified = JSON.stringify(localArr) !== JSON.stringify(lastSaved[i])
-          if (userModified) return localArr
-          return currentDb.skor_penguji[i] || localArr
-        })
-      }
-
-      const { error } = await supabase
-        .from('sessions')
-        .upsert({ ...toSave, skor_penguji: mergedSkor, updated_at: new Date().toISOString() })
-        .eq('id', sessionId)
-      if (!error) {
-        lastSavedSkorRef.current = mergedSkor
-        setLastSaved(new Date())
-        setSyncStatus('live')
-        setSession({ ...toSave, skor_penguji: mergedSkor })
-      } else {
-        setSyncStatus('offline')
-      }
-    }, 800)
-  }, [sessionId])
+    autoSaveTimer.current = setTimeout(() => saveNow(), 800)
+  }, [sessionId, saveNow])
 
   if (loading) return <div className="flex items-center justify-center min-h-[60vh] text-gray-500 font-serif text-lg">Memuat data sidang...</div>
   if (!session) return <div className="flex items-center justify-center min-h-[60vh] text-red-500 font-serif text-lg">Sidang tidak ditemukan</div>
@@ -123,11 +123,22 @@ export default function SessionPage() {
 
   return (
     <div className="max-w-5xl mx-auto p-4">
-      {/* Sync indicator */}
-      <div className={`sync-indicator ${syncStatus === 'live' ? 'bg-green-100 text-green-800' : syncStatus === 'saving' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'}`}>
-        <span className={`w-2 h-2 rounded-full ${syncStatus === 'live' ? 'bg-green-500' : syncStatus === 'saving' ? 'bg-yellow-500' : 'bg-red-500'}`} />
-        {syncStatus === 'live' ? 'Tersimpan' : syncStatus === 'saving' ? 'Menyimpan...' : 'Offline'}
-        {lastSaved && <span className="ml-1 opacity-60">{lastSaved.toLocaleTimeString('id-ID')}</span>}
+      {/* Sync indicator + Save button */}
+      <div className="flex items-center gap-3 mb-4">
+        <div className={`sync-indicator flex-1 ${syncStatus === 'live' ? 'bg-green-100 text-green-800' : syncStatus === 'saving' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'}`}>
+          <span className={`w-2 h-2 rounded-full ${syncStatus === 'live' ? 'bg-green-500' : syncStatus === 'saving' ? 'bg-yellow-500' : 'bg-red-500'}`} />
+          {syncStatus === 'live' ? 'Tersimpan' : syncStatus === 'saving' ? 'Menyimpan...' : 'Offline'}
+          {lastSaved && <span className="ml-1 opacity-60">{lastSaved.toLocaleTimeString('id-ID')}</span>}
+        </div>
+        {isDosen && (
+          <button
+            onClick={() => saveNow()}
+            disabled={syncStatus === 'saving'}
+            className="no-print px-4 py-1.5 bg-blue-900 text-white text-sm font-sans font-medium rounded hover:bg-blue-800 disabled:opacity-50 whitespace-nowrap"
+          >
+            💾 Simpan
+          </button>
+        )}
       </div>
 
       {/* Tabs */}
