@@ -193,12 +193,12 @@ export default function SessionPage() {
         )}
       </div>
 
-      {/* Floating save button — bottom right */}
+      {/* Floating save button — above sync indicator */}
       {isDosen && (
         <button
           onClick={() => saveNow()}
           disabled={syncStatus === 'saving'}
-          className="no-print fixed bottom-6 right-6 z-50 px-5 py-3 bg-blue-900 text-white text-sm font-sans font-bold rounded-full shadow-lg hover:bg-blue-800 disabled:opacity-50 flex items-center gap-2 transition-all hover:scale-105"
+          className="no-print fixed bottom-16 right-4 z-50 px-5 py-2.5 bg-blue-900 text-white text-sm font-sans font-bold rounded-full shadow-lg hover:bg-blue-800 disabled:opacity-50 flex items-center gap-2 transition-all hover:scale-105"
         >
           💾 Simpan
         </button>
