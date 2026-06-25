@@ -560,7 +560,9 @@ function PenilaianForm({
 
 // ─── REKAPITULASI NILAI ──────────────────────────────────────
 function RekapNilaiForm({ session, onUpdate }: { session: Session; onUpdate: (s: Session) => void }) {
-  const entries = session.rekap_entries || [{ nama: session.nama, nim: session.nim, nilai_i: null, nilai_ii: null, nilai_iii: null }]
+  const entries = (session.rekap_entries && session.rekap_entries.length > 0)
+    ? session.rekap_entries
+    : [{ nama: session.nama, nim: session.nim, nilai_i: null, nilai_ii: null, nilai_iii: null }]
 
   const updateEntry = (idx: number, field: string, value: any) => {
     const newEntries = [...entries]
