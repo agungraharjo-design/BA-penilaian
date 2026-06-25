@@ -123,22 +123,11 @@ export default function SessionPage() {
 
   return (
     <div className="max-w-5xl mx-auto p-4">
-      {/* Sync indicator + Save button */}
-      <div className="flex items-center gap-3 mb-4">
-        <div className={`sync-indicator flex-1 ${syncStatus === 'live' ? 'bg-green-100 text-green-800' : syncStatus === 'saving' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'}`}>
-          <span className={`w-2 h-2 rounded-full ${syncStatus === 'live' ? 'bg-green-500' : syncStatus === 'saving' ? 'bg-yellow-500' : 'bg-red-500'}`} />
-          {syncStatus === 'live' ? 'Tersimpan' : syncStatus === 'saving' ? 'Menyimpan...' : 'Offline'}
-          {lastSaved && <span className="ml-1 opacity-60">{lastSaved.toLocaleTimeString('id-ID')}</span>}
-        </div>
-        {isDosen && (
-          <button
-            onClick={() => saveNow()}
-            disabled={syncStatus === 'saving'}
-            className="no-print px-4 py-1.5 bg-blue-900 text-white text-sm font-sans font-medium rounded hover:bg-blue-800 disabled:opacity-50 whitespace-nowrap"
-          >
-            💾 Simpan
-          </button>
-        )}
+      {/* Sync indicator */}
+      <div className={`sync-indicator ${syncStatus === 'live' ? 'bg-green-100 text-green-800' : syncStatus === 'saving' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'}`}>
+        <span className={`w-2 h-2 rounded-full ${syncStatus === 'live' ? 'bg-green-500' : syncStatus === 'saving' ? 'bg-yellow-500' : 'bg-red-500'}`} />
+        {syncStatus === 'live' ? 'Tersimpan' : syncStatus === 'saving' ? 'Menyimpan...' : 'Offline'}
+        {lastSaved && <span className="ml-1 opacity-60">{lastSaved.toLocaleTimeString('id-ID')}</span>}
       </div>
 
       {/* Tabs */}
@@ -203,6 +192,17 @@ export default function SessionPage() {
           <PreviewAll session={session} />
         )}
       </div>
+
+      {/* Floating save button — bottom right */}
+      {isDosen && (
+        <button
+          onClick={() => saveNow()}
+          disabled={syncStatus === 'saving'}
+          className="no-print fixed bottom-6 right-6 z-50 px-5 py-3 bg-blue-900 text-white text-sm font-sans font-bold rounded-full shadow-lg hover:bg-blue-800 disabled:opacity-50 flex items-center gap-2 transition-all hover:scale-105"
+        >
+          💾 Simpan
+        </button>
+      )}
     </div>
   )
 }
@@ -681,25 +681,23 @@ function RekapNilaiForm({ session, onUpdate }: { session: Session; onUpdate: (s:
 
 // ─── DAFTAR HADIR ────────────────────────────────────────────
 function DaftarHadirForm({ session, onUpdate, isDosen, sessionId }: { session: Session; onUpdate: (s: Session) => void; isDosen: boolean; sessionId: string }) {
-  // For mahasiswa, use local state + API to avoid RLS rejection
   const [localPeserta, setLocalPeserta] = useState(session.peserta_hadir || [{ nama: session.nama, nim: session.nim }])
   const [localAudience, setLocalAudience] = useState(session.audience_hadir || [])
-  const saveTimer = useRef<NodeJS.Timeout | null>(null)
+  const fromRealtime = useRef(false)
 
-  // Sync local state when session changes (e.g., from realtime)
   useEffect(() => {
-    setLocalPeserta(session.peserta_hadir || [{ nama: session.nama, nim: session.nim }])
-    setLocalAudience(session.audience_hadir || [])
+    if (fromRealtime.current) {
+      fromRealtime.current = false
+      setLocalPeserta(session.peserta_hadir || [{ nama: session.nama, nim: session.nim }])
+      setLocalAudience(session.audience_hadir || [])
+    }
   }, [session.peserta_hadir, session.audience_hadir, session.nama, session.nim])
-
-  const peserta = isDosen ? (session.peserta_hadir || [{ nama: session.nama, nim: session.nim }]) : localPeserta
-  const audience = isDosen ? (session.audience_hadir || []) : localAudience
 
   const persistAttendance = async (newPeserta: typeof localPeserta, newAudience: typeof localAudience) => {
     if (isDosen) {
+      fromRealtime.current = true
       onUpdate({ ...session, peserta_hadir: newPeserta, audience_hadir: newAudience })
     } else {
-      // Get auth token and call API
       const { data: { session: authSession } } = await (supabase.auth as any).getSession()
       const token = authSession?.access_token
       if (token) {
@@ -713,47 +711,35 @@ function DaftarHadirForm({ session, onUpdate, isDosen, sessionId }: { session: S
   }
 
   const updatePeserta = (idx: number, field: string, value: string) => {
-    const newP = [...peserta]
+    const newP = [...localPeserta]
     newP[idx] = { ...newP[idx], [field]: value }
-    if (!isDosen) setLocalPeserta(newP)
-    if (saveTimer.current) clearTimeout(saveTimer.current)
-    saveTimer.current = setTimeout(() => persistAttendance(newP, audience), 800)
+    setLocalPeserta(newP)
   }
 
   const updateAudience = (idx: number, field: string, value: string) => {
-    const newA = [...audience]
+    const newA = [...localAudience]
     newA[idx] = { ...newA[idx], [field]: value }
-    if (!isDosen) setLocalAudience(newA)
-    if (saveTimer.current) clearTimeout(saveTimer.current)
-    saveTimer.current = setTimeout(() => persistAttendance(peserta, newA), 800)
+    setLocalAudience(newA)
   }
 
   const addPeserta = () => {
-    const newP = [...peserta, { nama: '', nim: '' }]
-    if (!isDosen) setLocalPeserta(newP)
-    if (saveTimer.current) clearTimeout(saveTimer.current)
-    saveTimer.current = setTimeout(() => persistAttendance(newP, audience), 800)
+    setLocalPeserta([...localPeserta, { nama: '', nim: '' }])
   }
 
   const removePeserta = (idx: number) => {
-    const newP = peserta.filter((_, i) => i !== idx)
-    if (!isDosen) setLocalPeserta(newP)
-    if (saveTimer.current) clearTimeout(saveTimer.current)
-    saveTimer.current = setTimeout(() => persistAttendance(newP, audience), 800)
+    setLocalPeserta(localPeserta.filter((_, i) => i !== idx))
   }
 
   const addAudience = () => {
-    const newA = [...audience, { nama: '', nim: '' }]
-    if (!isDosen) setLocalAudience(newA)
-    if (saveTimer.current) clearTimeout(saveTimer.current)
-    saveTimer.current = setTimeout(() => persistAttendance(peserta, newA), 800)
+    setLocalAudience([...localAudience, { nama: '', nim: '' }])
   }
 
   const removeAudience = (idx: number) => {
-    const newA = audience.filter((_, i) => i !== idx)
-    if (!isDosen) setLocalAudience(newA)
-    if (saveTimer.current) clearTimeout(saveTimer.current)
-    saveTimer.current = setTimeout(() => persistAttendance(peserta, newA), 800)
+    setLocalAudience(localAudience.filter((_, i) => i !== idx))
+  }
+
+  const persistChanges = () => {
+    persistAttendance(localPeserta, localAudience)
   }
 
   return (
@@ -818,17 +804,17 @@ function DaftarHadirForm({ session, onUpdate, isDosen, sessionId }: { session: S
             <tr><th className="w-8">NO</th><th>NAMA PESERTA</th><th className="w-24">NIM</th><th className="w-24">TANDA TANGAN</th><th className="w-16">KET</th></tr>
           </thead>
           <tbody>
-            {peserta.map((p, i) => (
+            {localPeserta.map((p, i) => (
               <tr key={i}>
                 <td className="text-center">{i + 1}.</td>
-                <td><input value={p.nama} onChange={(e) => updatePeserta(i, 'nama', e.target.value)} className="w-full bg-transparent" /></td>
-                <td><input value={p.nim} onChange={(e) => updatePeserta(i, 'nim', e.target.value)} className="w-full bg-transparent" /></td>
+                <td><input value={p.nama} onChange={(e) => updatePeserta(i, 'nama', e.target.value)} onBlur={persistChanges} className="w-full bg-transparent" /></td>
+                <td><input value={p.nim} onChange={(e) => updatePeserta(i, 'nim', e.target.value)} onBlur={persistChanges} className="w-full bg-transparent" /></td>
                 <td className="text-center align-middle">
-                  <SignatureUpload value={(p as any).ttd} onChange={(v) => updatePeserta(i, 'ttd', v)} />
+                  <SignatureUpload value={(p as any).ttd} onChange={(v) => { updatePeserta(i, 'ttd', v); persistChanges() }} />
                 </td>
                 <td className="text-center">
-                  {peserta.length > 1 && (
-                    <button onClick={() => removePeserta(i)} className="no-print text-red-500 text-xs hover:text-red-700" title="Hapus baris">✕</button>
+                  {localPeserta.length > 1 && (
+                    <button onClick={() => { removePeserta(i); setTimeout(persistChanges, 0) }} className="no-print text-red-500 text-xs hover:text-red-700" title="Hapus baris">✕</button>
                   )}
                 </td>
               </tr>
@@ -854,13 +840,13 @@ function DaftarHadirForm({ session, onUpdate, isDosen, sessionId }: { session: S
             <tr><th className="w-8">NO</th><th>NAMA MAHASISWA</th><th className="w-24">NIM</th><th className="w-24">TANDA TANGAN</th><th className="w-16">KET</th></tr>
           </thead>
           <tbody>
-            {audience.map((a, i) => (
+            {localAudience.map((a, i) => (
               <tr key={i}>
                 <td className="text-center">{i + 1}.</td>
-                <td><input value={a.nama} onChange={(e) => updateAudience(i, 'nama', e.target.value)} className="w-full bg-transparent" placeholder="Nama mahasiswa" /></td>
-                <td><input value={a.nim} onChange={(e) => updateAudience(i, 'nim', e.target.value)} className="w-full bg-transparent" placeholder="NIM" /></td>
+                <td><input value={a.nama} onChange={(e) => updateAudience(i, 'nama', e.target.value)} onBlur={persistChanges} className="w-full bg-transparent" placeholder="Nama mahasiswa" /></td>
+                <td><input value={a.nim} onChange={(e) => updateAudience(i, 'nim', e.target.value)} onBlur={persistChanges} className="w-full bg-transparent" placeholder="NIM" /></td>
                 <td className="text-center align-middle">
-                  <SignatureUpload value={(a as any).ttd} onChange={(v) => updateAudience(i, 'ttd', v)} />
+                  <SignatureUpload value={(a as any).ttd} onChange={(v) => { updateAudience(i, 'ttd', v); persistChanges() }} />
                 </td>
                 <td className="text-center">
                   <button onClick={() => removeAudience(i)} className="no-print text-red-500 text-xs hover:text-red-700" title="Hapus baris">✕</button>
