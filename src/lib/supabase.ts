@@ -1,5 +1,4 @@
 import { createClient } from '@supabase/supabase-js'
-import { createBrowserClient } from '@supabase/ssr'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
@@ -27,12 +26,16 @@ function createSupabaseClient() {
       },
     } as any
   }
-  return createBrowserClient(supabaseUrl, supabaseAnonKey)
+  return createClient(supabaseUrl, supabaseAnonKey, {
+    auth: { autoRefreshToken: true, persistSession: true, detectSessionInUrl: false },
+    realtime: { params: { eventsPerSecond: 10 } },
+  })
 }
 
-export const supabase = createSupabaseClient()
+const globalForSupabase = globalThis as unknown as { __supabase?: ReturnType<typeof createSupabaseClient> }
+export const supabase = globalForSupabase.__supabase ?? createSupabaseClient()
+if (typeof window !== 'undefined') globalForSupabase.__supabase = supabase
 
-// Realtime subscription helper
 export function subscribeToSession(
   sessionId: string,
   onUpdate: (payload: any) => void

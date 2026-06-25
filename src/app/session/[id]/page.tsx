@@ -31,7 +31,7 @@ export default function SessionPage() {
     const channel = subscribeToSession(sessionId, (updated: any) => {
       if (updated) {
         const s = updated as Session
-        if (!s.skor_penguji) s.skor_penguji = [[null,null,null,null],[null,null,null,null],[null,null,null,null]]
+        if (!s.skor_penguji) s.skor_penguji = [[null,null,null,null,null,null,null,null,null,null],[null,null,null,null,null,null,null,null,null,null],[null,null,null,null,null,null,null,null,null,null]]
         if (!s.peserta_hadir) s.peserta_hadir = [{ nama: s.nama, nim: s.nim }]
         if (!s.audience_hadir) s.audience_hadir = []
         setSession(s)
@@ -44,7 +44,7 @@ export default function SessionPage() {
     const { data } = await supabase.from('sessions').select('*').eq('id', sessionId).single()
     if (data) {
       const s = data as Session
-      if (!s.skor_penguji) s.skor_penguji = [[null,null,null,null],[null,null,null,null],[null,null,null,null]]
+      if (!s.skor_penguji) s.skor_penguji = [[null,null,null,null,null,null,null,null,null,null],[null,null,null,null,null,null,null,null,null,null],[null,null,null,null,null,null,null,null,null,null]]
       if (!s.peserta_hadir) s.peserta_hadir = [{ nama: s.nama, nim: s.nim }]
       if (!s.audience_hadir) s.audience_hadir = []
       setSession(s)
@@ -373,11 +373,11 @@ function PenilaianForm({
 }: {
   session: Session; onUpdate: (s: Session) => void; examinerIndex: number; label: string
 }) {
-  const scores = session.skor_penguji[examinerIndex]
+  const scores = session.skor_penguji?.[examinerIndex] || [null,null,null,null,null,null,null,null,null,null]
 
   const setScore = (criterionIdx: number, value: string) => {
     const v = value === '' ? null : Math.min(4, Math.max(1, Number(value)))
-    const newScores = [...session.skor_penguji]
+    const newScores = [...(session.skor_penguji || [[null,null,null,null,null,null,null,null,null,null],[null,null,null,null,null,null,null,null,null,null],[null,null,null,null,null,null,null,null,null,null]])]
     newScores[examinerIndex] = [
       ...newScores[examinerIndex].slice(0, criterionIdx),
       v,
@@ -540,7 +540,7 @@ function RekapNilaiForm({ session, onUpdate }: { session: Session; onUpdate: (s:
 
   // Calculate scores from penilaian for each examiner
   const calcExaminerTotal = (examIdx: number) => {
-    const scores = session.skor_penguji[examIdx]
+    const scores = session.skor_penguji?.[examIdx] || [null,null,null,null,null,null,null,null,null,null]
     const total = calcTotalSkorXBobot(scores, RUBRIC_CRITERIA.map(c => c.bobot))
     return total > 0 ? calcNilaiAkhir(total) : null
   }
@@ -992,7 +992,7 @@ function PreviewAll({ session }: { session: Session }) {
 
   const calculateAll = () => {
     const scoresByExaminer = [0, 1, 2].map(idx => {
-      const scores = session.skor_penguji[idx]
+      const scores = session.skor_penguji?.[idx] || [null,null,null,null,null,null,null,null,null,null]
       const totalSkorXBobot = calcTotalSkorXBobot(scores, RUBRIC_CRITERIA.map(c => c.bobot))
       const nilaiAkhir = calcNilaiAkhir(totalSkorXBobot)
       return { totalSkorXBobot, nilaiAkhir }
@@ -1092,7 +1092,7 @@ function PreviewAll({ session }: { session: Session }) {
 
         {/* ===== FORM PENILAIAN (3 examiners) ===== */}
         {[0, 1, 2].map((examIdx) => {
-          const scores = session.skor_penguji[examIdx]
+          const scores = session.skor_penguji?.[examIdx] || [null,null,null,null,null,null,null,null,null,null]
           const labels = ['Penguji I/Ketua Penguji', 'Penguji II/Anggota Penguji', 'Penguji III/Anggota Penguji']
           const namaPenguji = [session.penguji1, session.penguji2, session.penguji3]
           return (
