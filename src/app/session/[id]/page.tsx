@@ -64,34 +64,38 @@ export default function SessionPage() {
     const toSave = sessionRef.current
     if (!toSave) return
     setSyncStatus('saving')
+    try {
+      const { data: currentDb } = await supabase
+        .from('sessions')
+        .select('skor_penguji')
+        .eq('id', sessionId)
+        .single()
 
-    const { data: currentDb } = await supabase
-      .from('sessions')
-      .select('skor_penguji')
-      .eq('id', sessionId)
-      .single()
+      let mergedSkor = toSave.skor_penguji
+      const lastSaved = lastSavedSkorRef.current
+      if (currentDb?.skor_penguji && lastSaved) {
+        mergedSkor = toSave.skor_penguji.map((localArr: (number | null)[], i: number) => {
+          const userModified = JSON.stringify(localArr) !== JSON.stringify(lastSaved[i])
+          if (userModified) return localArr
+          return currentDb.skor_penguji[i] || localArr
+        })
+      }
 
-    let mergedSkor = toSave.skor_penguji
-    const lastSaved = lastSavedSkorRef.current
-    if (currentDb?.skor_penguji && lastSaved) {
-      mergedSkor = toSave.skor_penguji.map((localArr: (number | null)[], i: number) => {
-        const userModified = JSON.stringify(localArr) !== JSON.stringify(lastSaved[i])
-        if (userModified) return localArr
-        return currentDb.skor_penguji[i] || localArr
-      })
-    }
-
-    const { error } = await supabase
-      .from('sessions')
-      .upsert({ ...toSave, skor_penguji: mergedSkor, updated_at: new Date().toISOString() })
-      .eq('id', sessionId)
-    if (!error) {
+      const { error } = await supabase
+        .from('sessions')
+        .upsert({ ...toSave, skor_penguji: mergedSkor, updated_at: new Date().toISOString() })
+        .eq('id', sessionId)
+      if (!error) {
         lastSavedSkorRef.current = mergedSkor
         setLastSaved(new Date())
         startTransition(() => setSession({ ...toSave, skor_penguji: mergedSkor }))
-    } else {
+      } else {
+        setSyncStatus('offline')
+      }
+    } catch (err) {
       setSyncStatus('offline')
     }
+    setSyncStatus(prev => prev === 'saving' ? 'offline' : prev)
   }, [sessionId])
 
   const autoSave = useCallback((updated: Session) => {
@@ -288,6 +292,16 @@ function SignatureUpload({ value, onChange, label }: { value?: string; onChange:
 
 // ─── BERITA ACARA (LAPORAN SIDANG SKRIPSI) ─────────────────────
 const BeritaAcaraForm = memo(function BeritaAcaraForm({ session, onUpdate }: { session: Session; onUpdate: (s: Session) => void }) {
+  const [local, setLocal] = useState(session)
+  const fromRealtime = useRef(false)
+
+  useEffect(() => {
+    if (fromRealtime.current) { fromRealtime.current = false; setLocal(session) }
+  }, [session])
+
+  const update = (field: string, value: any) => setLocal(prev => ({ ...prev, [field]: value }))
+  const persist = () => { fromRealtime.current = true; onUpdate(local) }
+
   return (
     <div className="space-y-6">
       <div className="text-center border-b-2 border-black pb-4">
@@ -296,15 +310,16 @@ const BeritaAcaraForm = memo(function BeritaAcaraForm({ session, onUpdate }: { s
         <p className="text-sm">PROGRAM STUDI KESEHATAN MASYARAKAT PROGRAM SARJANA</p>
         <p className="text-sm">FAKULTAS ILMU KESEHATAN UPN &ldquo;VETERAN&rdquo; JAKARTA</p>
         <p className="text-sm font-semibold">
-          T.A. <input value={session.ta} onChange={(e) => onUpdate({ ...session, ta: e.target.value })} className="bg-transparent border-b border-gray-400 w-28 text-center font-bold" />
+          T.A. <input value={local.ta} onChange={(e) => update('ta', e.target.value)} onBlur={persist} className="bg-transparent border-b border-gray-400 w-28 text-center font-bold" />
         </p>
       </div>
 
       <p>
         Pada hari{' '}
         <input
-          value={session.hari_tanggal}
-          onChange={(e) => onUpdate({ ...session, hari_tanggal: e.target.value })}
+          value={local.hari_tanggal}
+          onChange={(e) => update('hari_tanggal', e.target.value)}
+          onBlur={persist}
           className="border-b border-gray-400 bg-transparent px-1 font-semibold w-64"
         />
         , telah dilaksanakan sidang skripsi mahasiswa:
@@ -315,22 +330,22 @@ const BeritaAcaraForm = memo(function BeritaAcaraForm({ session, onUpdate }: { s
           <tr>
             <td className="w-36">Nama Mahasiswa</td>
             <td className="w-4">:</td>
-            <td><input value={session.nama} onChange={(e) => onUpdate({ ...session, nama: e.target.value })} className="w-full border-b border-gray-400 bg-transparent" /></td>
+            <td><input value={local.nama} onChange={(e) => update('nama', e.target.value)} onBlur={persist} className="w-full border-b border-gray-400 bg-transparent" /></td>
           </tr>
           <tr>
             <td>NIM</td>
             <td>:</td>
-            <td><input value={session.nim} onChange={(e) => onUpdate({ ...session, nim: e.target.value })} className="w-full border-b border-gray-400 bg-transparent" /></td>
+            <td><input value={local.nim} onChange={(e) => update('nim', e.target.value)} onBlur={persist} className="w-full border-b border-gray-400 bg-transparent" /></td>
           </tr>
           <tr>
             <td>Waktu Sidang</td>
             <td>:</td>
-            <td><input value={session.waktu} onChange={(e) => onUpdate({ ...session, waktu: e.target.value })} className="w-full border-b border-gray-400 bg-transparent" /></td>
+            <td><input value={local.waktu} onChange={(e) => update('waktu', e.target.value)} onBlur={persist} className="w-full border-b border-gray-400 bg-transparent" /></td>
           </tr>
           <tr>
             <td>Peminatan</td>
             <td>:</td>
-            <td><input value={session.peminatan} onChange={(e) => onUpdate({ ...session, peminatan: e.target.value })} className="w-full border-b border-gray-400 bg-transparent" placeholder="K3 /Kesling/Epidemiologi/ AKK/Kesehatan Reproduksi" /></td>
+            <td><input value={local.peminatan} onChange={(e) => update('peminatan', e.target.value)} onBlur={persist} className="w-full border-b border-gray-400 bg-transparent" placeholder="K3 /Kesling/Epidemiologi/ AKK/Kesehatan Reproduksi" /></td>
           </tr>
         </tbody>
       </table>
@@ -338,8 +353,9 @@ const BeritaAcaraForm = memo(function BeritaAcaraForm({ session, onUpdate }: { s
       <div>
         <p className="font-semibold">Hasil Pelaksanaan :</p>
         <textarea
-          value={session.catatan}
-          onChange={(e) => onUpdate({ ...session, catatan: e.target.value })}
+          value={local.catatan}
+          onChange={(e) => update('catatan', e.target.value)}
+          onBlur={persist}
           className="w-full border border-gray-300 rounded p-2 min-h-[60px] font-serif mt-1"
           placeholder="Catatan hasil pelaksanaan sidang..."
         />
@@ -350,8 +366,8 @@ const BeritaAcaraForm = memo(function BeritaAcaraForm({ session, onUpdate }: { s
           <input
             type="radio"
             name="decision"
-            checked={session.decision === 'lulus_perbaikan'}
-            onChange={() => onUpdate({ ...session, decision: 'lulus_perbaikan' })}
+            checked={local.decision === 'lulus_perbaikan'}
+            onChange={() => { update('decision', 'lulus_perbaikan'); setTimeout(persist, 0) }}
             className="mt-1"
           />
           <div>
@@ -362,8 +378,8 @@ const BeritaAcaraForm = memo(function BeritaAcaraForm({ session, onUpdate }: { s
           <input
             type="radio"
             name="decision"
-            checked={session.decision === 'tidak_lulus_ulang'}
-            onChange={() => onUpdate({ ...session, decision: 'tidak_lulus_ulang' })}
+            checked={local.decision === 'tidak_lulus_ulang'}
+            onChange={() => { update('decision', 'tidak_lulus_ulang'); setTimeout(persist, 0) }}
             className="mt-1"
           />
           <div>
@@ -398,8 +414,9 @@ const BeritaAcaraForm = memo(function BeritaAcaraForm({ session, onUpdate }: { s
                   <td className="text-center">{p.no}.</td>
                   <td>
                     <input
-                      value={(session as any)[p.field] || ''}
-                      onChange={(e) => onUpdate({ ...session, [p.field]: e.target.value })}
+                      value={(local as any)[p.field] || ''}
+                      onChange={(e) => update(p.field, e.target.value)}
+                      onBlur={persist}
                       className="w-full bg-transparent"
                       placeholder="Nama dosen"
                     />
@@ -407,8 +424,8 @@ const BeritaAcaraForm = memo(function BeritaAcaraForm({ session, onUpdate }: { s
                   <td>{p.jabatan}</td>
                   <td className="text-center align-middle">
                     <SignatureUpload
-                      value={(session as any)[p.ttdField]}
-                      onChange={(v) => onUpdate({ ...session, [p.ttdField]: v })}
+                      value={(local as any)[p.ttdField]}
+                      onChange={(v) => { update(p.ttdField, v); setTimeout(persist, 0) }}
                       label={p.jabatan}
                     />
                   </td>
@@ -422,23 +439,26 @@ const BeritaAcaraForm = memo(function BeritaAcaraForm({ session, onUpdate }: { s
       <div className="text-right mt-8 avoid-break">
         <p>Jakarta,{' '}
           <input
-            value={session.tanggal_ba}
-            onChange={(e) => onUpdate({ ...session, tanggal_ba: e.target.value })}
+            value={local.tanggal_ba}
+            onChange={(e) => update('tanggal_ba', e.target.value)}
+            onBlur={persist}
             className="border-b border-gray-400 bg-transparent w-40 text-center"
           />
         </p>
         <p className="mt-4">Koordinator Program Studi Kesehatan Masyarakat Program Sarjana</p>
-        <SignatureUpload value={session.ttd_koordinator} onChange={(v) => onUpdate({ ...session, ttd_koordinator: v })} label="Koordinator Prodi" />
+        <SignatureUpload value={local.ttd_koordinator} onChange={(v) => { update('ttd_koordinator', v); setTimeout(persist, 0) }} label="Koordinator Prodi" />
         <div className="h-8"></div>
         <input
-          value={session.koordinator}
-          onChange={(e) => onUpdate({ ...session, koordinator: e.target.value })}
+          value={local.koordinator}
+          onChange={(e) => update('koordinator', e.target.value)}
+          onBlur={persist}
           className="border-b border-gray-400 bg-transparent text-center font-semibold"
         />
         <br />
         <input
-          value={session.nip_koordinator}
-          onChange={(e) => onUpdate({ ...session, nip_koordinator: e.target.value })}
+          value={local.nip_koordinator}
+          onChange={(e) => update('nip_koordinator', e.target.value)}
+          onBlur={persist}
           className="border-b border-gray-400 bg-transparent text-center text-sm"
         />
         <p className="text-xs text-gray-500 mt-2">*) Coret yang tidak perlu</p>
@@ -453,17 +473,29 @@ const PenilaianForm = memo(function PenilaianForm({
 }: {
   session: Session; onUpdate: (s: Session) => void; examinerIndex: number; label: string
 }) {
-  const scores = session.skor_penguji?.[examinerIndex] || [null,null,null,null,null,null,null,null,null,null]
+  const defaultSkor = [[null,null,null,null,null,null,null,null,null,null],[null,null,null,null,null,null,null,null,null,null],[null,null,null,null,null,null,null,null,null,null]]
+  const [localSkor, setLocalSkor] = useState<(number | null)[][]>(session.skor_penguji || defaultSkor)
+  const fromRealtime = useRef(false)
+
+  useEffect(() => {
+    if (fromRealtime.current) { fromRealtime.current = false; setLocalSkor(session.skor_penguji || defaultSkor) }
+  }, [session.skor_penguji])
+
+  const scores = localSkor[examinerIndex] || [null,null,null,null,null,null,null,null,null,null]
 
   const setScore = (criterionIdx: number, value: string) => {
     const v = value === '' ? null : Math.min(4, Math.max(1, Number(value)))
-    const newScores = [...(session.skor_penguji || [[null,null,null,null,null,null,null,null,null,null],[null,null,null,null,null,null,null,null,null,null],[null,null,null,null,null,null,null,null,null,null]])]
-    newScores[examinerIndex] = [
-      ...newScores[examinerIndex].slice(0, criterionIdx),
-      v,
-      ...newScores[examinerIndex].slice(criterionIdx + 1),
-    ]
-    onUpdate({ ...session, skor_penguji: newScores })
+    setLocalSkor(prev => {
+      const next = [...prev]
+      next[examinerIndex] = [...(next[examinerIndex] || [null,null,null,null,null,null,null,null,null,null])]
+      next[examinerIndex][criterionIdx] = v
+      return next
+    })
+  }
+
+  const persist = () => {
+    fromRealtime.current = true
+    onUpdate({ ...session, skor_penguji: localSkor })
   }
 
   const totalSkorXBobot = calcTotalSkorXBobot(scores, RUBRIC_CRITERIA.map(c => c.bobot))
@@ -547,6 +579,7 @@ const PenilaianForm = memo(function PenilaianForm({
                     step={1}
                     value={scores[i] ?? ''}
                     onChange={(e) => setScore(i, e.target.value)}
+                    onBlur={persist}
                     className="w-16 text-center border border-gray-300 rounded px-1 py-1"
                   />
                 </td>
