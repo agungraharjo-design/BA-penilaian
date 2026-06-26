@@ -8,6 +8,7 @@ import {
   calcTotalSkorXBobot, calcNilaiAkhir, calcGrade,
 } from '@/lib/utils'
 import { useAuth } from '@/app/components/AuthProvider'
+import { isDosenEmail } from '@/lib/dosen'
 
 type Tab = 'berita-acara' | 'penilaian-1' | 'penilaian-2' | 'penilaian-3' | 'rekap-nilai' | 'daftar-hadir' | 'preview'
 
@@ -15,7 +16,7 @@ export default function SessionPage() {
   const params = useParams()
   const sessionId = params.id as string
 
-  const { isDosen } = useAuth()
+  const { isDosen, profile } = useAuth()
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<Tab>(isDosen ? 'berita-acara' : 'daftar-hadir')
@@ -113,8 +114,47 @@ export default function SessionPage() {
     { key: 'daftar-hadir', label: 'Daftar Hadir' },
     { key: 'preview', label: 'Preview & PDF' },
   ]
-  // Mahasiswa hanya bisa melihat Daftar Hadir
-  const tabs = isDosen ? allTabs : allTabs.filter(t => t.key === 'daftar-hadir')
+
+  // Match current user to their penguji assignment
+  const userName = profile?.full_name || ''
+  const matchPenguji = (pengujiName: string) => {
+    if (!userName || !pengujiName) return false
+    const normalize = (s: string) => s.toLowerCase().replace(/[,.\-]/g, '').replace(/\s+/g, ' ').trim()
+    const a = normalize(userName)
+    const b = normalize(pengujiName)
+    if (a === b) return true
+    // Check if one contains the other (handles "Dr. X" vs "X")
+    if (a.includes(b) || b.includes(a)) return true
+    // Check if first 2 significant words match
+    const wordsA = a.split(' ').filter((w: string) => w.length > 2)
+    const wordsB = b.split(' ').filter((w: string) => w.length > 2)
+    if (wordsA.length >= 2 && wordsB.length >= 2 && wordsA[0] === wordsB[0] && wordsA[1] === wordsB[1]) return true
+    return false
+  }
+
+  let allowedPenilaian: number[] | null = null // null = all allowed
+  if (isDosen && session) {
+    const matched = [
+      matchPenguji(session.penguji1),
+      matchPenguji(session.penguji2),
+      matchPenguji(session.penguji3),
+    ]
+    const matchedIndices = matched.map((m, i) => m ? i : -1).filter(i => i >= 0)
+    if (matchedIndices.length > 0) {
+      allowedPenilaian = matchedIndices
+    }
+  }
+
+  const tabs = isDosen
+    ? allTabs.filter(t => {
+        if (allowedPenilaian === null) return true // coordinator sees all
+        if (t.key.startsWith('penilaian-')) {
+          const idx = parseInt(t.key.split('-')[1]) - 1
+          return allowedPenilaian.includes(idx)
+        }
+        return true // berita-acara, rekap, daftar-hadir, preview always visible
+      })
+    : allTabs.filter(t => t.key === 'daftar-hadir')
 
   const updateField = (field: string, value: any) => {
     if (!session) return
