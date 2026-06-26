@@ -754,12 +754,14 @@ function DaftarHadirForm({ session, onUpdate, isDosen, sessionId }: { session: S
     const newP = [...localPeserta]
     newP[idx] = { ...newP[idx], [field]: value }
     setLocalPeserta(newP)
+    return newP
   }
 
   const updateAudience = (idx: number, field: string, value: string) => {
     const newA = [...localAudience]
     newA[idx] = { ...newA[idx], [field]: value }
     setLocalAudience(newA)
+    return newA
   }
 
   const addPeserta = () => {
@@ -850,11 +852,11 @@ function DaftarHadirForm({ session, onUpdate, isDosen, sessionId }: { session: S
                 <td><input value={p.nama} onChange={(e) => updatePeserta(i, 'nama', e.target.value)} onBlur={persistChanges} className="w-full bg-transparent" /></td>
                 <td><input value={p.nim} onChange={(e) => updatePeserta(i, 'nim', e.target.value)} onBlur={persistChanges} className="w-full bg-transparent" /></td>
                 <td className="text-center align-middle">
-                  <SignatureUpload value={(p as any).ttd} onChange={(v) => { updatePeserta(i, 'ttd', v); persistChanges() }} />
+                  <SignatureUpload value={(p as any).ttd} onChange={(v) => { const newP = updatePeserta(i, 'ttd', v); persistAttendance(newP, localAudience) }} />
                 </td>
                 <td className="text-center">
                   {localPeserta.length > 1 && (
-                    <button onClick={() => { removePeserta(i); setTimeout(persistChanges, 0) }} className="no-print text-red-500 text-xs hover:text-red-700" title="Hapus baris">✕</button>
+                    <button onClick={() => { const newP = localPeserta.filter((_, j) => j !== i); setLocalPeserta(newP); persistAttendance(newP, localAudience) }} className="no-print text-red-500 text-xs hover:text-red-700" title="Hapus baris">✕</button>
                   )}
                 </td>
               </tr>
@@ -886,10 +888,10 @@ function DaftarHadirForm({ session, onUpdate, isDosen, sessionId }: { session: S
                 <td><input value={a.nama} onChange={(e) => updateAudience(i, 'nama', e.target.value)} onBlur={persistChanges} className="w-full bg-transparent" placeholder="Nama mahasiswa" /></td>
                 <td><input value={a.nim} onChange={(e) => updateAudience(i, 'nim', e.target.value)} onBlur={persistChanges} className="w-full bg-transparent" placeholder="NIM" /></td>
                 <td className="text-center align-middle">
-                  <SignatureUpload value={(a as any).ttd} onChange={(v) => { updateAudience(i, 'ttd', v); persistChanges() }} />
+                  <SignatureUpload value={(a as any).ttd} onChange={(v) => { const newA = updateAudience(i, 'ttd', v); persistAttendance(localPeserta, newA) }} />
                 </td>
                 <td className="text-center">
-                  <button onClick={() => removeAudience(i)} className="no-print text-red-500 text-xs hover:text-red-700" title="Hapus baris">✕</button>
+                  <button onClick={() => { const newA = localAudience.filter((_, j) => j !== i); setLocalAudience(newA); persistAttendance(localPeserta, newA) }} className="no-print text-red-500 text-xs hover:text-red-700" title="Hapus baris">✕</button>
                 </td>
               </tr>
             ))}
