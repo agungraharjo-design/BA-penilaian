@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useRef, useCallback } from 'react'
+import { useEffect, useState, useRef, useCallback, memo, startTransition } from 'react'
 import { useParams } from 'next/navigation'
 import { supabase, subscribeToSession } from '@/lib/supabase'
 import { Session, RUBRIC_CRITERIA } from '@/types'
@@ -86,17 +86,16 @@ export default function SessionPage() {
       .upsert({ ...toSave, skor_penguji: mergedSkor, updated_at: new Date().toISOString() })
       .eq('id', sessionId)
     if (!error) {
-      lastSavedSkorRef.current = mergedSkor
-      setLastSaved(new Date())
-      setSyncStatus('live')
-      setSession({ ...toSave, skor_penguji: mergedSkor })
+        lastSavedSkorRef.current = mergedSkor
+        setLastSaved(new Date())
+        startTransition(() => setSession({ ...toSave, skor_penguji: mergedSkor }))
     } else {
       setSyncStatus('offline')
     }
   }, [sessionId])
 
   const autoSave = useCallback((updated: Session) => {
-    setSession(updated)
+    startTransition(() => setSession(updated))
     sessionRef.current = updated
     if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current)
     autoSaveTimer.current = setTimeout(() => saveNow(), 800)
@@ -288,7 +287,7 @@ function SignatureUpload({ value, onChange, label }: { value?: string; onChange:
 }
 
 // ─── BERITA ACARA (LAPORAN SIDANG SKRIPSI) ─────────────────────
-function BeritaAcaraForm({ session, onUpdate }: { session: Session; onUpdate: (s: Session) => void }) {
+const BeritaAcaraForm = memo(function BeritaAcaraForm({ session, onUpdate }: { session: Session; onUpdate: (s: Session) => void }) {
   return (
     <div className="space-y-6">
       <div className="text-center border-b-2 border-black pb-4">
@@ -446,10 +445,10 @@ function BeritaAcaraForm({ session, onUpdate }: { session: Session; onUpdate: (s
       </div>
     </div>
   )
-}
+})
 
 // ─── FORM PENILAIAN ─────────────────────────────────────────
-function PenilaianForm({
+const PenilaianForm = memo(function PenilaianForm({
   session, onUpdate, examinerIndex, label
 }: {
   session: Session; onUpdate: (s: Session) => void; examinerIndex: number; label: string
@@ -607,7 +606,7 @@ function PenilaianForm({
       </div>
     </div>
   )
-}
+})
 
 // ─── REKAPITULASI NILAI ──────────────────────────────────────
 function RekapNilaiForm({ session, onUpdate }: { session: Session; onUpdate: (s: Session) => void }) {
