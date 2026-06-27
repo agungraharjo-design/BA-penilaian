@@ -95,7 +95,6 @@ export default function SessionPage() {
     } catch (err) {
       setSyncStatus('offline')
     }
-    setSyncStatus(prev => prev === 'saving' ? 'offline' : prev)
   }, [sessionId])
 
   const autoSave = useCallback((updated: Session) => {
