@@ -89,6 +89,7 @@ export default function SessionPage() {
         lastSavedSkorRef.current = mergedSkor
         setLastSaved(new Date())
         startTransition(() => setSession({ ...toSave, skor_penguji: mergedSkor }))
+        setSyncStatus('live')
       } else {
         setSyncStatus('offline')
       }
