@@ -16,6 +16,7 @@ export default function Home() {
   const [nim, setNim] = useState('')
   const [defaultSemester, setDefaultSemester] = useState('Genap')
   const [defaultTa, setDefaultTa] = useState('2025/2026')
+  const [search, setSearch] = useState('')
 
   useEffect(() => {
     loadSessions()
@@ -122,13 +123,34 @@ export default function Home() {
 
       <div className="bg-white rounded-lg shadow-md p-6">
         <h2 className="text-lg font-semibold mb-4">Daftar Sidang</h2>
+        <div className="flex gap-2 mb-4">
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="flex-1 border border-gray-300 rounded px-3 py-2 font-serif text-sm"
+            placeholder="Cari nama, NIM, atau judul..."
+          />
+          {search.trim() && (
+            <button onClick={() => setSearch('')} className="text-sm text-gray-500 hover:text-gray-700 px-2">✕</button>
+          )}
+        </div>
         {loading ? (
           <p className="text-gray-500 text-center py-8">Memuat...</p>
         ) : sessions.length === 0 ? (
           <p className="text-gray-500 text-center py-8">Belum ada data sidang. Buat sidang baru untuk memulai.</p>
         ) : (
           <div className="space-y-2">
-            {sessions.map((s) => (
+            {sessions
+              .filter((s) => {
+                if (!search.trim()) return true
+                const q = search.toLowerCase()
+                return (
+                  s.nama?.toLowerCase().includes(q) ||
+                  s.nim?.toLowerCase().includes(q) ||
+                  s.judul_skripsi?.toLowerCase().includes(q)
+                )
+              })
+              .map((s) => (
               <div
                 key={s.id}
                 onClick={() => router.push(`/session/${s.id}`)}
@@ -144,6 +166,12 @@ export default function Home() {
                 <span className="text-xs text-gray-400">{new Date(s.created_at || '').toLocaleDateString('id-ID')}</span>
               </div>
             ))}
+            {search.trim() && sessions.filter((s) => {
+              const q = search.toLowerCase()
+              return s.nama?.toLowerCase().includes(q) || s.nim?.toLowerCase().includes(q) || s.judul_skripsi?.toLowerCase().includes(q)
+            }).length === 0 && (
+              <p className="text-gray-400 text-center py-4">Tidak ditemukan hasil untuk "{search}"</p>
+            )}
           </div>
         )}
       </div>
