@@ -1,102 +1,85 @@
 # PDF Generation — Implementation History & Error Log
 
 ## Goal
-Click "⬇ Menyimpan PDF" → server generates paginated A4 PDF → auto-saves to Supabase Storage `pdf-archive` → "📄 Lihat PDF" link appears.
+Click "⬇ Menyimpan PDF" → browser captures preview → saves to Supabase Storage `pdf-archive` → "📄 Lihat PDF" link appears.
 
 ---
 
-## Architecture
+## Current Implementation (html2canvas)
 
-```
-Frontend (PreviewAll component)
-  → POST /api/generate-pdf/:id
-    → Playwright (playwright-core) + @sparticuz/chromium
-    → Navigates to /pdf-render/:id (server-side rendered HTML)
-    → page.pdf() → A4 buffer
-    → Upload to Supabase Storage
-    → Return public URL
-```
+After many attempts with Playwright/Puppeteer/@sparticuz/chromium failing due to browser binary not being available on Vercel's serverless runtime, we reverted to html2canvas approach.
 
----
-
-## What Was Built
-
-### New files
-- `src/app/api/generate-pdf/[id]/route.ts` — API route, generates PDF server-side
-- `src/app/pdf-render/[id]/page.tsx` — Server component, fetches session from Supabase (admin client, no auth) and renders the full preview HTML that Playwright captures
-- `src/app/globals.css` — Print CSS: `@page { margin: 15mm 20mm 20mm }`, `.page-break`, `.avoid-break`, `thead { display: table-header-group }` for repeated table headers
-- `scripts/playwright-install.mjs` — (removed) Node.js bootstrap that downloaded Chromium during build
-
-### Modified files
-- `src/app/session/[id]/page.tsx` — `PreviewAll` component: replaced html2canvas+jsPDF pipeline with `fetch('/api/generate-pdf/...')`. Improved error handling: checks `res.ok` and `content-type` before calling `.json()` to prevent `Unexpected token '<'` crash on HTML error responses.
-- `next.config.js` — externalizes `playwright-core` and `@sparticuz/chromium` in both `serverComponentsExternalPackages` and `webpack.externals` so Next.js doesn't bundle them
-- `package.json` — dependencies: `playwright-core`, `@sparticuz/chromium`
+**How it works:**
+1. User clicks "⬇ Menyimpan PDF"
+2. Client-side: html2canvas captures each `.page-break` section
+3. jsPDF creates A4 PDF with proper margins (15mm top/bottom, 20mm left/right)
+4. PDF uploaded to Supabase Storage
+5. URL saved to session
 
 ---
 
 ## Error Log (chronological)
 
-### 1. `Chrome not found` (local dev)
+### 1. Chrome not found (local dev)
 **Cause:** No Chrome binary on system.
-**Fix:** Added fallback chain: system Chrome → `@sparticuz/chromium` → `@puppeteer/browsers` download.
+**Fix:** System Chrome fallback.
 
-### 2. `@sparticuz/chromium bin directory does not exist` (Vercel)
-**Cause:** Next.js bundler was relocating/moving `@sparticuz/chromium` during build, breaking the `bin/` path that `executablePath()` relies on.
-**Fix Attempts:**
-- Added `serverComponentsExternalPackages` + `webpack.externals` in `next.config.js`
-- Used `require.resolve()` to locate package → blocked by `exports` field in package.json
-- Used `process.cwd() + '/node_modules/@sparticuz/chromium/bin'` — worked for path, but import still broke
-
-### 3. `ERR_REQUIRE_ESM: require() of ES Module @sparticuz/chromium not supported` (Vercel)
-**Cause:** `@sparticuz/chromium` is pure ESM. Next.js App Router compiles top-level `import` statements into `require()` calls internally. Even though the source code used ESM `import`, the compiled output used `require()` — crashing on ESM-only packages.
+### 2. Playwright chromium_headless_shell not installed (Vercel)
+**Cause:** Browser downloaded during build stays on build machine, not deployed to runtime.
 **Fix attempts:**
-- Moved `import ChromiumPkg from '@sparticuz/chromium'` inside the handler → still crashed because Next.js transforms all top-level imports in the file
-- Removing `require.resolve()` wasn't enough — the static ESM `import` was still being converted to `require()` by the bundler
+- Added `npx playwright install chromium` to build script — browser still not deployed
+- `@sparticuz/chromium` — ESM-only package, Next.js bundling converts imports to require() causing `ERR_REQUIRE_ESM`
+- Dynamic imports + `export const runtime = 'nodejs'` — still got bundled as require()
+- `playwright` full package — still needs browser at runtime
+- Puppeteer — same browser download issue
 
-### 4. `ERR_REQUIRE_ESM` (continued — root fix)
+### 3. Browser binary on Vercel — fundamental problem
+**Root cause:** Vercel serverless functions don't have a browser binary installed. All approaches (Playwright, Puppeteer, @sparticuz/chromium) require a browser to be present at runtime, but:
+- Browser downloaded during build stays on build machine
+- Vercel doesn't pre-install any browsers
+- @sparticuz/chromium has ESM bundling issues with Next.js
 
-**Root cause confirmed:** Next.js App Router wraps route handlers in a CommonJS-compatible runtime. Any module imported at the top level of a route file can be transformed to `require()` regardless of whether the source uses ESM syntax.
-
-**Final fix:**
-```typescript
-// At the very top of the route file — BEFORE any imports
-export const runtime = 'nodejs'
-export const dynamic = 'force-dynamic'
-
-// NO top-level imports of playwright-core or @sparticuz/chromium
-// Inside the handler ONLY:
-const { chromium } = await import('playwright-core')
-const ChromiumPkg = (await import('@sparticuz/chromium')).default
-```
-
-`runtime = 'nodejs'` tells Next.js this route uses pure Node.js ESM runtime and shouldn't wrap it in a CJS-compatible layer. Combined with 100% dynamic imports for the ESM-only packages, this prevents all `require()` transformations.
+**Solution:** Revert to html2canvas (client-side rendering).
 
 ---
 
-## Previous Approaches (abandoned)
+## Files
 
-| Approach | Why abandoned |
-|---|---|
-| html2canvas + jsPDF (client-side) | Pixel-based slicing — can't do semantic page breaks, repeated table headers, or match browser print quality |
-| Puppeteer + `@sparticuz/chromium` (initial) | `@sparticuz/chromium` ESM + Next.js CJS bundling was incompatible; binary path resolution broke under bundling |
-| Playwright full + browser download at build | Playwright's browser download at runtime fails in Vercel (npx not available); shipping Windows binaries to Linux Vercel was a mismatch |
-| `playwright install chromium-headless-shell` in build script | Binary downloaded on Windows dev machine (wrong arch); Vercel's .gitignore excluded `playwright-browsers/` so it never deployed |
-| Paged.js (client-side) | Can't auto-upload to Supabase Storage; requires manual "Save as PDF" from browser dialog |
+### Current (html2canvas)
+- `src/app/session/[id]/page.tsx` — `handleDownloadPDF` uses html2canvas + jsPDF
+- `src/app/globals.css` — `@page { margin: 15mm 20mm 20mm }`, `.page-break`, `.avoid-break`
 
----
-
-## Current Setup
-
-- `playwright-core` — lightweight driver (~400KB, no browser bundles)
-- `@sparticuz/chromium` — prebuilt Linux Chromium binary inside npm package; extracts to `/tmp` on first call
-- Bin path: `process.cwd()/node_modules/@sparticuz/chromium/bin` (ESM-safe, no require.resolve)
-- PDF renders at `/pdf-render/:id` which is a Next.js server component (fetches session via admin Supabase client, no auth required)
-- PDF uploaded to `pdf-archive` bucket in Supabase Storage, URL saved to `sessions.pdf_url`
+### Removed during Playwright attempts
+- `scripts/playwright-install.mjs` — deleted
+- `public/pagedjs/paged.polyfill.js` — deleted
 
 ---
 
-## Vercel Environment Requirements
+## Notes on Display Quality
 
-- `VERCEL_SUPPORT_LARGE_FUNCTIONS=1` — removes 250 MB serverless function size limit (Chromium binary pushes function over limit)
-- `next.config.js` must externalize both `playwright-core` and `@sparticuz/chromium` so their binaries ship with the function
-- `playwright-browsers/` is in `.gitignore` — it's OS-specific and re-evaluated at runtime via `@sparticuz/chromium`
+html2canvas has limitations:
+- Can't do semantic page breaks (captures pixels, not HTML structure)
+- Table headers don't repeat on new pages
+- Some layout differences from browser print
+
+The `.page-break` class helps, but the quality is not pixel-perfect like browser print.
+
+---
+
+## Previous Approaches (for reference)
+
+| Approach | Status | Issue |
+|---|---|---|
+| html2canvas | ✓ Working | Lower quality |
+| Playwright | ✗ | Browser not on Vercel |
+| Puppeteer | ✗ | Browser not on Vercel |
+| @sparticuz/chromium | ✗ | ESM bundling breaks |
+| Browser print → manual | ✓ Perfect | User must save manually |
+
+---
+
+## Supabase Storage
+
+- Bucket: `pdf-archive` (public)
+- Path format: `{session_id}/BA_Sidang_{name}_{nim}.pdf`
+- File size: ~100-200KB typical
