@@ -1395,13 +1395,15 @@ function PreviewAll({ session, onUpdate }: { session: Session; onUpdate: (s: Ses
           </table>
         </div>
 
-        {/* ===== FORM PENILAIAN (3 examiners, 1 page each, font 12pt) ===== */}
+        {/* ===== FORM PENILAIAN (3 examiners, 2 pages each) ===== */}
         {[0, 1, 2].map((examIdx) => {
           const scores = session.skor_penguji?.[examIdx] || [null,null,null,null,null,null,null,null,null,null]
           const labels = ['Penguji I/Ketua Penguji', 'Penguji II/Anggota Penguji', 'Penguji III/Anggota Penguji']
           const namaPenguji = [session.penguji1, session.penguji2, session.penguji3]
-          return (
-            <div key={examIdx} className="page-break">
+          const half = Math.ceil(RUBRIC_CRITERIA.length / 2)
+          
+          return [
+            <div key={`${examIdx}-p1`} className="page-break">
               <div className="text-center border-b-2 border-black pb-4">
                 <img src="/kop-surat-resize.png" alt="KOP UPN Veteran Jakarta" style={{ display: 'block', margin: '0 auto 0.5rem', maxWidth: '100%', maxHeight: '100px', width: 'auto', height: 'auto' }} />
                 <h1 className="text-xl font-bold text-center uppercase">Formulir Penilaian Sidang Skripsi</h1>
@@ -1410,7 +1412,7 @@ function PreviewAll({ session, onUpdate }: { session: Session; onUpdate: (s: Ses
                 <p className="text-sm text-center font-bold">SEMESTER {session.semester} T.A. {session.ta}</p>
               </div>
 
-              <table className="w-full mt-2 text-base">
+              <table className="w-full mt-2 text-sm">
                 <tbody>
                   <tr><td className="w-36">Nama Peserta</td><td className="w-4">:</td><td>{session.nama}</td><td className="w-36">NIM</td><td className="w-4">:</td><td>{session.nim}</td></tr>
                   <tr><td>Hari, Tanggal Sidang</td><td>:</td><td>{session.hari_tanggal}</td><td>Waktu Sidang</td><td>:</td><td>{session.waktu}</td></tr>
@@ -1418,21 +1420,21 @@ function PreviewAll({ session, onUpdate }: { session: Session; onUpdate: (s: Ses
                   <tr><td>Peminatan</td><td>:</td><td>{session.peminatan}</td><td></td><td></td><td></td></tr>
                 </tbody>
               </table>
-              <p className="text-base mt-1"><span className="font-semibold">Judul Skripsi:</span> {session.judul_skripsi}</p>
+              <p className="text-sm mt-1"><span className="font-semibold">Judul Skripsi:</span> {session.judul_skripsi}</p>
 
-              <table className="template-table text-base mt-3">
+              <table className="template-table text-sm mt-3">
                 <thead>
-                  <tr><th className="w-8">NO</th><th className="w-64">PARAMETER PENILAIAN</th><th className="w-24">SKOR (1—4)</th><th className="w-14">BOBOT</th><th className="w-24">SKOR × BOBOT</th></tr>
+                  <tr><th className="w-8">NO</th><th>PARAMETER PENILAIAN</th><th className="w-24">SKOR (1—4)</th><th className="w-14">BOBOT</th><th className="w-24">SKOR × BOBOT</th></tr>
                 </thead>
                 <tbody>
-                  {RUBRIC_CRITERIA.map((c) => {
+                  {RUBRIC_CRITERIA.slice(0, half).map((c) => {
                     const skorXBobot = scores[c.no - 1] !== null ? scores[c.no - 1]! * c.bobot : null
                     return (
                       <tr key={c.no} className="avoid-break">
                         <td className="text-center align-top">{c.no}.</td>
-                        <td className="leading-snug py-1.5">
+                        <td className="text-xs leading-snug py-1">
                           <div className="font-semibold">{c.label}</div>
-                          <div className="text-[11px] text-gray-700 whitespace-pre-line">{c.detail}</div>
+                          <div className="whitespace-pre-line text-[10px] text-gray-700">{c.detail}</div>
                         </td>
                         <td className="text-center">{scores[c.no - 1] ?? ''}</td>
                         <td className="text-center">{c.bobot}</td>
@@ -1441,21 +1443,57 @@ function PreviewAll({ session, onUpdate }: { session: Session; onUpdate: (s: Ses
                     )
                   })}
                 </tbody>
-                <tfoot>
-                  <tr className="font-bold">
-                    <td colSpan={4} className="text-center">TOTAL SKOR × BOBOT</td>
+              </table>
+            </div>,
+            
+            <div key={`${examIdx}-p2`} className="page-break">
+              <div className="text-center border-b-2 border-black pb-4">
+                <img src="/kop-surat-resize.png" alt="KOP UPN Veteran Jakarta" style={{ display: 'block', margin: '0 auto 0.5rem', maxWidth: '100%', maxHeight: '100px', width: 'auto', height: 'auto' }} />
+                <h1 className="text-xl font-bold text-center uppercase">Formulir Penilaian Sidang Skripsi</h1>
+                <p className="text-sm text-center">PROGRAM STUDI KESEHATAN MASYARAKAT PROGRAM SARJANA</p>
+                <p className="text-sm text-center">FAKULTAS ILMU KESEHATAN UPN &ldquo;VETERAN&rdquo; JAKARTA</p>
+                <p className="text-sm text-center font-bold">SEMESTER {session.semester} T.A. {session.ta}</p>
+              </div>
+
+              <table className="template-table text-sm mt-3">
+                <thead>
+                  <tr><th className="w-8">NO</th><th>PARAMETER PENILAIAN</th><th className="w-24">SKOR (1—4)</th><th className="w-14">BOBOT</th><th className="w-24">SKOR × BOBOT</th></tr>
+                </thead>
+                <tbody>
+                  {RUBRIC_CRITERIA.slice(half).map((c) => {
+                    const skorXBobot = scores[c.no - 1] !== null ? scores[c.no - 1]! * c.bobot : null
+                    return (
+                      <tr key={c.no} className="avoid-break">
+                        <td className="text-center align-top">{c.no}.</td>
+                        <td className="text-xs leading-snug py-1">
+                          <div className="font-semibold">{c.label}</div>
+                          <div className="whitespace-pre-line text-[10px] text-gray-700">{c.detail}</div>
+                        </td>
+                        <td className="text-center">{scores[c.no - 1] ?? ''}</td>
+                        <td className="text-center">{c.bobot}</td>
+                        <td className="text-center font-bold">{skorXBobot ?? ''}</td>
+                      </tr>
+                    )
+                  })}
+                  <tr className="font-bold border-t-2 border-black">
+                    <td colSpan={3} className="text-center py-1">TOTAL SKOR × BOBOT</td>
+                    <td className="text-center"></td>
                     <td className="text-center">{calc.scoresByExaminer[examIdx].totalSkorXBobot}</td>
                   </tr>
                   <tr className="font-bold">
-                    <td colSpan={4} className="text-center">NILAI AKHIR [/400 × 100]</td>
+                    <td colSpan={3} className="text-center py-1">NILAI AKHIR [/400 × 100]</td>
+                    <td className="text-center"></td>
                     <td className="text-center">{calc.scoresByExaminer[examIdx].nilaiAkhir > 0 ? calc.scoresByExaminer[examIdx].nilaiAkhir.toFixed(2) : ''}</td>
                   </tr>
                   <tr className="font-bold">
-                    <td colSpan={4} className="text-center">HURUF MUTU</td>
+                    <td colSpan={3} className="text-center py-1">HURUF MUTU</td>
+                    <td className="text-center"></td>
                     <td className="text-center">{calc.scoresByExaminer[examIdx].nilaiAkhir > 0 ? calcGrade(calc.scoresByExaminer[examIdx].nilaiAkhir) : ''}</td>
                   </tr>
-                </tfoot>
+                </tbody>
               </table>
+
+              <p className="text-xs mt-1 italic">*Bila presentasi skripsi dilakukan menggunakan Bahasa Inggris, nilai akhir ditambahkan 2—6 poin.</p>
 
               <div className="mt-4 avoid-break">
                 <p>Hari, Tanggal: {session.hari_tanggal}</p>
@@ -1473,7 +1511,7 @@ function PreviewAll({ session, onUpdate }: { session: Session; onUpdate: (s: Ses
                 </div>
               </div>
             </div>
-          )
+          ]
         })}
 
         {/* ===== REKAPITULASI NILAI ===== */}
