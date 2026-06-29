@@ -50,36 +50,37 @@ export async function POST(
   }
 
   const chromePath = getChromePath()
-  const fs = require('fs')
-  if (!fs.existsSync(chromePath)) {
-    return NextResponse.json({ error: 'Chrome not found', path: chromePath }, { status: 500 })
-  }
+
+  // No pre-check here — try/catch handles everything including fallback
 
   let browser: any = null
   let page: any = null
   const step = (name: string) => console.log(`[PDF] Step: ${name}`)
   try {
     step('launching browser')
-    browser = await puppeteer.launch({
-      executablePath: chromePath,
-      headless: true,
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-gpu',
-        '--font-render-hinting=none',
-      ],
-    }).catch(async (err: any) => {
-      // Fallback: try without executablePath so puppeteer uses bundled Chromium
-      console.error('Primary Chrome launch failed, trying fallback:', err.message)
+    try {
+      browser = await puppeteer.launch({
+        executablePath: chromePath,
+        headless: true,
+        args: [
+          '--no-sandbox',
+          '--disable-setuid-sandbox',
+          '--disable-dev-shm-usage',
+          '--disable-gpu',
+          '--font-render-hinting=none',
+        ],
+      })
+      step('launched with system Chrome')
+    } catch (launchErr: any) {
+      console.error('System Chrome failed, falling back to @sparticuz/chromium:', launchErr.message)
       const Chromium = (await import('@sparticuz/chromium')).default
-      return puppeteer.launch({
+      browser = await puppeteer.launch({
         executablePath: await Chromium.executablePath(),
         headless: true,
         args: Chromium.args,
       })
-    })
+      step('launched with @sparticuz/chromium')
+    }
 
     page = await browser.newPage()
     step('browser launched')
