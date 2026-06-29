@@ -1149,7 +1149,7 @@ function PreviewAll({ session }: { session: Session }) {
       await new Promise(r => setTimeout(r, 50))
 
       const canvas = await html2canvas(offscreen, {
-        scale: 1.5,
+        scale: 2,
         useCORS: true,
         logging: false,
         width: offscreen.scrollWidth,
