@@ -1211,27 +1211,13 @@ function PreviewAll({ session }: { session: Session }) {
         console.error('Storage upload error:', uploadError)
         setPdfStatus('error')
       } else {
-        let publicUrl = ''
-        try {
-          const { data } = supabase.storage.from('pdf-archive').getPublicUrl(storagePath)
-          publicUrl = data?.publicUrl || ''
-        } catch (e) {
-          console.warn('getPublicUrl failed, using fallback:', e)
-          publicUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/pdf-archive/${storagePath}`
-        }
+        const publicUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/pdf-archive/${storagePath}`
 
-        if (publicUrl) {
-          const { error: updateError } = await supabase.from('sessions').update({ pdf_url: publicUrl }).eq('id', session.id)
-          if (updateError) {
-            console.error('DB update error:', updateError)
-            // Storage succeeded, DB update failed — still show partial success
-            setPdfStatus('saved')
-          } else {
-            setPdfStatus('saved')
-          }
-        } else {
-          setPdfStatus('saved')
+        const { error: updateError } = await supabase.from('sessions').update({ pdf_url: publicUrl }).eq('id', session.id)
+        if (updateError) {
+          console.error('DB update error:', updateError)
         }
+        setPdfStatus('saved')
       }
     } catch (err) {
       console.error('PDF storage error:', err)
