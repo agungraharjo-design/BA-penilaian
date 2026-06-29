@@ -325,7 +325,7 @@ export default function SessionPage() {
           </div>
         )}
         {activeTab === 'preview' && (
-          <PreviewAll session={session} />
+          <PreviewAll session={session} onUpdate={autoSave} />
         )}
       </div>
 
@@ -1065,7 +1065,7 @@ function DaftarHadirForm({ session, onUpdate, isDosen, sessionId }: { session: S
 }
 
 // ─── PREVIEW & PDF ───────────────────────────────────────────
-function PreviewAll({ session }: { session: Session }) {
+function PreviewAll({ session, onUpdate }: { session: Session; onUpdate: (s: Session) => void }) {
   const previewRef = useRef<HTMLDivElement>(null)
   const [pdfStatus, setPdfStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
 
@@ -1074,235 +1074,17 @@ function PreviewAll({ session }: { session: Session }) {
   }
 
   const handleDownloadPDF = async () => {
-    const html2canvas = (await import('html2canvas')).default
-    const { jsPDF } = await import('jspdf')
-
-    if (!previewRef.current) return
-
-    const original = previewRef.current
     setPdfStatus('saving')
-
     try {
-    // Clone the preview content
-    const docFrag = original.cloneNode(true) as HTMLElement
-
-    // Hide .no-print elements
-    docFrag.querySelectorAll('.no-print').forEach(el => {
-      ;(el as HTMLElement).style.display = 'none'
-    })
-
-    // Split content into sections at .page-break boundaries
-    const children = Array.from(docFrag.children)
-    const sections: HTMLElement[] = []
-    let currentParts: HTMLElement[] = []
-
-    for (const child of children) {
-      const el = child as HTMLElement
-      if (el.classList.contains('page-break') && currentParts.length > 0) {
-        const section = document.createElement('div')
-        section.style.width = '100%'
-        currentParts.forEach(c => section.appendChild(c.cloneNode(true)))
-        sections.push(section)
-        currentParts = [el.cloneNode(true) as HTMLElement]
-      } else {
-        currentParts.push(el.cloneNode(true) as HTMLElement)
+      const res = await fetch(`/api/generate-pdf/${session.id}`, { method: 'POST' })
+      const data = await res.json()
+      if (!res.ok) {
+        console.error('PDF API error:', data)
+        setPdfStatus('error')
+        return
       }
-    }
-    if (currentParts.length > 0) {
-      const section = document.createElement('div')
-      section.style.width = '100%'
-      currentParts.forEach(c => section.appendChild(c))
-      sections.push(section)
-    }
-    if (sections.length === 0) {
-      const section = document.createElement('div')
-      section.style.width = '100%'
-      children.forEach(c => section.appendChild(c.cloneNode(true)))
-      sections.push(section)
-    }
-
-    // A4: @page { margin: 15mm 20mm 20mm } → content = 170mm × 262mm
-    const pdf = new jsPDF('p', 'mm', 'a4')
-    const marginLeft = 20
-    const contentW = 170
-    const marginTop = 15
-    const contentH = 262
-
-    // Render a DOM element to canvas
-    const renderToCanvas = async (el: HTMLElement): Promise<HTMLCanvasElement> => {
-      const offscreen = document.createElement('div')
-      offscreen.style.position = 'absolute'
-      offscreen.style.left = '-9999px'
-      offscreen.style.top = '0'
-      offscreen.style.width = original.scrollWidth + 'px'
-      offscreen.style.overflow = 'visible'
-      offscreen.style.background = 'white'
-      offscreen.style.fontFamily = "'Times New Roman', Georgia, serif"
-      offscreen.style.color = '#000'
-      offscreen.style.lineHeight = '1.5'
-      offscreen.appendChild(el)
-      document.body.appendChild(offscreen)
-
-      offscreen.querySelectorAll('table').forEach(t => {
-        ;(t as HTMLElement).style.borderCollapse = 'collapse'
-      })
-
-      const imgs = offscreen.querySelectorAll('img')
-      await Promise.all(Array.from(imgs).map(img => {
-        if (img.complete) return Promise.resolve()
-        return new Promise<void>(r => { img.onload = () => r(); img.onerror = () => r() })
-      }))
-      await new Promise(r => setTimeout(r, 200))
-
-      const canvas = await html2canvas(offscreen, {
-        scale: 2, useCORS: true, logging: false,
-        width: offscreen.scrollWidth, height: offscreen.scrollHeight,
-      })
-      document.body.removeChild(offscreen)
-      return canvas
-    }
-
-    // Convert canvas pixel height to mm on PDF
-    const pxToMM = (px: number, canvasW: number) => (px * contentW) / canvasW
-
-    // Add a canvas to current PDF page
-    const addCanvas = (canvas: HTMLCanvasElement, x: number, y: number, w: number, h: number) => {
-      pdf.addImage(canvas.toDataURL('image/jpeg', 0.9), 'JPEG', x, y, w, h)
-    }
-
-    // Render a canvas and add it to PDF, slicing across pages if needed
-    const renderAndAdd = async (el: HTMLElement) => {
-      const canvas = await renderToCanvas(el)
-      const imgH = pxToMM(canvas.height, canvas.width)
-
-      if (imgH <= contentH) {
-        addCanvas(canvas, marginLeft, marginTop, contentW, imgH)
-      } else {
-        let yOff = 0
-        let first = true
-        while (yOff < imgH) {
-          if (!first) pdf.addPage()
-          first = false
-          const sliceH = Math.min(contentH, imgH - yOff)
-          const srcY = (yOff / imgH) * canvas.height
-          const srcH = (sliceH / imgH) * canvas.height
-          const tmp = document.createElement('canvas')
-          tmp.width = canvas.width
-          tmp.height = Math.round(srcH)
-          tmp.getContext('2d')!.drawImage(canvas, 0, srcY, canvas.width, srcH, 0, 0, canvas.width, srcH)
-          addCanvas(tmp, marginLeft, marginTop, contentW, sliceH)
-          yOff += contentH
-        }
-      }
-    }
-
-    // Process each section
-    for (let sIdx = 0; sIdx < sections.length; sIdx++) {
-      const section = sections[sIdx]
-
-      // First render the full section to check its height
-      const fullCanvas = await renderToCanvas(section)
-      const fullH = pxToMM(fullCanvas.height, fullCanvas.width)
-
-      if (fullH <= contentH) {
-        // Fits on one page
-        if (sIdx > 0) pdf.addPage()
-        addCanvas(fullCanvas, marginLeft, marginTop, contentW, fullH)
-        continue
-      }
-
-      // Too tall — try to split at the rubric table
-      const table = section.querySelector('.template-table') as HTMLTableElement | null
-      if (!table) {
-        // No table — just slice across pages
-        if (sIdx > 0) pdf.addPage()
-        let yOff = 0
-        let first = true
-        while (yOff < fullH) {
-          if (!first) pdf.addPage()
-          first = false
-          const sliceH = Math.min(contentH, fullH - yOff)
-          const srcY = (yOff / fullH) * fullCanvas.height
-          const srcH = (sliceH / fullH) * fullCanvas.height
-          const tmp = document.createElement('canvas')
-          tmp.width = fullCanvas.width
-          tmp.height = Math.round(srcH)
-          tmp.getContext('2d')!.drawImage(fullCanvas, 0, srcY, fullCanvas.width, srcH, 0, 0, fullCanvas.width, srcH)
-          addCanvas(tmp, marginLeft, marginTop, contentW, sliceH)
-          yOff += contentH
-        }
-        continue
-      }
-
-      // Gather nodes above/below the table
-      const above: Node[] = []
-      const below: Node[] = []
-      let nd: ChildNode | null = section.firstChild
-      while (nd && nd !== table) { above.push(nd.cloneNode(true)); nd = nd.nextSibling }
-      nd = table.nextSibling
-      while (nd) { below.push(nd.cloneNode(true)); nd = nd.nextSibling }
-
-      const thead = table.querySelector('thead')
-      const tbody = table.querySelector('tbody')
-      const tfoot = table.querySelector('tfoot')
-      const rows = tbody ? Array.from(tbody.children) : []
-      const mid = Math.ceil(rows.length / 2)
-
-      // Build half-table with repeated thead
-      const buildHalf = (rowStart: number, rowEnd: number, includeFoot: boolean) => {
-        const halfTable = document.createElement('table')
-        halfTable.className = table.className
-        halfTable.style.width = '100%'
-        halfTable.style.borderCollapse = 'collapse'
-        if (thead) halfTable.appendChild(thead.cloneNode(true))
-        const halfBody = document.createElement('tbody')
-        for (let r = rowStart; r < rowEnd; r++) halfBody.appendChild(rows[r].cloneNode(true))
-        halfTable.appendChild(halfBody)
-        if (includeFoot && tfoot) halfTable.appendChild(tfoot.cloneNode(true))
-        return halfTable
-      }
-
-      // Build a div with nodes above + table + nodes below
-      const buildDiv = (aboveNodes: Node[], tbl: HTMLTableElement, belowNodes: Node[]) => {
-        const div = document.createElement('div')
-        div.style.width = '100%'
-        aboveNodes.forEach(n => div.appendChild(n.cloneNode(true)))
-        div.appendChild(tbl)
-        belowNodes.forEach(n => div.appendChild(n.cloneNode(true)))
-        return div
-      }
-
-      // Page 1: header info + first half rows
-      if (sIdx > 0) pdf.addPage()
-      const half1 = buildHalf(0, mid, false)
-      const page1 = buildDiv(above, half1, [])
-      await renderAndAdd(page1)
-
-      // Page 2: repeated header + second half rows + tfoot + signature
-      pdf.addPage()
-      const half2 = buildHalf(mid, rows.length, true)
-      const page2 = buildDiv([], half2, below)
-      await renderAndAdd(page2)
-    }
-
-    // Upload to Supabase Storage
-    const fileName = `BA_Sidang_${session.nama.replace(/\s+/g, '_')}_${session.nim}.pdf`
-    const blob = pdf.output('blob')
-    const storagePath = `${session.id}/${fileName}`
-    const { error: uploadError } = await supabase.storage
-      .from('pdf-archive')
-      .upload(storagePath, blob, { contentType: 'application/pdf', upsert: true })
-
-    if (uploadError) {
-      console.error('Storage upload error:', uploadError)
-      setPdfStatus('error')
-    } else {
-      const publicUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/pdf-archive/${storagePath}`
-      const { error: updateError } = await supabase.from('sessions').update({ pdf_url: publicUrl }).eq('id', session.id)
-      if (updateError) console.error('DB update error:', updateError)
+      onUpdate({ ...session, pdf_url: data.url })
       setPdfStatus('saved')
-    }
-
     } catch (err) {
       console.error('PDF generation error:', err)
       setPdfStatus('error')
