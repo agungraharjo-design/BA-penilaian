@@ -1074,226 +1074,66 @@ function PreviewAll({ session }: { session: Session }) {
   }
 
   const handleDownloadPDF = async () => {
-    const html2canvas = (await import('html2canvas')).default
-    const { jsPDF } = await import('jspdf')
-
     if (!previewRef.current) return
 
-    const original = previewRef.current
-    const docFrag = original.cloneNode(true) as HTMLElement
+    // The only way to get a PDF that matches the print preview is to use
+    // the browser's native print engine. html2canvas captures pixels and
+    // fundamentally cannot replicate @media print CSS, page breaks, or
+    // proper font rendering.
 
-    // Remove padding, margin, spacing from cloned root (these are Tailwind classes
-    // that eat into the content width and cause NIP/table clipping)
-    docFrag.style.padding = '0'
-    docFrag.style.margin = '0'
-    docFrag.style.gap = '0'
-    docFrag.style.width = '100%'
-    // Strip Tailwind space-y from children
-    Array.from(docFrag.children).forEach(child => {
-      (child as HTMLElement).style.marginTop = '0'
-      ;(child as HTMLElement).style.marginBottom = '0'
-    })
-
-    // Create offscreen container in PIXELS (html2canvas handles px better than mm)
-    // A4 content area: 170mm = ~642px at 96dpi, but we render at 2x for quality
-    const offscreen = document.createElement('div')
-    offscreen.style.position = 'absolute'
-    offscreen.style.left = '-9999px'
-    offscreen.style.top = '0'
-    offscreen.style.width = '642px'
-    offscreen.style.overflow = 'visible'
-    offscreen.style.background = 'white'
-    offscreen.style.fontFamily = "'Times New Roman', Georgia, serif"
-    offscreen.style.fontSize = '12pt'
-    offscreen.style.lineHeight = '1.5'
-    offscreen.style.color = '#000'
-    document.body.appendChild(offscreen)
-
-    // Apply comprehensive inline styles to all elements in the cloned DOM
-    // This overrides Tailwind classes that don't work in offscreen context
-    const applyPrintStyles = (root: HTMLElement) => {
-      // All tables: force border-collapse and full width
-      root.querySelectorAll('table').forEach(table => {
-        const t = table as HTMLElement
-        t.style.borderCollapse = 'collapse'
-        t.style.width = '100%'
-        t.style.tableLayout = 'auto'
-        t.style.margin = '0'
-        table.querySelectorAll('th, td').forEach(cell => {
-          const c = cell as HTMLElement
-          c.style.padding = '4px 8px'
-          c.style.border = '1px solid black'
-          c.style.verticalAlign = 'top'
-          c.style.lineHeight = '1.4'
-          // Ensure no overflow clipping
-          c.style.overflow = 'visible'
-          c.style.whiteSpace = 'normal'
-          c.style.wordBreak = 'break-word'
-        })
-        table.querySelectorAll('th').forEach(th => {
-          ;(th as HTMLElement).style.textAlign = 'center'
-          ;(th as HTMLElement).style.fontWeight = 'bold'
-        })
-      })
-
-      // Force text containers to not clip
-      root.querySelectorAll('p, div, span, td, th').forEach(el => {
-        const e = el as HTMLElement
-        if (e.style.overflow === 'hidden') e.style.overflow = 'visible'
-      })
-
-      // Signature blocks: ensure they don't overflow
-      root.querySelectorAll('.avoid-break').forEach(el => {
-        ;(el as HTMLElement).style.pageBreakInside = 'avoid'
-      })
-
-      // Hide no-print elements
-      root.querySelectorAll('.no-print').forEach(el => {
-        ;(el as HTMLElement).style.display = 'none'
-      })
-
-      // Remove all margin-top from space-y children
-      Array.from(root.children).forEach(child => {
-        const c = child as HTMLElement
-        if (c.classList.contains('page-break')) {
-          c.style.marginTop = '0'
-          c.style.paddingTop = '0'
-          c.style.borderTop = 'none'
-        }
-      })
-    }
-
-    const pdf = new jsPDF('p', 'mm', 'a4')
-    const pdfWidth = pdf.internal.pageSize.getWidth()
-    const pdfHeight = pdf.internal.pageSize.getHeight()
-    // Content area: 210 - 20*2 = 170mm wide, 297 - 15 - 20 = 262mm tall
-    const contentWidthMM = 170
-    const contentHeightMM = 262
-    const marginLeftMM = 20
-    const marginTopMM = 15
-
-    // Split content into sections at each .page-break element
-    const children = Array.from(docFrag.children)
-    const sections: HTMLElement[] = []
-    let currentParts: HTMLElement[] = []
-
-    for (const child of children) {
-      const el = child as HTMLElement
-      if (el.classList.contains('page-break') && currentParts.length > 0) {
-        // Finalize current section
-        const section = document.createElement('div')
-        section.style.width = '100%'
-        section.style.overflow = 'visible'
-        currentParts.forEach(c => section.appendChild(c.cloneNode(true)))
-        sections.push(section)
-        currentParts = [el.cloneNode(true) as HTMLElement]
-      } else {
-        currentParts.push(el.cloneNode(true) as HTMLElement)
-      }
-    }
-    if (currentParts.length > 0) {
-      const section = document.createElement('div')
-      section.style.width = '100%'
-      section.style.overflow = 'visible'
-      currentParts.forEach(c => section.appendChild(c))
-      sections.push(section)
-    }
-
-    // If no sections were split (no .page-break found), treat entire content as one section
-    if (sections.length === 0) {
-      const section = document.createElement('div')
-      section.style.width = '100%'
-      section.style.overflow = 'visible'
-      children.forEach(c => section.appendChild(c.cloneNode(true)))
-      sections.push(section)
-    }
-
-    for (let sIdx = 0; sIdx < sections.length; sIdx++) {
-      // Clear and render this section in the offscreen container
-      offscreen.innerHTML = ''
-      offscreen.appendChild(sections[sIdx])
-
-      // Apply comprehensive inline styles
-      applyPrintStyles(offscreen)
-
-      // Wait for layout
-      await new Promise(r => setTimeout(r, 100))
-
-      const canvas = await html2canvas(offscreen, {
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        width: offscreen.scrollWidth,
-        height: offscreen.scrollHeight,
-        windowWidth: 642,
-      })
-
-      const imgData = canvas.toDataURL('image/jpeg', 0.85)
-      const imgHeight = (canvas.height * contentWidthMM) / canvas.width
-
-      // If this section fits on one page, add directly
-      if (imgHeight <= contentHeightMM) {
-        if (sIdx > 0) pdf.addPage()
-        pdf.addImage(imgData, 'JPEG', marginLeftMM, 0, contentWidthMM, imgHeight)
-      } else {
-        // Section is taller than one page — tile across pages
-        let remainingHeight = imgHeight
-        let yOffset = 0
-        let firstPageForSection = true
-
-        while (remainingHeight > 0) {
-          if (!firstPageForSection || sIdx > 0) pdf.addPage()
-          firstPageForSection = false
-
-          const pageImgHeight = Math.min(contentHeightMM, imgHeight - yOffset)
-          const srcY = (yOffset / contentWidthMM) * canvas.width
-          const srcH = (pageImgHeight / contentWidthMM) * canvas.width
-
-          // Crop canvas to this page slice
-          const tempCanvas = document.createElement('canvas')
-          tempCanvas.width = canvas.width
-          tempCanvas.height = Math.round(srcH)
-          const ctx = tempCanvas.getContext('2d')!
-          ctx.drawImage(canvas, 0, srcY, canvas.width, srcH, 0, 0, canvas.width, srcH)
-
-          const pageImgData = tempCanvas.toDataURL('image/jpeg', 0.85)
-          pdf.addImage(pageImgData, 'JPEG', marginLeftMM, 0, contentWidthMM, pageImgHeight)
-
-          yOffset += contentHeightMM
-          remainingHeight -= contentHeightMM
-        }
-      }
-    }
-
-    document.body.removeChild(offscreen)
-
-    const fileName = `BA_Sidang_${session.nama.replace(/\s+/g, '_')}_${session.nim}.pdf`
-
-    // Upload to Supabase Storage for persistence
     setPdfStatus('saving')
-    try {
-      const blob = pdf.output('blob')
-      const storagePath = `${session.id}/${fileName}`
-      const { error: uploadError } = await supabase.storage
-        .from('pdf-archive')
-        .upload(storagePath, blob, { contentType: 'application/pdf', upsert: true })
 
-      if (uploadError) {
-        console.error('Storage upload error:', uploadError)
-        setPdfStatus('error')
-      } else {
-        const publicUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/pdf-archive/${storagePath}`
-
-        const { error: updateError } = await supabase.from('sessions').update({ pdf_url: publicUrl }).eq('id', session.id)
-        if (updateError) {
-          console.error('DB update error:', updateError)
-        }
-        setPdfStatus('saved')
-      }
-    } catch (err) {
-      console.error('PDF storage error:', err)
+    // Open print dialog — user selects "Save as PDF" as destination
+    const printWindow = window.open('', '_blank')
+    if (!printWindow) {
+      alert('Popup diblokir. Izinkan popup untuk generate PDF.')
       setPdfStatus('error')
+      return
     }
+
+    // Write the preview content into the new window with print CSS
+    const previewHTML = previewRef.current.innerHTML
+    const printCSS = `
+      @page { size: A4; margin: 15mm 20mm 20mm; }
+      @media print {
+        body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        .page-break { page-break-before: always; break-before: page; padding-top: 8mm; }
+        .avoid-break { page-break-inside: avoid; break-inside: avoid; }
+        p, h1, h2, h3, li { orphans: 3; widows: 3; }
+        img { max-width: 100% !important; height: auto !important; }
+        .template-table { font-size: 10pt; border-collapse: collapse; width: 100%; }
+        .template-table th, .template-table td { padding: 2px 4px; border: 1px solid black; vertical-align: top; }
+        .template-table th { background-color: #f0f0f0; text-align: center; font-weight: bold; }
+        .no-print { display: none !important; }
+        .print-only { display: block !important; }
+        .print-only-inline { display: inline !important; }
+      }
+      @media screen {
+        .page-break { margin-top: 16px; border-top: 1px solid #e5e7eb; padding-top: 12px; }
+        .no-print { display: none !important; }
+      }
+      body { font-family: 'Times New Roman', Georgia, serif; }
+    `
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html><head>
+        <meta charset="utf-8">
+        <title>PDF - ${session.nama}</title>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Times+New+Roman&display=swap">
+        <style>${printCSS}</style>
+      </head><body>
+        <div style="font-family: 'Times New Roman', Georgia, serif; padding: 0; margin: 0;">
+          ${previewHTML}
+        </div>
+        <script>
+          window.onload = function() {
+            setTimeout(function() { window.print(); }, 500);
+          };
+        </script>
+      </body></html>
+    `)
+    printWindow.document.close()
+    setPdfStatus('saved')
   }
 
   const calculateAll = () => {
@@ -1319,13 +1159,13 @@ function PreviewAll({ session }: { session: Session }) {
           🖨 Cetak / Print
         </button>
         <button onClick={handleDownloadPDF} disabled={pdfStatus === 'saving'} className="bg-green-800 text-white px-6 py-2 rounded hover:bg-green-700 font-sans text-sm font-medium flex items-center gap-2 disabled:opacity-50">
-          {pdfStatus === 'saving' ? '⏳ Menyimpan...' : '⬇ Download PDF'}
+          {pdfStatus === 'saving' ? '⏳ Menyimpan...' : '⬇ Save as PDF'}
         </button>
         {pdfStatus === 'saved' && (
-          <span className="text-green-700 text-sm font-sans self-center">✓ Tersimpan</span>
+          <span className="text-green-700 text-sm font-sans self-center">✓ Gunakan "Save as PDF" di dialog print</span>
         )}
         {pdfStatus === 'error' && (
-          <span className="text-red-600 text-sm font-sans self-center">⚠ Gagal simpan ke database</span>
+          <span className="text-red-600 text-sm font-sans self-center">⚠ Gagal membuka print dialog</span>
         )}
         {(session.pdf_url || pdfStatus === 'saved') && (() => {
           const cleanUrl = session.pdf_url?.split('?token=')[0] || ''
