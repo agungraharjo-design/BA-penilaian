@@ -1,5 +1,7 @@
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
+
 import { NextRequest, NextResponse } from 'next/server'
-import { chromium } from 'playwright-core'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
@@ -37,7 +39,11 @@ export async function POST(
       return NextResponse.json({ error: 'Supabase not configured' }, { status: 500 })
     }
 
+    // Dynamic imports only — never at top level, avoids Next.js require() transformation
     const { createClient } = await import('@supabase/supabase-js')
+    const { chromium } = await import('playwright-core')
+    const ChromiumPkg = (await import('@sparticuz/chromium')).default
+
     const supabase = createClient(supabaseUrl, supabaseServiceKey, {
       auth: { autoRefreshToken: false, persistSession: false },
     })
@@ -61,7 +67,6 @@ export async function POST(
     } else {
       const binPath = getSparticuzBinPath()
       console.log(`[PDF] @sparticuz bin: ${binPath}`)
-      const ChromiumPkg = (await import('@sparticuz/chromium')).default
       executablePath = await ChromiumPkg.executablePath(binPath)
       console.log(`[PDF] Chromium exe: ${executablePath}`)
     }
