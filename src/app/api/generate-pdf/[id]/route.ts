@@ -20,11 +20,10 @@ function getSystemChromePath(): string | undefined {
 }
 
 function getSparticuzBinPath(): string {
-  const { dirname, join } = require('path')
-  const { createRequire } = require('node:module')
-  const requireFromHere = createRequire(import.meta.url)
-  const mainPath = requireFromHere.resolve('@sparticuz/chromium')
-  return join(dirname(dirname(mainPath)), 'bin')
+  // ESM-safe: @sparticuz/chromium is ESM-only so require.resolve fails.
+  // process.cwd() in Vercel/serverless = project root, so node_modules is always here.
+  const { join } = require('path')
+  return join(process.cwd(), 'node_modules', '@sparticuz', 'chromium', 'bin')
 }
 
 export async function POST(
