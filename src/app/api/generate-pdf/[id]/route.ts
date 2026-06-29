@@ -20,11 +20,6 @@ function getSystemChromePath(): string | undefined {
   return undefined
 }
 
-function getSparticuzBinPath(): string {
-  const { join } = require('path')
-  return join(process.cwd(), 'node_modules', '@sparticuz', 'chromium', 'bin')
-}
-
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -39,10 +34,9 @@ export async function POST(
       return NextResponse.json({ error: 'Supabase not configured' }, { status: 500 })
     }
 
-    // Dynamic imports only — never at top level, avoids Next.js require() transformation
     const { createClient } = await import('@supabase/supabase-js')
-    const { chromium } = await import('playwright-core')
-    const ChromiumPkg = (await import('@sparticuz/chromium')).default
+    // Use full playwright package - handles browser downloads automatically
+    const { chromium } = await import('playwright')
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey, {
       auth: { autoRefreshToken: false, persistSession: false },
@@ -58,17 +52,14 @@ export async function POST(
       return NextResponse.json({ error: 'Session not found', details: fetchError?.message }, { status: 404 })
     }
 
+    // Try system Chrome first, fallback to playwright's bundled browser
     let executablePath: string | undefined
     const systemChrome = getSystemChromePath()
-
     if (systemChrome && process.platform !== 'linux') {
       executablePath = systemChrome
-      console.log(`[PDF] System Chrome: ${executablePath}`)
+      console.log(`[PDF] Using system Chrome: ${executablePath}`)
     } else {
-      const binPath = getSparticuzBinPath()
-      console.log(`[PDF] @sparticuz bin: ${binPath}`)
-      executablePath = await ChromiumPkg.executablePath(binPath)
-      console.log(`[PDF] Chromium exe: ${executablePath}`)
+      console.log('[PDF] Using playwright bundled browser')
     }
 
     console.log('[PDF] Launching...')
