@@ -4,12 +4,13 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "node scripts/playwright-install.mjs && next build",
+    "build": "next build",
     "start": "next start",
     "lint": "next lint"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",
+    "@sparticuz/chromium": "^149.0.0",
     "@supabase/realtime-js": "^2.10.0",
     "@supabase/ssr": "^0.12.0",
     "@supabase/supabase-js": "^2.108.2",
@@ -18,7 +19,7 @@
     "jspdf": "^2.5.1",
     "lucide-react": "^0.400.0",
     "next": "^14.2.0",
-    "playwright": "^1.61.1",
+    "playwright-core": "^1.61.1",
     "react": "^18.3.0",
     "react-dom": "^18.3.0",
     "react-hook-form": "^7.52.0",

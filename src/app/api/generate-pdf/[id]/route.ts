@@ -1,29 +1,31 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { chromium } from 'playwright'
+import { chromium } from 'playwright-core'
+import ChromiumPkg from '@sparticuz/chromium'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
 
-// Resolve Playwright browsers path — checks shipped project dir first
-function resolveBrowsersPath(): string | undefined {
-  const { existsSync } = require('fs')
-  const path = require('path')
-  const candidates = [
-    path.join(process.cwd(), 'playwright-browsers'),
-    path.join(process.cwd(), '.next', 'server', 'playwright-browsers'),
-  ]
-  for (const c of candidates) {
-    if (existsSync(c)) {
-      console.log('[PDF] Found browsers at:', c)
-      return c
-    }
+function getSystemChromePath(): string | undefined {
+  if (process.platform === 'win32') {
+    const paths = [
+      'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+      'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
+      `${process.env.LOCALAPPDATA}\\Google\\Chrome\\Application\\chrome.exe`,
+    ]
+    const fs = require('fs')
+    for (const p of paths) { if (fs.existsSync(p)) return p }
   }
-  console.warn('[PDF] Browsers not found at:', candidates.join(', '))
+  if (process.platform === 'darwin') return '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
   return undefined
 }
 
-const browsersPath = resolveBrowsersPath()
-if (browsersPath) process.env.PLAYWRIGHT_BROWSERS_PATH = browsersPath
+function getSparticuzBinPath(): string {
+  const { dirname, join } = require('path')
+  const { createRequire } = require('node:module')
+  const requireFromHere = createRequire(import.meta.url)
+  const mainPath = requireFromHere.resolve('@sparticuz/chromium')
+  return join(dirname(dirname(mainPath)), 'bin')
+}
 
 export async function POST(
   request: NextRequest,
@@ -54,14 +56,26 @@ export async function POST(
   let page: any = null
 
   try {
-    console.log('[PDF] Launching Chromium...')
-    if (!process.env.PLAYWRIGHT_BROWSERS_PATH) {
-      console.warn('[PDF] PLAYWRIGHT_BROWSERS_PATH not set — Playwright will use default cache')
+    // On Vercel (Linux): use @sparticuz/chromium
+    // On local Windows/Mac: fall back to system Chrome
+    let executablePath: string | undefined
+    const systemChrome = getSystemChromePath()
+
+    if (systemChrome && process.platform !== 'linux') {
+      // Local dev — use system Chrome
+      executablePath = systemChrome
+      console.log('[PDF] Using system Chrome:', executablePath)
     } else {
-      console.log('[PDF] PLAYWRIGHT_BROWSERS_PATH =', process.env.PLAYWRIGHT_BROWSERS_PATH)
+      // Vercel Linux (or fallback) — use @sparticuz/chromium
+      const binPath = getSparticuzBinPath()
+      console.log('[PDF] @sparticuz/chromium bin:', binPath)
+      executablePath = await ChromiumPkg.executablePath(binPath)
+      console.log('[PDF] Chromium executable:', executablePath)
     }
 
+    console.log('[PDF] Launching Chromium...')
     browser = await chromium.launch({
+      executablePath,
       headless: true,
       args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu'],
     })
@@ -116,9 +130,13 @@ export async function POST(
     return NextResponse.json({ url: publicUrl, fileName })
   } catch (err: any) {
     console.error('[PDF] FATAL error:', err)
-    return NextResponse.json({ error: err.message || 'PDF generation failed', stack: err.stack }, { status: 500 })
+    return NextResponse.json({
+      error: err.message || 'PDF generation failed',
+      stack: err.stack,
+    }, { status: 500 })
   } finally {
     if (page) try { await page.close() } catch {}
     if (browser) try { await browser.close() } catch {}
   }
 }
+
