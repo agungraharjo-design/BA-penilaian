@@ -1082,60 +1082,19 @@ function PreviewAll({ session }: { session: Session }) {
     const original = previewRef.current
     const docFrag = original.cloneNode(true) as HTMLElement
 
-    // Create offscreen container matching print preview exactly
+    // Create offscreen container matching the exact content area of A4 print layout
+    // @page { margin: 15mm 20mm 20mm } → content area = 170mm wide, 262mm tall per page
     const offscreen = document.createElement('div')
     offscreen.style.position = 'absolute'
     offscreen.style.left = '-9999px'
     offscreen.style.top = '0'
-    offscreen.style.width = '210mm'
+    offscreen.style.width = '170mm'
     offscreen.style.background = 'white'
     offscreen.style.fontFamily = "'Times New Roman', Georgia, serif"
     offscreen.style.fontSize = '12pt'
     offscreen.style.lineHeight = '1.5'
-    offscreen.style.padding = '0'
     offscreen.style.color = '#000'
     document.body.appendChild(offscreen)
-
-    // Apply print styles to offscreen content
-    const applyPrintStyles = (root: HTMLElement) => {
-      root.querySelectorAll('.page-break').forEach(el => {
-        const htmlEl = el as HTMLElement
-        htmlEl.style.pageBreakBefore = 'always'
-        htmlEl.style.breakBefore = 'page'
-        htmlEl.style.paddingTop = '8mm'
-        htmlEl.style.borderTop = 'none'
-        htmlEl.style.marginTop = '0'
-      })
-      root.querySelectorAll('.avoid-break').forEach(el => {
-        (el as HTMLElement).style.pageBreakInside = 'avoid'
-        ;(el as HTMLElement).style.breakInside = 'avoid'
-      })
-      root.querySelectorAll('.template-table').forEach(el => {
-        (el as HTMLElement).style.fontSize = '10pt'
-        ;(el as HTMLElement).style.borderCollapse = 'collapse'
-        ;(el as HTMLElement).style.width = '100%'
-      })
-      root.querySelectorAll('.template-table th, .template-table td').forEach(el => {
-        const htmlEl = el as HTMLElement
-        htmlEl.style.border = '1px solid black'
-        htmlEl.style.padding = '2px 4px'
-        htmlEl.style.verticalAlign = 'top'
-      })
-      root.querySelectorAll('.template-table th').forEach(el => {
-        const htmlEl = el as HTMLElement
-        htmlEl.style.backgroundColor = '#f0f0f0'
-        htmlEl.style.textAlign = 'center'
-        htmlEl.style.fontWeight = 'bold'
-      })
-      root.querySelectorAll('.no-print').forEach(el => {
-        (el as HTMLElement).style.display = 'none'
-      })
-      // Signature blocks: keep together
-      root.querySelectorAll('.avoid-break').forEach(el => {
-        (el as HTMLElement).style.pageBreakInside = 'avoid'
-        ;(el as HTMLElement).style.breakInside = 'avoid'
-      })
-    }
 
     const pdf = new jsPDF('p', 'mm', 'a4')
     const pdfWidth = pdf.internal.pageSize.getWidth()
@@ -1178,7 +1137,6 @@ function PreviewAll({ session }: { session: Session }) {
       // Clear and render this section in the offscreen container
       offscreen.innerHTML = ''
       offscreen.appendChild(sections[sIdx])
-      applyPrintStyles(offscreen)
 
       // Wait a tick for layout
       await new Promise(r => setTimeout(r, 50))
@@ -1191,14 +1149,16 @@ function PreviewAll({ session }: { session: Session }) {
         height: offscreen.scrollHeight,
       })
 
-      const imgData = canvas.toDataURL('image/jpeg', 0.7)
-      const imgWidth = pdfWidth
-      const imgHeight = (canvas.height * pdfWidth) / canvas.width
+      const imgData = canvas.toDataURL('image/jpeg', 0.8)
+      // Content is 170mm wide, page is 210mm → 20mm left margin to center
+      const marginLeft = 20
+      const contentWidth = 170
+      const imgHeight = (canvas.height * contentWidth) / canvas.width
 
       // If this section fits on one page, add directly
       if (imgHeight <= pdfHeight) {
         if (sIdx > 0) pdf.addPage()
-        pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight)
+        pdf.addImage(imgData, 'JPEG', marginLeft, 0, contentWidth, imgHeight)
       } else {
         // Section is taller than one page — tile across pages
         let remainingHeight = imgHeight
@@ -1210,18 +1170,18 @@ function PreviewAll({ session }: { session: Session }) {
           firstPageForSection = false
 
           const pageImgHeight = Math.min(pdfHeight, imgHeight - yOffset)
-          const srcY = (yOffset / pdfWidth) * canvas.width
-          const srcH = (pageImgHeight / pdfWidth) * canvas.width
+          const srcY = (yOffset / contentWidth) * canvas.width
+          const srcH = (pageImgHeight / contentWidth) * canvas.width
 
-          // Use canvas cropping: create a temporary canvas for this page slice
+          // Crop canvas to this page slice
           const tempCanvas = document.createElement('canvas')
           tempCanvas.width = canvas.width
-          tempCanvas.height = canvas.width * (pageImgHeight / pdfWidth)
+          tempCanvas.height = Math.round(srcH)
           const ctx = tempCanvas.getContext('2d')!
-          ctx.drawImage(canvas, 0, srcY, tempCanvas.width, tempCanvas.height, 0, 0, tempCanvas.width, tempCanvas.height)
+          ctx.drawImage(canvas, 0, srcY, canvas.width, srcH, 0, 0, canvas.width, srcH)
 
-          const pageImgData = tempCanvas.toDataURL('image/jpeg', 0.7)
-          pdf.addImage(pageImgData, 'JPEG', 0, 0, pdfWidth, pageImgHeight)
+          const pageImgData = tempCanvas.toDataURL('image/jpeg', 0.8)
+          pdf.addImage(pageImgData, 'JPEG', marginLeft, 0, contentWidth, pageImgHeight)
 
           yOffset += pdfHeight
           remainingHeight -= pdfHeight
