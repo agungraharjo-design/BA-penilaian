@@ -16,7 +16,7 @@
   p, h1, h2, h3, li { orphans: 3; widows: 3; }
   img { max-width: 100% !important; height: auto !important; }
   .template-table { font-size: 10pt; }
-  .template-table th, .template-table td { padding: 2px 4px; }
+  .template-table th, .template-table td { padding: 4px 6px; }
 }
 
 @media screen {
