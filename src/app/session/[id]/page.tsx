@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef, useCallback, memo, startTransition } from 'react'
 import { useParams } from 'next/navigation'
 import { supabase, subscribeToSession } from '@/lib/supabase'
+import { createClient } from '@supabase/supabase-js'
 import { Session, RUBRIC_CRITERIA } from '@/types'
 import {
   calcTotalSkorXBobot, calcNilaiAkhir, calcGrade,
@@ -1184,28 +1185,29 @@ function PreviewAll({ session, onUpdate }: { session: Session; onUpdate: (s: Ses
       
       const safeName = (session.nama || 'unknown').replace(/[^a-zA-Z0-9]/g, '_')
       const fileName = `BA_Sidang_${safeName}_${session.nim || 'unknown'}.pdf`
+      const storagePath = `${session.id}/${fileName}`
       
-      // Call API to upload
-      const uploadRes = await fetch('/api/upload-pdf', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          sessionId: session.id,
-          pdfBase64,
-          fileName
+      const adminClient = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY!
+      )
+      
+      const pdfBuffer = Buffer.from(pdfBase64, 'base64')
+      const { error: uploadError } = await adminClient.storage
+        .from('pdf-archive')
+        .upload(storagePath, pdfBuffer, { 
+          contentType: 'application/pdf', 
+          upsert: true 
         })
-      })
       
-      const uploadData = await uploadRes.json()
-      
-      if (!uploadRes.ok || uploadData.error) {
-        console.error('Upload error:', uploadData.error)
-        alert('Gagal upload PDF: ' + (uploadData.error || 'Unknown error'))
+      if (uploadError) {
+        console.error('Upload error:', uploadError)
+        alert('Gagal upload PDF: ' + uploadError.message)
         setPdfStatus('idle')
         return
       }
       
-      const publicUrl = uploadData.url
+      const publicUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/pdf-archive/${storagePath}`
       
       // Update session with PDF URL
       const { error: updateError } = await supabase
