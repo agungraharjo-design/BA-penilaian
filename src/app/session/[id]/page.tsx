@@ -1082,6 +1082,7 @@ function PreviewAll({ session }: { session: Session }) {
     const original = previewRef.current
     setPdfStatus('saving')
 
+    try {
     // Clone the preview content
     const docFrag = original.cloneNode(true) as HTMLElement
 
@@ -1134,6 +1135,7 @@ function PreviewAll({ session }: { session: Session }) {
       offscreen.style.left = '-9999px'
       offscreen.style.top = '0'
       offscreen.style.width = original.scrollWidth + 'px'
+      offscreen.style.overflow = 'visible'
       offscreen.style.background = 'white'
       offscreen.style.fontFamily = "'Times New Roman', Georgia, serif"
       offscreen.style.color = '#000'
@@ -1150,7 +1152,7 @@ function PreviewAll({ session }: { session: Session }) {
         if (img.complete) return Promise.resolve()
         return new Promise<void>(r => { img.onload = () => r(); img.onerror = () => r() })
       }))
-      await new Promise(r => setTimeout(r, 150))
+      await new Promise(r => setTimeout(r, 200))
 
       const canvas = await html2canvas(offscreen, {
         scale: 2, useCORS: true, logging: false,
@@ -1168,17 +1170,18 @@ function PreviewAll({ session }: { session: Session }) {
       pdf.addImage(canvas.toDataURL('image/jpeg', 0.9), 'JPEG', x, y, w, h)
     }
 
-    // Split a too-tall section: find the rubric table, split rows in half, repeat thead
-    const splitSection = async (section: HTMLElement, sIdx: number) => {
-      const table = section.querySelector('.template-table') as HTMLTableElement | null
-      if (!table) {
-        // No table — just render and slice the canvas
-        const canvas = await renderToCanvas(section)
-        const imgH = pxToMM(canvas.height, canvas.width)
+    // Render a canvas and add it to PDF, slicing across pages if needed
+    const renderAndAdd = async (el: HTMLElement) => {
+      const canvas = await renderToCanvas(el)
+      const imgH = pxToMM(canvas.height, canvas.width)
+
+      if (imgH <= contentH) {
+        addCanvas(canvas, marginLeft, marginTop, contentW, imgH)
+      } else {
         let yOff = 0
         let first = true
         while (yOff < imgH) {
-          if (!first || sIdx > 0) pdf.addPage()
+          if (!first) pdf.addPage()
           first = false
           const sliceH = Math.min(contentH, imgH - yOff)
           const srcY = (yOff / imgH) * canvas.height
@@ -1190,16 +1193,54 @@ function PreviewAll({ session }: { session: Session }) {
           addCanvas(tmp, marginLeft, marginTop, contentW, sliceH)
           yOff += contentH
         }
-        return
+      }
+    }
+
+    // Process each section
+    for (let sIdx = 0; sIdx < sections.length; sIdx++) {
+      const section = sections[sIdx]
+
+      // First render the full section to check its height
+      const fullCanvas = await renderToCanvas(section)
+      const fullH = pxToMM(fullCanvas.height, fullCanvas.width)
+
+      if (fullH <= contentH) {
+        // Fits on one page
+        if (sIdx > 0) pdf.addPage()
+        addCanvas(fullCanvas, marginLeft, marginTop, contentW, fullH)
+        continue
+      }
+
+      // Too tall — try to split at the rubric table
+      const table = section.querySelector('.template-table') as HTMLTableElement | null
+      if (!table) {
+        // No table — just slice across pages
+        if (sIdx > 0) pdf.addPage()
+        let yOff = 0
+        let first = true
+        while (yOff < fullH) {
+          if (!first) pdf.addPage()
+          first = false
+          const sliceH = Math.min(contentH, fullH - yOff)
+          const srcY = (yOff / fullH) * fullCanvas.height
+          const srcH = (sliceH / fullH) * fullCanvas.height
+          const tmp = document.createElement('canvas')
+          tmp.width = fullCanvas.width
+          tmp.height = Math.round(srcH)
+          tmp.getContext('2d')!.drawImage(fullCanvas, 0, srcY, fullCanvas.width, srcH, 0, 0, fullCanvas.width, srcH)
+          addCanvas(tmp, marginLeft, marginTop, contentW, sliceH)
+          yOff += contentH
+        }
+        continue
       }
 
       // Gather nodes above/below the table
       const above: Node[] = []
       const below: Node[] = []
-      let n: ChildNode | null = section.firstChild
-      while (n && n !== table) { above.push(n.cloneNode(true)); n = n.nextSibling }
-      n = table.nextSibling
-      while (n) { below.push(n.cloneNode(true)); n = n.nextSibling }
+      let nd: ChildNode | null = section.firstChild
+      while (nd && nd !== table) { above.push(nd.cloneNode(true)); nd = nd.nextSibling }
+      nd = table.nextSibling
+      while (nd) { below.push(nd.cloneNode(true)); nd = nd.nextSibling }
 
       const thead = table.querySelector('thead')
       const tbody = table.querySelector('tbody')
@@ -1207,7 +1248,7 @@ function PreviewAll({ session }: { session: Session }) {
       const rows = tbody ? Array.from(tbody.children) : []
       const mid = Math.ceil(rows.length / 2)
 
-      // Helper: build a half-table with repeated thead
+      // Build half-table with repeated thead
       const buildHalf = (rowStart: number, rowEnd: number, includeFoot: boolean) => {
         const halfTable = document.createElement('table')
         halfTable.className = table.className
@@ -1221,90 +1262,49 @@ function PreviewAll({ session }: { session: Session }) {
         return halfTable
       }
 
-      // Helper: build full section DOM with specific table
-      const buildPage = (aboveNodes: Node[], tbl: HTMLTableElement, belowNodes: Node[]) => {
+      // Build a div with nodes above + table + nodes below
+      const buildDiv = (aboveNodes: Node[], tbl: HTMLTableElement, belowNodes: Node[]) => {
         const div = document.createElement('div')
         div.style.width = '100%'
-        aboveNodes.forEach(nd => div.appendChild(nd.cloneNode(true)))
+        aboveNodes.forEach(n => div.appendChild(n.cloneNode(true)))
         div.appendChild(tbl)
-        belowNodes.forEach(nd => div.appendChild(nd.cloneNode(true)))
+        belowNodes.forEach(n => div.appendChild(n.cloneNode(true)))
         return div
       }
 
-      // First half: header info + first half rows
-      const half1Table = buildHalf(0, mid, false)
-      const page1 = buildPage(above, half1Table, [])
-      const canvas1 = await renderToCanvas(page1)
-      const h1 = pxToMM(canvas1.height, canvas1.width)
-
+      // Page 1: header info + first half rows
       if (sIdx > 0) pdf.addPage()
-      addCanvas(canvas1, marginLeft, marginTop, contentW, Math.min(contentH, h1))
+      const half1 = buildHalf(0, mid, false)
+      const page1 = buildDiv(above, half1, [])
+      await renderAndAdd(page1)
 
-      // Second half: repeated thead + second half rows + tfoot + signature
-      const half2Table = buildHalf(mid, rows.length, true)
-      const page2 = buildPage([], half2Table, below)
-      const canvas2 = await renderToCanvas(page2)
-      const h2 = pxToMM(canvas2.height, canvas2.width)
-
+      // Page 2: repeated header + second half rows + tfoot + signature
       pdf.addPage()
-      addCanvas(canvas2, marginLeft, marginTop, contentW, Math.min(contentH, h2))
-
-      // If second half still too tall, slice it
-      if (h2 > contentH) {
-        let yOff = 0
-        let first = true
-        while (yOff < h2) {
-          if (!first) pdf.addPage()
-          first = false
-          const sliceH = Math.min(contentH, h2 - yOff)
-          const srcY = (yOff / h2) * canvas2.height
-          const srcH = (sliceH / h2) * canvas2.height
-          const tmp = document.createElement('canvas')
-          tmp.width = canvas2.width
-          tmp.height = Math.round(srcH)
-          tmp.getContext('2d')!.drawImage(canvas2, 0, srcY, canvas2.width, srcH, 0, 0, canvas2.width, srcH)
-          addCanvas(tmp, marginLeft, marginTop, contentW, sliceH)
-          yOff += contentH
-        }
-      }
-    }
-
-    // Process each section
-    for (let sIdx = 0; sIdx < sections.length; sIdx++) {
-      const section = sections[sIdx]
-      const canvas = await renderToCanvas(section)
-      const imgH = pxToMM(canvas.height, canvas.width)
-
-      if (imgH <= contentH) {
-        // Fits on one page
-        if (sIdx > 0) pdf.addPage()
-        addCanvas(canvas, marginLeft, marginTop, contentW, imgH)
-      } else {
-        // Too tall — split with table header repeat
-        await splitSection(section, sIdx)
-      }
+      const half2 = buildHalf(mid, rows.length, true)
+      const page2 = buildDiv([], half2, below)
+      await renderAndAdd(page2)
     }
 
     // Upload to Supabase Storage
     const fileName = `BA_Sidang_${session.nama.replace(/\s+/g, '_')}_${session.nim}.pdf`
-    try {
-      const blob = pdf.output('blob')
-      const storagePath = `${session.id}/${fileName}`
-      const { error: uploadError } = await supabase.storage
-        .from('pdf-archive')
-        .upload(storagePath, blob, { contentType: 'application/pdf', upsert: true })
+    const blob = pdf.output('blob')
+    const storagePath = `${session.id}/${fileName}`
+    const { error: uploadError } = await supabase.storage
+      .from('pdf-archive')
+      .upload(storagePath, blob, { contentType: 'application/pdf', upsert: true })
 
-      if (uploadError) {
-        console.error('Storage upload error:', uploadError)
-        setPdfStatus('error')
-      } else {
-        const publicUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/pdf-archive/${storagePath}`
-        const { error: updateError } = await supabase.from('sessions').update({ pdf_url: publicUrl }).eq('id', session.id)
-        if (updateError) console.error('DB update error:', updateError)
-        setPdfStatus('saved')
-      }
+    if (uploadError) {
+      console.error('Storage upload error:', uploadError)
+      setPdfStatus('error')
+    } else {
+      const publicUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/pdf-archive/${storagePath}`
+      const { error: updateError } = await supabase.from('sessions').update({ pdf_url: publicUrl }).eq('id', session.id)
+      if (updateError) console.error('DB update error:', updateError)
+      setPdfStatus('saved')
+    }
+
     } catch (err) {
-      console.error('PDF storage error:', err)
+      console.error('PDF generation error:', err)
       setPdfStatus('error')
     }
   }
@@ -1332,10 +1332,10 @@ function PreviewAll({ session }: { session: Session }) {
           🖨 Cetak / Print
         </button>
         <button onClick={handleDownloadPDF} disabled={pdfStatus === 'saving'} className="bg-green-800 text-white px-6 py-2 rounded hover:bg-green-700 font-sans text-sm font-medium flex items-center gap-2 disabled:opacity-50">
-          {pdfStatus === 'saving' ? '⏳ Menyimpan...' : '⬇ Generate PDF'}
+          {pdfStatus === 'saving' ? '⏳ Menyimpan PDF...' : '⬇ Menyimpan PDF'}
         </button>
-        {pdfStatus === 'saved' && !session.pdf_url && (
-          <span className="text-green-700 text-sm font-sans self-center">✓ PDF tersimpan</span>
+        {pdfStatus === 'saved' && (
+          <span className="text-green-700 text-sm font-sans self-center">✓ PDF berhasil tersimpan</span>
         )}
         {pdfStatus === 'error' && (
           <span className="text-red-600 text-sm font-sans self-center">⚠ Gagal simpan ke database</span>
@@ -1344,7 +1344,7 @@ function PreviewAll({ session }: { session: Session }) {
           const cleanUrl = session.pdf_url?.split('?token=')[0] || ''
           return cleanUrl ? (
             <a href={cleanUrl} target="_blank" rel="noopener noreferrer" className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-500 font-sans text-sm font-medium flex items-center gap-2 no-print">
-              📄 PDF Tersimpan
+              📄 Lihat PDF
             </a>
           ) : null
         })()}
