@@ -1069,36 +1069,39 @@ function PreviewAll({ session, onUpdate }: { session: Session; onUpdate: (s: Ses
   const previewRef = useRef<HTMLDivElement>(null)
   const [pdfStatus, setPdfStatus] = useState<'idle' | 'preparing' | 'saved' | 'error'>('idle')
 
-  // Inject Paged.js polyfill — intercepts window.print() for proper pagination
-  useEffect(() => {
-    let disposed = false
-    const init = () => {
-      if (disposed || typeof document === 'undefined') return
-      if (document.querySelector('script[data-pagedjs]')) return
-
-      const script = document.createElement('script')
-      script.src = '/pagedjs/paged.polyfill.js'
-      script.async = true
-      script.setAttribute('data-pagedjs', 'true')
-      script.onload = () => console.log('[Paged.js] Polyfill loaded from /pagedjs/paged.polyfill.js')
-      script.onerror = () => console.warn('[Paged.js] Polyfill script failed to load')
-      document.head.appendChild(script)
-    }
-    init()
-    return () => { disposed = true }
-  }, [])
-
   const handlePrint = () => {
     window.print()
   }
 
-  // Paged.js handles pagination in-browser; user saves via browser print dialog
+  // Load Paged.js ONLY when "Menyimpan PDF" is clicked — not on page open.
+  // Paged.js intercepts window.print() and produces properly paginated A4 output.
   const handleDownloadPDF = () => {
     setPdfStatus('preparing')
-    setTimeout(() => {
-      window.print()
-      setPdfStatus('idle')
-    }, 300)
+    const loadAndPrint = async () => {
+      try {
+        // Inject Paged.js polyfill if not already present
+        if (!document.querySelector('script[data-pagedjs]')) {
+          await new Promise<void>((resolve, reject) => {
+            const script = document.createElement('script')
+            script.src = '/pagedjs/paged.polyfill.js'
+            script.async = true
+            script.setAttribute('data-pagedjs', 'true')
+            script.onload = () => resolve()
+            script.onerror = () => reject(new Error('Paged.js load failed'))
+            document.head.appendChild(script)
+          })
+          // Wait for Paged.js to parse stylesheets and build the page model
+          await new Promise(r => setTimeout(r, 800))
+        }
+        window.print()
+      } catch (err) {
+        console.warn('[Paged.js] Failed to load, using browser default print:', err)
+        window.print()
+      } finally {
+        setPdfStatus('idle')
+      }
+    }
+    loadAndPrint()
   }
 
   const calculateAll = () => {
@@ -1121,10 +1124,10 @@ function PreviewAll({ session, onUpdate }: { session: Session; onUpdate: (s: Ses
     <div>
       <div className="no-print flex gap-3 mb-6">
         <button onClick={handlePrint} className="bg-blue-900 text-white px-6 py-2 rounded hover:bg-blue-800 font-sans text-sm font-medium flex items-center gap-2">
-          🖨 Cetak / Simpan PDF
+          🖨 Print
         </button>
         <button onClick={handleDownloadPDF} disabled={pdfStatus === 'preparing'} className="bg-green-800 text-white px-6 py-2 rounded hover:bg-green-700 font-sans text-sm font-medium flex items-center gap-2 disabled:opacity-50">
-          {pdfStatus === 'preparing' ? '⏳ Membuka printer...' : '⬇ Menyimpan PDF'}
+          {pdfStatus === 'preparing' ? '⏳ Membuka...' : '⬇ Menyimpan PDF'}
         </button>
         {session.pdf_url && (() => {
           const cleanUrl = session.pdf_url?.split('?token=')[0] || ''
