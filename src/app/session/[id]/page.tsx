@@ -295,13 +295,18 @@ function SignatureUpload({ value, onChange, label }: { value?: string; onChange:
 const BeritaAcaraForm = memo(function BeritaAcaraForm({ session, onUpdate }: { session: Session; onUpdate: (s: Session) => void }) {
   const [local, setLocal] = useState(session)
   const fromRealtime = useRef(false)
+  const localRef = useRef(local)
 
   useEffect(() => {
-    if (fromRealtime.current) { fromRealtime.current = false; setLocal(session) }
+    if (fromRealtime.current) { fromRealtime.current = false; setLocal(session); localRef.current = session }
   }, [session])
 
-  const update = (field: string, value: any) => setLocal(prev => ({ ...prev, [field]: value }))
-  const persist = () => { fromRealtime.current = true; onUpdate(local) }
+  const update = (field: string, value: any) => {
+    const next = { ...localRef.current, [field]: value }
+    localRef.current = next
+    setLocal(next)
+  }
+  const persist = () => { fromRealtime.current = true; onUpdate(localRef.current) }
 
   return (
     <div className="space-y-6">
@@ -477,9 +482,10 @@ const PenilaianForm = memo(function PenilaianForm({
   const defaultSkor = [[null,null,null,null,null,null,null,null,null,null],[null,null,null,null,null,null,null,null,null,null],[null,null,null,null,null,null,null,null,null,null]]
   const [localSkor, setLocalSkor] = useState<(number | null)[][]>(session.skor_penguji || defaultSkor)
   const fromRealtime = useRef(false)
+  const localSkorRef = useRef(localSkor)
 
   useEffect(() => {
-    if (fromRealtime.current) { fromRealtime.current = false; setLocalSkor(session.skor_penguji || defaultSkor) }
+    if (fromRealtime.current) { fromRealtime.current = false; setLocalSkor(session.skor_penguji || defaultSkor); localSkorRef.current = session.skor_penguji || defaultSkor }
   }, [session.skor_penguji])
 
   const scores = localSkor[examinerIndex] || [null,null,null,null,null,null,null,null,null,null]
@@ -490,13 +496,14 @@ const PenilaianForm = memo(function PenilaianForm({
       const next = [...prev]
       next[examinerIndex] = [...(next[examinerIndex] || [null,null,null,null,null,null,null,null,null,null])]
       next[examinerIndex][criterionIdx] = v
+      localSkorRef.current = next
       return next
     })
   }
 
   const persist = () => {
     fromRealtime.current = true
-    onUpdate({ ...session, skor_penguji: localSkor })
+    onUpdate({ ...session, skor_penguji: localSkorRef.current })
   }
 
   const totalSkorXBobot = calcTotalSkorXBobot(scores, RUBRIC_CRITERIA.map(c => c.bobot))
