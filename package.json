@@ -6,8 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
-    "postinstall": "cross-env PLAYWRIGHT_BROWSERS_PATH=playwright-browsers playwright install chromium-headless-shell"
+    "lint": "next lint"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",
@@ -15,12 +14,11 @@
     "@supabase/ssr": "^0.12.0",
     "@supabase/supabase-js": "^2.108.2",
     "clsx": "^2.1.0",
-    "cross-env": "^7.0.3",
     "html2canvas": "^1.4.1",
     "jspdf": "^2.5.1",
     "lucide-react": "^0.400.0",
     "next": "^14.2.0",
-    "playwright": "^1.61.1",
+    "pagedjs": "^0.4.3",
     "react": "^18.3.0",
     "react-dom": "^18.3.0",
     "react-hook-form": "^7.52.0",

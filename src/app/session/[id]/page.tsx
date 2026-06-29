@@ -1067,33 +1067,38 @@ function DaftarHadirForm({ session, onUpdate, isDosen, sessionId }: { session: S
 // ─── PREVIEW & PDF ───────────────────────────────────────────
 function PreviewAll({ session, onUpdate }: { session: Session; onUpdate: (s: Session) => void }) {
   const previewRef = useRef<HTMLDivElement>(null)
-  const [pdfStatus, setPdfStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
+  const [pdfStatus, setPdfStatus] = useState<'idle' | 'preparing' | 'saved' | 'error'>('idle')
+
+  // Inject Paged.js polyfill — intercepts window.print() for proper pagination
+  useEffect(() => {
+    let disposed = false
+    const init = () => {
+      if (disposed || typeof document === 'undefined') return
+      if (document.querySelector('script[data-pagedjs]')) return
+
+      const script = document.createElement('script')
+      script.src = '/pagedjs/paged.polyfill.js'
+      script.async = true
+      script.setAttribute('data-pagedjs', 'true')
+      script.onload = () => console.log('[Paged.js] Polyfill loaded from /pagedjs/paged.polyfill.js')
+      script.onerror = () => console.warn('[Paged.js] Polyfill script failed to load')
+      document.head.appendChild(script)
+    }
+    init()
+    return () => { disposed = true }
+  }, [])
 
   const handlePrint = () => {
     window.print()
   }
 
-  const [pdfError, setPdfError] = useState<string>('')
-
-  const handleDownloadPDF = async () => {
-    setPdfStatus('saving')
-    setPdfError('')
-    try {
-      const res = await fetch(`/api/generate-pdf/${session.id}`, { method: 'POST' })
-      const data = await res.json()
-      if (!res.ok) {
-        console.error('PDF API error:', data)
-        setPdfError(data.details || data.error || 'Gagal generate PDF')
-        setPdfStatus('error')
-        return
-      }
-      onUpdate({ ...session, pdf_url: data.url })
-      setPdfStatus('saved')
-    } catch (err: any) {
-      console.error('PDF generation error:', err)
-      setPdfError(err.message || 'Terjadi kesalahan jaringan')
-      setPdfStatus('error')
-    }
+  // Paged.js handles pagination in-browser; user saves via browser print dialog
+  const handleDownloadPDF = () => {
+    setPdfStatus('preparing')
+    setTimeout(() => {
+      window.print()
+      setPdfStatus('idle')
+    }, 300)
   }
 
   const calculateAll = () => {
@@ -1116,17 +1121,11 @@ function PreviewAll({ session, onUpdate }: { session: Session; onUpdate: (s: Ses
     <div>
       <div className="no-print flex gap-3 mb-6">
         <button onClick={handlePrint} className="bg-blue-900 text-white px-6 py-2 rounded hover:bg-blue-800 font-sans text-sm font-medium flex items-center gap-2">
-          🖨 Cetak / Print
+          🖨 Cetak / Simpan PDF
         </button>
-        <button onClick={handleDownloadPDF} disabled={pdfStatus === 'saving'} className="bg-green-800 text-white px-6 py-2 rounded hover:bg-green-700 font-sans text-sm font-medium flex items-center gap-2 disabled:opacity-50">
-          {pdfStatus === 'saving' ? '⏳ Menyimpan PDF...' : '⬇ Menyimpan PDF'}
+        <button onClick={handleDownloadPDF} disabled={pdfStatus === 'preparing'} className="bg-green-800 text-white px-6 py-2 rounded hover:bg-green-700 font-sans text-sm font-medium flex items-center gap-2 disabled:opacity-50">
+          {pdfStatus === 'preparing' ? '⏳ Membuka printer...' : '⬇ Menyimpan PDF'}
         </button>
-        {pdfStatus === 'saved' && (
-          <span className="text-green-700 text-sm font-sans self-center">✓ PDF berhasil tersimpan</span>
-        )}
-        {pdfStatus === 'error' && (
-          <span className="text-red-600 text-sm font-sans self-center">⚠ {pdfError || 'Gagal simpan ke database'}</span>
-        )}
         {session.pdf_url && (() => {
           const cleanUrl = session.pdf_url?.split('?token=')[0] || ''
           return cleanUrl ? (
@@ -1135,7 +1134,7 @@ function PreviewAll({ session, onUpdate }: { session: Session; onUpdate: (s: Ses
             </a>
           ) : null
         })()}
-        <span className="text-xs text-gray-500 self-center ml-2 font-sans">(PDF akan sesuai dengan template asli)</span>
+        <span className="text-xs text-gray-500 self-center ml-2 font-sans">(Gunakan "Simpan sebagai PDF" di dialog printer)</span>
       </div>
 
       <div ref={previewRef} className="print-area bg-white p-8 md:p-12 print:p-0 space-y-10 print:space-y-0" style={{ fontFamily: "'Times New Roman', Georgia, serif" }}>
