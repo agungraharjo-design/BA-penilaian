@@ -56,7 +56,10 @@ export async function POST(
   }
 
   let browser: any = null
+  let page: any = null
+  const step = (name: string) => console.log(`[PDF] Step: ${name}`)
   try {
+    step('launching browser')
     browser = await puppeteer.launch({
       executablePath: chromePath,
       headless: true,
@@ -67,29 +70,50 @@ export async function POST(
         '--disable-gpu',
         '--font-render-hinting=none',
       ],
+    }).catch(async (err: any) => {
+      // Fallback: try without executablePath so puppeteer uses bundled Chromium
+      console.error('Primary Chrome launch failed, trying fallback:', err.message)
+      const Chromium = (await import('@sparticuz/chromium')).default
+      return puppeteer.launch({
+        executablePath: await Chromium.executablePath(),
+        headless: true,
+        args: Chromium.args,
+      })
     })
 
-    const page = await browser.newPage()
+    page = await browser.newPage()
+    step('browser launched')
 
     const host = request.headers.get('host') || 'localhost:3000'
     const protocol = host.includes('localhost') ? 'http' : 'https'
     const renderUrl = `${protocol}://${host}/pdf-render/${id}`
+    step(`navigating to ${renderUrl}`)
 
-    await page.goto(renderUrl, {
+    const navResponse = await page.goto(renderUrl, {
       waitUntil: 'networkidle0',
       timeout: 60000,
     })
+    step(`navigated, status: ${navResponse?.status()}`)
 
+    const pageContent = await page.content()
+    if (!pageContent.includes('Laporan Sidang Skripsi')) {
+      console.error('PDF render page content mismatch. First 500 chars:', pageContent.slice(0, 500))
+      return NextResponse.json({ error: 'Render page content invalid', url: renderUrl }, { status: 500 })
+    }
+
+    step('generating PDF')
     const pdfBuffer = await page.pdf({
       format: 'A4',
       margin: { top: '15mm', right: '20mm', bottom: '20mm', left: '20mm' },
       printBackground: true,
       preferCSSPageSize: false,
     })
+    step(`PDF generated, size: ${pdfBuffer.length}`)
 
     const fileName = `BA_Sidang_${session.nama?.replace(/\s+/g, '_') || 'unknown'}_${session.nim || 'unknown'}.pdf`
     const storagePath = `${session.id}/${fileName}`
 
+    step('uploading to storage')
     const { error: uploadError } = await supabase.storage
       .from('pdf-archive')
       .upload(storagePath, pdfBuffer, { contentType: 'application/pdf', upsert: true })
@@ -98,15 +122,19 @@ export async function POST(
       console.error('Storage upload error:', uploadError)
       return NextResponse.json({ error: 'Upload failed', details: uploadError.message }, { status: 500 })
     }
+    step('uploaded')
 
     const publicUrl = `${supabaseUrl}/storage/v1/object/public/pdf-archive/${storagePath}`
-    await supabase.from('sessions').update({ pdf_url: publicUrl }).eq('id', session.id)
+    const { error: updateError } = await supabase.from('sessions').update({ pdf_url: publicUrl }).eq('id', session.id)
+    if (updateError) console.error('DB update error:', updateError)
 
+    step('done')
     return NextResponse.json({ url: publicUrl, fileName })
   } catch (err: any) {
-    console.error('PDF generation error:', err)
-    return NextResponse.json({ error: err.message || 'PDF generation failed' }, { status: 500 })
+    console.error('PDF generation error at step:', err)
+    return NextResponse.json({ error: err.message || 'PDF generation failed', stack: err.stack }, { status: 500 })
   } finally {
-    if (browser) await browser.close()
+    if (page) try { await page.close() } catch {}
+    if (browser) try { await browser.close() } catch {}
   }
 }
