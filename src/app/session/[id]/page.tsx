@@ -3,7 +3,6 @@
 import { useEffect, useState, useRef, useCallback, memo, startTransition } from 'react'
 import { useParams } from 'next/navigation'
 import { supabase, subscribeToSession } from '@/lib/supabase'
-import { createClient } from '@supabase/supabase-js'
 import { Session, RUBRIC_CRITERIA } from '@/types'
 import {
   calcTotalSkorXBobot, calcNilaiAkhir, calcGrade,
@@ -1083,7 +1082,7 @@ function PreviewAll({ session, onUpdate }: { session: Session; onUpdate: (s: Ses
       const { jsPDF } = await import('jspdf')
       
       const container = previewRef.current
-      const scale = 2 // Higher scale for better quality
+      const scale = 1.5 // Reduced scale to keep PDF under Vercel payload limit
       
       // Get all sections that have .page-break
       const sections = container.querySelectorAll('.page-break')
@@ -1101,13 +1100,7 @@ function PreviewAll({ session, onUpdate }: { session: Session; onUpdate: (s: Ses
       const marginRight = 20
       const marginBottom = 20
       const marginLeft = 20
-      const minimalMarginTop = 5 // Minimal top margin for 2nd page of Form Penilaian
       const contentWidth = pageWidth - marginLeft - marginRight
-      
-      const isPenilaianSection = (section: HTMLElement) => {
-        return section.querySelector('.template-table') !== null &&
-               section.querySelector('.avoid-break') !== null
-      }
       
       let yOffset = 0
       let pageCount = 0
@@ -1131,15 +1124,14 @@ function PreviewAll({ session, onUpdate }: { session: Session; onUpdate: (s: Ses
         // Restore page-break
         section.style.pageBreakBefore = originalBreak
         
-        const imgData = canvas.toDataURL('image/jpeg', 0.95)
+        const imgData = canvas.toDataURL('image/jpeg', 0.8)
         const imgHeight = (canvas.height * contentWidth) / canvas.width
         
         // Check if we need a new page before placing this section
         if (pageCount > 0 || yOffset > 0) {
           if (yOffset + imgHeight > pageHeight - marginBottom) {
             pdf.addPage()
-            const nextPageMarginTop = (isPenilaianSection(section) && pageCount > 0) ? minimalMarginTop : marginTop
-            yOffset = nextPageMarginTop
+            yOffset = marginTop
             pageCount++
           }
         }
@@ -1149,12 +1141,9 @@ function PreviewAll({ session, onUpdate }: { session: Session; onUpdate: (s: Ses
           pdf.addImage(imgData, 'JPEG', marginLeft, marginTop, contentWidth, imgHeight)
           yOffset += imgHeight
         } else {
-          const currentMarginTop = (isPenilaianSection(section) && pageCount > 0 && yOffset === minimalMarginTop) ? minimalMarginTop : marginTop
-          pdf.addImage(imgData, 'JPEG', marginLeft, currentMarginTop, contentWidth, imgHeight)
+          pdf.addImage(imgData, 'JPEG', marginLeft, yOffset, contentWidth, imgHeight)
           yOffset += imgHeight
         }
-
-        // No more forced page break after each section — let content flow naturally
       }
       
       // If no sections, handle the whole container
@@ -1167,7 +1156,7 @@ function PreviewAll({ session, onUpdate }: { session: Session; onUpdate: (s: Ses
           logging: false,
         })
         
-        const imgData = canvas.toDataURL('image/jpeg', 0.95)
+        const imgData = canvas.toDataURL('image/jpeg', 0.8)
         const imgHeight = (canvas.height * contentWidth) / canvas.width
         
         pdf.addImage(imgData, 'JPEG', marginLeft, marginTop, contentWidth, imgHeight)
@@ -1185,29 +1174,27 @@ function PreviewAll({ session, onUpdate }: { session: Session; onUpdate: (s: Ses
       
       const safeName = (session.nama || 'unknown').replace(/[^a-zA-Z0-9]/g, '_')
       const fileName = `BA_Sidang_${safeName}_${session.nim || 'unknown'}.pdf`
-      const storagePath = `${session.id}/${fileName}`
       
-      const adminClient = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY!
-      )
-      
-      const pdfBuffer = Buffer.from(pdfBase64, 'base64')
-      const { error: uploadError } = await adminClient.storage
-        .from('pdf-archive')
-        .upload(storagePath, pdfBuffer, { 
-          contentType: 'application/pdf', 
-          upsert: true 
+      const uploadRes = await fetch('/api/upload-pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionId: session.id,
+          pdfBase64,
+          fileName
         })
+      })
       
-      if (uploadError) {
-        console.error('Upload error:', uploadError)
-        alert('Gagal upload PDF: ' + uploadError.message)
+      const uploadData = await uploadRes.json()
+      
+      if (!uploadRes.ok || uploadData.error) {
+        console.error('Upload error:', uploadData.error)
+        alert('Gagal upload PDF: ' + (uploadData.error || 'Unknown error'))
         setPdfStatus('idle')
         return
       }
       
-      const publicUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/pdf-archive/${storagePath}`
+      const publicUrl = uploadData.url
       
       // Update session with PDF URL
       const { error: updateError } = await supabase
@@ -1331,11 +1318,11 @@ function PreviewAll({ session, onUpdate }: { session: Session; onUpdate: (s: Ses
           </div>
         </div>
 
-        {/* ===== DAFTAR HADIR PENGUJI ===== */}
-        <div>
+        {/* ===== DAFTAR HADIR ===== */}
+        <div className="page-break">
           <div className="text-center border-b-2 border-black pb-4">
             <img src="/kop-surat-resize.png" alt="KOP UPN Veteran Jakarta" style={{ display: 'block', margin: '0 auto 0.5rem', maxWidth: '100%', maxHeight: '100px', width: 'auto', height: 'auto' }} />
-            <h1 className="text-xl font-bold uppercase">Daftar Hadir Penguji Sidang Skripsi</h1>
+            <h1 className="text-xl font-bold uppercase">Daftar Hadir Sidang Skripsi</h1>
             <p className="text-sm">PROGRAM STUDI KESEHATAN MASYARAKAT PROGRAM SARJANA</p>
             <p className="text-sm">FAKULTAS ILMU KESEHATAN UPN &ldquo;VETERAN&rdquo; JAKARTA</p>
             <p className="text-sm font-semibold">T.A. {session.ta}</p>
@@ -1344,11 +1331,13 @@ function PreviewAll({ session, onUpdate }: { session: Session; onUpdate: (s: Ses
             <tbody>
               <tr><td className="w-32">Nama Mahasiswa</td><td className="w-4">:</td><td>{session.nama}</td></tr>
               <tr><td>NIM</td><td>:</td><td>{session.nim}</td></tr>
-              <tr><td>Tanggal Ujian</td><td>:</td><td>{session.hari_tanggal}</td></tr>
+              <tr><td>Hari, Tanggal</td><td>:</td><td>{session.hari_tanggal}</td></tr>
               <tr><td>Peminatan</td><td>:</td><td>{session.peminatan}</td></tr>
             </tbody>
           </table>
-          <table className="template-table text-sm mt-4">
+
+          <h3 className="font-bold text-center mt-4 mb-1">DAFTAR HADIR PENGUJI</h3>
+          <table className="template-table text-sm">
             <thead><tr><th className="w-8">NO</th><th className="w-28">NIP</th><th>NAMA PENGUJI</th><th>JABATAN</th><th className="w-24">TANDA TANGAN</th></tr></thead>
             <tbody>
               {[
@@ -1368,18 +1357,9 @@ function PreviewAll({ session, onUpdate }: { session: Session; onUpdate: (s: Ses
               ))}
             </tbody>
           </table>
-        </div>
 
-        {/* ===== DAFTAR HADIR PESERTA ===== */}
-        <div>
-          <div className="text-center border-b-2 border-black pb-4">
-            <img src="/kop-surat-resize.png" alt="KOP UPN Veteran Jakarta" style={{ display: 'block', margin: '0 auto 0.5rem', maxWidth: '100%', maxHeight: '100px', width: 'auto', height: 'auto' }} />
-            <h1 className="text-xl font-bold uppercase">Daftar Hadir Peserta Sidang Skripsi</h1>
-            <p className="text-sm">PROGRAM STUDI KESEHATAN MASYARAKAT PROGRAM SARJANA</p>
-            <p className="text-sm">FAKULTAS ILMU KESEHATAN UPN &ldquo;VETERAN&rdquo; JAKARTA</p>
-            <p className="text-sm font-semibold">SEMESTER {session.semester} T.A. {session.ta}</p>
-          </div>
-          <table className="template-table text-sm mt-4">
+          <h3 className="font-bold text-center mt-4 mb-1">DAFTAR HADIR PESERTA</h3>
+          <table className="template-table text-sm">
             <thead><tr><th className="w-8">NO</th><th>NAMA PESERTA</th><th className="w-24">NIM</th><th className="w-24">TANDA TANGAN</th><th className="w-16">KET</th></tr></thead>
             <tbody>
               {(session.peserta_hadir || [{ nama: session.nama, nim: session.nim }]).map((p: any, i: number) => (
@@ -1395,18 +1375,9 @@ function PreviewAll({ session, onUpdate }: { session: Session; onUpdate: (s: Ses
               ))}
             </tbody>
           </table>
-        </div>
 
-        {/* ===== DAFTAR HADIR AUDIENS ===== */}
-        <div>
-          <div className="text-center border-b-2 border-black pb-4">
-            <img src="/kop-surat-resize.png" alt="KOP UPN Veteran Jakarta" style={{ display: 'block', margin: '0 auto 0.5rem', maxWidth: '100%', maxHeight: '100px', width: 'auto', height: 'auto' }} />
-            <h1 className="text-xl font-bold uppercase">Daftar Hadir Mahasiswa Sebagai Audiens Sidang Skripsi</h1>
-            <p className="text-sm">PROGRAM STUDI KESEHATAN MASYARAKAT PROGRAM SARJANA</p>
-            <p className="text-sm">FAKULTAS ILMU KESEHATAN UPN &ldquo;VETERAN&rdquo; JAKARTA</p>
-            <p className="text-sm font-semibold">SEMESTER {session.semester} T.A. {session.ta}</p>
-          </div>
-          <table className="template-table text-sm mt-4">
+          <h3 className="font-bold text-center mt-4 mb-1">DAFTAR HADIR AUDIENS</h3>
+          <table className="template-table text-sm">
             <thead><tr><th className="w-8">NO</th><th>NAMA MAHASISWA</th><th className="w-24">NIM</th><th className="w-24">TANDA TANGAN</th><th className="w-16">KET</th></tr></thead>
             <tbody>
               {(session.audience_hadir || []).map((a: any, i: number) => (
