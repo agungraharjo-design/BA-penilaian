@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "node scripts/playwright-install.mjs && next build",
     "start": "next start",
     "lint": "next lint"
   },
@@ -18,7 +18,7 @@
     "jspdf": "^2.5.1",
     "lucide-react": "^0.400.0",
     "next": "^14.2.0",
-    "pagedjs": "^0.4.3",
+    "playwright": "^1.61.1",
     "react": "^18.3.0",
     "react-dom": "^18.3.0",
     "react-hook-form": "^7.52.0",

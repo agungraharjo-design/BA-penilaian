@@ -18,7 +18,7 @@
   .template-table { font-size: 10pt; }
   .template-table th, .template-table td { padding: 2px 4px; }
 
-  /* Paged.js: ensure table headers repeat on every page */
+  /* Ensure table headers repeat on every printed page */
   thead { display: table-header-group; }
   tbody { display: table-row-group; }
   tfoot { display: table-footer-group; }

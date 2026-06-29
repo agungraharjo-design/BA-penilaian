@@ -3,7 +3,7 @@ node_modules/
 .next/
 out/
 
-# Playwright browsers (OS-specific — re-downloaded on each platform during build)
+# Playwright browsers — downloaded by scripts/playwright-install.mjs during build
 playwright-browsers/
 
 # Environment
@@ -19,4 +19,3 @@ playwright-browsers/
 # OS
 .DS_Store
 Thumbs.db
-.env.local

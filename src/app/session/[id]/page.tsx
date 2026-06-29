@@ -1073,35 +1073,24 @@ function PreviewAll({ session, onUpdate }: { session: Session; onUpdate: (s: Ses
     window.print()
   }
 
-  // Load Paged.js ONLY when "Menyimpan PDF" is clicked — not on page open.
-  // Paged.js intercepts window.print() and produces properly paginated A4 output.
-  const handleDownloadPDF = () => {
+  const handleDownloadPDF = async () => {
     setPdfStatus('preparing')
-    const loadAndPrint = async () => {
-      try {
-        // Inject Paged.js polyfill if not already present
-        if (!document.querySelector('script[data-pagedjs]')) {
-          await new Promise<void>((resolve, reject) => {
-            const script = document.createElement('script')
-            script.src = '/pagedjs/paged.polyfill.js'
-            script.async = true
-            script.setAttribute('data-pagedjs', 'true')
-            script.onload = () => resolve()
-            script.onerror = () => reject(new Error('Paged.js load failed'))
-            document.head.appendChild(script)
-          })
-          // Wait for Paged.js to parse stylesheets and build the page model
-          await new Promise(r => setTimeout(r, 800))
-        }
-        window.print()
-      } catch (err) {
-        console.warn('[Paged.js] Failed to load, using browser default print:', err)
-        window.print()
-      } finally {
+    try {
+      const res = await fetch(`/api/generate-pdf/${session.id}`, { method: 'POST' })
+      const data = await res.json()
+      if (!res.ok) {
+        console.error('PDF API error:', data)
+        alert('Gagal generate PDF: ' + (data.error || 'Unknown error'))
         setPdfStatus('idle')
+        return
       }
+      onUpdate({ ...session, pdf_url: data.url })
+      setPdfStatus('saved')
+    } catch (err: any) {
+      console.error('PDF generation error:', err)
+      alert('Terjadi kesalahan: ' + err.message)
+      setPdfStatus('idle')
     }
-    loadAndPrint()
   }
 
   const calculateAll = () => {
@@ -1127,8 +1116,11 @@ function PreviewAll({ session, onUpdate }: { session: Session; onUpdate: (s: Ses
           🖨 Print
         </button>
         <button onClick={handleDownloadPDF} disabled={pdfStatus === 'preparing'} className="bg-green-800 text-white px-6 py-2 rounded hover:bg-green-700 font-sans text-sm font-medium flex items-center gap-2 disabled:opacity-50">
-          {pdfStatus === 'preparing' ? '⏳ Membuka...' : '⬇ Menyimpan PDF'}
+          {pdfStatus === 'preparing' ? '⏳ Generating PDF...' : '⬇ Menyimpan PDF'}
         </button>
+        {pdfStatus === 'saved' && (
+          <span className="text-green-700 text-sm font-sans self-center">✓ PDF berhasil tersimpan</span>
+        )}
         {session.pdf_url && (() => {
           const cleanUrl = session.pdf_url?.split('?token=')[0] || ''
           return cleanUrl ? (
@@ -1137,7 +1129,7 @@ function PreviewAll({ session, onUpdate }: { session: Session; onUpdate: (s: Ses
             </a>
           ) : null
         })()}
-        <span className="text-xs text-gray-500 self-center ml-2 font-sans">(Gunakan "Simpan sebagai PDF" di dialog printer)</span>
+        <span className="text-xs text-gray-500 self-center ml-2 font-sans">(PDF sesuai dengan template asli)</span>
       </div>
 
       <div ref={previewRef} className="print-area bg-white p-8 md:p-12 print:p-0 space-y-10 print:space-y-0" style={{ fontFamily: "'Times New Roman', Georgia, serif" }}>
