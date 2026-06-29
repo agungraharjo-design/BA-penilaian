@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import puppeteer from 'puppeteer-core'
-import { createClient } from '@supabase/supabase-js'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
 
 function getChromePath(): string {
   if (process.env.CHROME_PATH) return process.env.CHROME_PATH
@@ -25,6 +23,17 @@ function getChromePath(): string {
   return '/usr/bin/google-chrome'
 }
 
+function getSparticuzBinPath(): string | undefined {
+  try {
+    const { dirname, join } = require('path')
+    const { fileURLToPath } = require('url')
+    const pkgDir = dirname(require.resolve('@sparticuz/chromium/package.json'))
+    return join(pkgDir, 'bin')
+  } catch {
+    return undefined
+  }
+}
+
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -35,6 +44,7 @@ export async function POST(
     return NextResponse.json({ error: 'Supabase not configured' }, { status: 500 })
   }
 
+  const { createClient } = await import('@supabase/supabase-js')
   const supabase = createClient(supabaseUrl, supabaseServiceKey, {
     auth: { autoRefreshToken: false, persistSession: false },
   })
@@ -50,46 +60,87 @@ export async function POST(
   }
 
   const chromePath = getChromePath()
-
-  // No pre-check here — try/catch handles everything including fallback
+  const sparticuzBinPath = getSparticuzBinPath()
+  const { tmpdir } = require('os')
+  const { join, dirname } = require('path')
+  const { fileURLToPath } = require('url')
 
   let browser: any = null
   let page: any = null
-  const step = (name: string) => console.log(`[PDF] Step: ${name}`)
+  let chromeUsed: string = 'none'
+  const step = (name: string) => console.log(`[PDF] ${name}`)
+
   try {
     step('launching browser')
+
+    // Strategy 1: system Chrome
     try {
       browser = await puppeteer.launch({
         executablePath: chromePath,
         headless: true,
-        args: [
-          '--no-sandbox',
-          '--disable-setuid-sandbox',
-          '--disable-dev-shm-usage',
-          '--disable-gpu',
-          '--font-render-hinting=none',
-        ],
+        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu'],
       })
-      step('launched with system Chrome')
-    } catch (launchErr: any) {
-      console.error('System Chrome failed, falling back to @sparticuz/chromium:', launchErr.message)
-      const Chromium = (await import('@sparticuz/chromium')).default
-      browser = await puppeteer.launch({
-        executablePath: await Chromium.executablePath(),
-        headless: true,
-        args: Chromium.args,
-      })
-      step('launched with @sparticuz/chromium')
+      chromeUsed = `system:${chromePath}`
+      step(`system Chrome OK`)
+    } catch (e: any) {
+      step(`system Chrome failed: ${e.message}`)
     }
 
+    // Strategy 2: @sparticuz/chromium (explicit bin path to bypass import.meta.url bundling bug)
+    if (!browser && sparticuzBinPath) {
+      try {
+        step(`@sparticuz/chromium bin at: ${sparticuzBinPath}`)
+        const { existsSync } = require('fs')
+        if (!existsSync(sparticuzBinPath)) {
+          step(`bin dir missing — package likely bundled by Next.js`)
+        }
+        const Chromium = (await import('@sparticuz/chromium')).default
+        const exePath = await Chromium.executablePath(sparticuzBinPath)
+        browser = await puppeteer.launch({
+          executablePath: exePath,
+          headless: true,
+          args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu'],
+        })
+        chromeUsed = `sparticuz:${exePath}`
+        step(`@sparticuz/chromium OK → ${exePath}`)
+      } catch (e: any) {
+        step(`@sparticuz/chromium failed: ${e.message}`)
+      }
+    } else if (!browser && !sparticuzBinPath) {
+      step('@sparticuz/chromium package not resolvable')
+    }
+
+    // Strategy 3: @puppeteer/browsers download fallback
+    if (!browser) {
+      step('trying @puppeteer/browsers download fallback')
+      try {
+        const { install, Browser } = await import('@puppeteer/browsers')
+        const installed = await install({
+          cacheDir: join(tmpdir(), 'chrome-download'),
+          browser: Browser.CHROME,
+          buildId: 'latest',
+        })
+        browser = await puppeteer.launch({
+          executablePath: installed.executablePath,
+          headless: true,
+          args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu'],
+        })
+        chromeUsed = `puppeteer-browsers:${installed.executablePath}`
+        step(`@puppeteer/browsers download OK → ${installed.executablePath}`)
+      } catch (e: any) {
+        step(`@puppeteer/browsers download failed: ${e.message}`)
+        throw new Error(`All Chrome launch strategies failed. Last error: ${e.message}`)
+      }
+    }
+
+    step(`Chrome source: ${chromeUsed}`)
     page = await browser.newPage()
-    step('browser launched')
 
     const host = request.headers.get('host') || 'localhost:3000'
     const protocol = host.includes('localhost') ? 'http' : 'https'
     const renderUrl = `${protocol}://${host}/pdf-render/${id}`
-    step(`navigating to ${renderUrl}`)
 
+    step(`navigating to ${renderUrl}`)
     const navResponse = await page.goto(renderUrl, {
       waitUntil: 'networkidle0',
       timeout: 60000,
@@ -99,7 +150,7 @@ export async function POST(
     const pageContent = await page.content()
     if (!pageContent.includes('Laporan Sidang Skripsi')) {
       console.error('PDF render page content mismatch. First 500 chars:', pageContent.slice(0, 500))
-      return NextResponse.json({ error: 'Render page content invalid', url: renderUrl }, { status: 500 })
+      return NextResponse.json({ error: 'Render page returned invalid content', url: renderUrl }, { status: 500 })
     }
 
     step('generating PDF')
@@ -109,9 +160,10 @@ export async function POST(
       printBackground: true,
       preferCSSPageSize: false,
     })
-    step(`PDF generated, size: ${pdfBuffer.length}`)
+    step(`PDF generated, size: ${pdfBuffer.length} bytes`)
 
-    const fileName = `BA_Sidang_${session.nama?.replace(/\s+/g, '_') || 'unknown'}_${session.nim || 'unknown'}.pdf`
+    const safeName = (session.nama || 'unknown').replace(/[^a-zA-Z0-9]/g, '_')
+    const fileName = `BA_Sidang_${safeName}_${session.nim || 'unknown'}.pdf`
     const storagePath = `${session.id}/${fileName}`
 
     step('uploading to storage')
@@ -123,7 +175,7 @@ export async function POST(
       console.error('Storage upload error:', uploadError)
       return NextResponse.json({ error: 'Upload failed', details: uploadError.message }, { status: 500 })
     }
-    step('uploaded')
+    step('storage upload OK')
 
     const publicUrl = `${supabaseUrl}/storage/v1/object/public/pdf-archive/${storagePath}`
     const { error: updateError } = await supabase.from('sessions').update({ pdf_url: publicUrl }).eq('id', session.id)
@@ -132,8 +184,12 @@ export async function POST(
     step('done')
     return NextResponse.json({ url: publicUrl, fileName })
   } catch (err: any) {
-    console.error('PDF generation error at step:', err)
-    return NextResponse.json({ error: err.message || 'PDF generation failed', stack: err.stack }, { status: 500 })
+    console.error('[PDF] FATAL error:', err)
+    return NextResponse.json({
+      error: err.message || 'PDF generation failed',
+      chromeUsed,
+      stack: err.stack,
+    }, { status: 500 })
   } finally {
     if (page) try { await page.close() } catch {}
     if (browser) try { await browser.close() } catch {}
