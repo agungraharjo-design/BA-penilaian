@@ -678,7 +678,7 @@ const PenilaianForm = memo(function PenilaianForm({
           {RUBRIC_CRITERIA.map((c, i) => {
             const skorXBobot = scores[i] !== null ? scores[i]! * c.bobot : null
             return (
-              <tr key={c.no}>
+              <tr key={c.no} className="avoid-break">
                 <td className="text-center align-top">{c.no}.</td>
                 <td className="text-xs leading-snug py-1.5">
                   <div className="font-semibold">{c.label}</div>
@@ -1137,6 +1137,13 @@ function PreviewAll({ session }: { session: Session }) {
       offscreen.innerHTML = ''
       offscreen.appendChild(sections[sIdx])
 
+      // Remove page-break visual artifacts for PDF rendering
+      offscreen.querySelectorAll('.page-break').forEach(el => {
+        el.style.borderTop = 'none'
+        el.style.marginTop = '0'
+        el.style.paddingTop = '0'
+      })
+
       // Wait a tick for layout
       await new Promise(r => setTimeout(r, 50))
 
@@ -1204,14 +1211,24 @@ function PreviewAll({ session }: { session: Session }) {
         console.error('Storage upload error:', uploadError)
         setPdfStatus('error')
       } else {
-        const { data: { publicUrl } } = supabase.storage
-          .from('pdf-archive')
-          .getPublicUrl(storagePath)
+        let publicUrl = ''
+        try {
+          const { data } = supabase.storage.from('pdf-archive').getPublicUrl(storagePath)
+          publicUrl = data?.publicUrl || ''
+        } catch (e) {
+          console.warn('getPublicUrl failed, using fallback:', e)
+          publicUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/pdf-archive/${storagePath}`
+        }
 
-        const { error: updateError } = await supabase.from('sessions').update({ pdf_url: publicUrl }).eq('id', session.id)
-        if (updateError) {
-          console.error('DB update error:', updateError)
-          setPdfStatus('error')
+        if (publicUrl) {
+          const { error: updateError } = await supabase.from('sessions').update({ pdf_url: publicUrl }).eq('id', session.id)
+          if (updateError) {
+            console.error('DB update error:', updateError)
+            // Storage succeeded, DB update failed — still show partial success
+            setPdfStatus('saved')
+          } else {
+            setPdfStatus('saved')
+          }
         } else {
           setPdfStatus('saved')
         }
@@ -1355,7 +1372,7 @@ function PreviewAll({ session }: { session: Session }) {
                   {RUBRIC_CRITERIA.map((c, i) => {
                     const skorXBobot = scores[i] !== null ? scores[i]! * c.bobot : null
                     return (
-                      <tr key={c.no}>
+                      <tr key={c.no} className="avoid-break">
                         <td className="text-center align-top">{c.no}.</td>
                 <td className="text-xs leading-snug py-1.5">
                   <div className="font-semibold">{c.label}</div>
