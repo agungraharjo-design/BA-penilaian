@@ -1082,13 +1082,26 @@ function PreviewAll({ session }: { session: Session }) {
     const original = previewRef.current
     const docFrag = original.cloneNode(true) as HTMLElement
 
-    // Create offscreen container matching the exact content area of A4 print layout
-    // @page { margin: 15mm 20mm 20mm } → content area = 170mm wide, 262mm tall per page
+    // Remove padding, margin, spacing from cloned root (these are Tailwind classes
+    // that eat into the content width and cause NIP/table clipping)
+    docFrag.style.padding = '0'
+    docFrag.style.margin = '0'
+    docFrag.style.gap = '0'
+    docFrag.style.width = '100%'
+    // Strip Tailwind space-y from children
+    Array.from(docFrag.children).forEach(child => {
+      (child as HTMLElement).style.marginTop = '0'
+      ;(child as HTMLElement).style.marginBottom = '0'
+    })
+
+    // Create offscreen container in PIXELS (html2canvas handles px better than mm)
+    // A4 content area: 170mm = ~642px at 96dpi, but we render at 2x for quality
     const offscreen = document.createElement('div')
     offscreen.style.position = 'absolute'
     offscreen.style.left = '-9999px'
     offscreen.style.top = '0'
-    offscreen.style.width = '170mm'
+    offscreen.style.width = '642px'
+    offscreen.style.overflow = 'visible'
     offscreen.style.background = 'white'
     offscreen.style.fontFamily = "'Times New Roman', Georgia, serif"
     offscreen.style.fontSize = '12pt'
@@ -1096,36 +1109,68 @@ function PreviewAll({ session }: { session: Session }) {
     offscreen.style.color = '#000'
     document.body.appendChild(offscreen)
 
-    // Apply print-compatible styles to all tables and elements in a section
-    // (since @media print CSS doesn't apply in offscreen container)
+    // Apply comprehensive inline styles to all elements in the cloned DOM
+    // This overrides Tailwind classes that don't work in offscreen context
     const applyPrintStyles = (root: HTMLElement) => {
-      root.querySelectorAll('.template-table').forEach(table => {
-        ;(table as HTMLElement).style.fontSize = '10pt'
-        ;(table as HTMLElement).style.borderCollapse = 'collapse'
-        ;(table as HTMLElement).style.width = '100%'
+      // All tables: force border-collapse and full width
+      root.querySelectorAll('table').forEach(table => {
+        const t = table as HTMLElement
+        t.style.borderCollapse = 'collapse'
+        t.style.width = '100%'
+        t.style.tableLayout = 'auto'
+        t.style.margin = '0'
         table.querySelectorAll('th, td').forEach(cell => {
-          ;(cell as HTMLElement).style.padding = '4px 6px'
-          ;(cell as HTMLElement).style.border = '1px solid black'
-          ;(cell as HTMLElement).style.verticalAlign = 'top'
+          const c = cell as HTMLElement
+          c.style.padding = '4px 8px'
+          c.style.border = '1px solid black'
+          c.style.verticalAlign = 'top'
+          c.style.lineHeight = '1.4'
+          // Ensure no overflow clipping
+          c.style.overflow = 'visible'
+          c.style.whiteSpace = 'normal'
+          c.style.wordBreak = 'break-word'
         })
         table.querySelectorAll('th').forEach(th => {
           ;(th as HTMLElement).style.textAlign = 'center'
           ;(th as HTMLElement).style.fontWeight = 'bold'
         })
       })
-      // Apply avoid-break as inline style hint (won't break in html2canvas, but keeps DOM tidy)
+
+      // Force text containers to not clip
+      root.querySelectorAll('p, div, span, td, th').forEach(el => {
+        const e = el as HTMLElement
+        if (e.style.overflow === 'hidden') e.style.overflow = 'visible'
+      })
+
+      // Signature blocks: ensure they don't overflow
       root.querySelectorAll('.avoid-break').forEach(el => {
         ;(el as HTMLElement).style.pageBreakInside = 'avoid'
       })
-      // Hide no-print
+
+      // Hide no-print elements
       root.querySelectorAll('.no-print').forEach(el => {
         ;(el as HTMLElement).style.display = 'none'
+      })
+
+      // Remove all margin-top from space-y children
+      Array.from(root.children).forEach(child => {
+        const c = child as HTMLElement
+        if (c.classList.contains('page-break')) {
+          c.style.marginTop = '0'
+          c.style.paddingTop = '0'
+          c.style.borderTop = 'none'
+        }
       })
     }
 
     const pdf = new jsPDF('p', 'mm', 'a4')
     const pdfWidth = pdf.internal.pageSize.getWidth()
     const pdfHeight = pdf.internal.pageSize.getHeight()
+    // Content area: 210 - 20*2 = 170mm wide, 297 - 15 - 20 = 262mm tall
+    const contentWidthMM = 170
+    const contentHeightMM = 262
+    const marginLeftMM = 20
+    const marginTopMM = 15
 
     // Split content into sections at each .page-break element
     const children = Array.from(docFrag.children)
@@ -1138,6 +1183,7 @@ function PreviewAll({ session }: { session: Session }) {
         // Finalize current section
         const section = document.createElement('div')
         section.style.width = '100%'
+        section.style.overflow = 'visible'
         currentParts.forEach(c => section.appendChild(c.cloneNode(true)))
         sections.push(section)
         currentParts = [el.cloneNode(true) as HTMLElement]
@@ -1148,6 +1194,7 @@ function PreviewAll({ session }: { session: Session }) {
     if (currentParts.length > 0) {
       const section = document.createElement('div')
       section.style.width = '100%'
+      section.style.overflow = 'visible'
       currentParts.forEach(c => section.appendChild(c))
       sections.push(section)
     }
@@ -1156,6 +1203,7 @@ function PreviewAll({ session }: { session: Session }) {
     if (sections.length === 0) {
       const section = document.createElement('div')
       section.style.width = '100%'
+      section.style.overflow = 'visible'
       children.forEach(c => section.appendChild(c.cloneNode(true)))
       sections.push(section)
     }
@@ -1165,11 +1213,11 @@ function PreviewAll({ session }: { session: Session }) {
       offscreen.innerHTML = ''
       offscreen.appendChild(sections[sIdx])
 
-      // Apply print styles to all tables in this section
+      // Apply comprehensive inline styles
       applyPrintStyles(offscreen)
 
-      // Wait a tick for layout
-      await new Promise(r => setTimeout(r, 50))
+      // Wait for layout
+      await new Promise(r => setTimeout(r, 100))
 
       const canvas = await html2canvas(offscreen, {
         scale: 2,
@@ -1177,18 +1225,16 @@ function PreviewAll({ session }: { session: Session }) {
         logging: false,
         width: offscreen.scrollWidth,
         height: offscreen.scrollHeight,
+        windowWidth: 642,
       })
 
-      const imgData = canvas.toDataURL('image/jpeg', 0.8)
-      // Content is 170mm wide, page is 210mm → 20mm left margin to center
-      const marginLeft = 20
-      const contentWidth = 170
-      const imgHeight = (canvas.height * contentWidth) / canvas.width
+      const imgData = canvas.toDataURL('image/jpeg', 0.85)
+      const imgHeight = (canvas.height * contentWidthMM) / canvas.width
 
       // If this section fits on one page, add directly
-      if (imgHeight <= pdfHeight) {
+      if (imgHeight <= contentHeightMM) {
         if (sIdx > 0) pdf.addPage()
-        pdf.addImage(imgData, 'JPEG', marginLeft, 0, contentWidth, imgHeight)
+        pdf.addImage(imgData, 'JPEG', marginLeftMM, 0, contentWidthMM, imgHeight)
       } else {
         // Section is taller than one page — tile across pages
         let remainingHeight = imgHeight
@@ -1199,9 +1245,9 @@ function PreviewAll({ session }: { session: Session }) {
           if (!firstPageForSection || sIdx > 0) pdf.addPage()
           firstPageForSection = false
 
-          const pageImgHeight = Math.min(pdfHeight, imgHeight - yOffset)
-          const srcY = (yOffset / contentWidth) * canvas.width
-          const srcH = (pageImgHeight / contentWidth) * canvas.width
+          const pageImgHeight = Math.min(contentHeightMM, imgHeight - yOffset)
+          const srcY = (yOffset / contentWidthMM) * canvas.width
+          const srcH = (pageImgHeight / contentWidthMM) * canvas.width
 
           // Crop canvas to this page slice
           const tempCanvas = document.createElement('canvas')
@@ -1210,11 +1256,11 @@ function PreviewAll({ session }: { session: Session }) {
           const ctx = tempCanvas.getContext('2d')!
           ctx.drawImage(canvas, 0, srcY, canvas.width, srcH, 0, 0, canvas.width, srcH)
 
-          const pageImgData = tempCanvas.toDataURL('image/jpeg', 0.8)
-          pdf.addImage(pageImgData, 'JPEG', marginLeft, 0, contentWidth, pageImgHeight)
+          const pageImgData = tempCanvas.toDataURL('image/jpeg', 0.85)
+          pdf.addImage(pageImgData, 'JPEG', marginLeftMM, 0, contentWidthMM, pageImgHeight)
 
-          yOffset += pdfHeight
-          remainingHeight -= pdfHeight
+          yOffset += contentHeightMM
+          remainingHeight -= contentHeightMM
         }
       }
     }
