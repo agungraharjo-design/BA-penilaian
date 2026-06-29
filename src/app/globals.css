@@ -5,20 +5,22 @@
 @media print {
   @page {
     size: A4;
-    margin: 5mm 30mm 25mm;
+    margin: 15mm 20mm 20mm;
   }
   body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .no-print { display: none !important; }
   .print-only { display: block !important; }
   .print-only-inline { display: inline !important; }
-  .page-break { page-break-before: always; break-before: page; }
+  .page-break { page-break-before: always; break-before: page; padding-top: 8mm; }
   .avoid-break { page-break-inside: avoid; break-inside: avoid; }
   p, h1, h2, h3, li { orphans: 3; widows: 3; }
   img { max-width: 100% !important; height: auto !important; }
+  .template-table { font-size: 10pt; }
+  .template-table th, .template-table td { padding: 2px 4px; }
 }
 
 @media screen {
-  .page-break { margin-top: 24px; border-top: 1px solid #e5e7eb; padding-top: 12px; }
+  .page-break { margin-top: 16px; border-top: 1px solid #e5e7eb; padding-top: 12px; }
 }
 
 .print-only, .print-only-inline { display: none; }

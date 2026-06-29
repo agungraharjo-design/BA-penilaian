@@ -811,13 +811,13 @@ function RekapNilaiForm({ session, onUpdate }: { session: Session; onUpdate: (s:
       <table className="template-table text-sm">
         <thead>
           <tr>
-            <th className="w-8">NO</th>
+            <th className="w-6">NO</th>
             <th>NAMA</th>
-            <th className="w-20">NIM</th>
-            <th className="w-16">NILAI<br/>PENGUJI I<br/>(Ketua)</th>
-            <th className="w-16">NILAI<br/>PENGUJI II<br/>(Anggota I)</th>
-            <th className="w-16">NILAI<br/>PENGUJI III<br/>(Anggota II)</th>
-            <th className="w-16">RERATA<br/>NILAI SIDANG<br/>SKRIPSI</th>
+            <th className="w-16">NIM</th>
+            <th className="w-14 text-[10px]">NILAI<br/>PENGUJI I<br/>(Ketua)</th>
+            <th className="w-14 text-[10px]">NILAI<br/>PENGUJI II<br/>(Anggota I)</th>
+            <th className="w-14 text-[10px]">NILAI<br/>PENGUJI III<br/>(Anggota II)</th>
+            <th className="w-16 text-[10px]">RERATA<br/>NILAI SIDANG<br/>SKRIPSI</th>
           </tr>
         </thead>
         <tbody>
@@ -1092,7 +1092,7 @@ function PreviewAll({ session }: { session: Session }) {
     offscreen.style.fontFamily = "'Times New Roman', Georgia, serif"
     offscreen.style.fontSize = '12pt'
     offscreen.style.lineHeight = '1.5'
-    offscreen.style.padding = '5mm 30mm 25mm'
+    offscreen.style.padding = '15mm 20mm 20mm'
     document.body.appendChild(offscreen)
 
     const pdf = new jsPDF('p', 'mm', 'a4')
@@ -1197,7 +1197,6 @@ function PreviewAll({ session }: { session: Session }) {
     document.body.removeChild(offscreen)
 
     const fileName = `BA_Sidang_${session.nama.replace(/\s+/g, '_')}_${session.nim}.pdf`
-    pdf.save(fileName)
 
     // Upload to Supabase Storage for persistence
     setPdfStatus('saving')
@@ -1444,9 +1443,9 @@ function PreviewAll({ session }: { session: Session }) {
           <table className="template-table text-sm mt-4">
             <thead>
               <tr>
-                <th className="w-8">NO</th><th>NAMA</th><th className="w-20">NIM</th>
-                <th className="w-16">NILAI<br/>PENGUJI I<br/>(Ketua)</th><th className="w-16">NILAI<br/>PENGUJI II<br/>(Anggota I)</th><th className="w-16">NILAI<br/>PENGUJI III<br/>(Anggota II)</th>
-                <th className="w-16">RERATA<br/>NILAI SIDANG<br/>SKRIPSI</th>
+                <th className="w-6">NO</th><th>NAMA</th><th className="w-16">NIM</th>
+                <th className="w-14 text-[10px]">NILAI<br/>PENGUJI I<br/>(Ketua)</th><th className="w-14 text-[10px]">NILAI<br/>PENGUJI II<br/>(Anggota I)</th><th className="w-14 text-[10px]">NILAI<br/>PENGUJI III<br/>(Anggota II)</th>
+                <th className="w-16 text-[10px]">RERATA<br/>NILAI SIDANG<br/>SKRIPSI</th>
               </tr>
             </thead>
             <tbody>
