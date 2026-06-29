@@ -4,20 +4,62 @@ import { chromium } from 'playwright'
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
 
-// Locate the Playwright browsers that were copied to .next/server/ during build
-const { existsSync } = require('fs')
-const path = require('path')
+const { execSync } = require('child_process')
+const { existsSync, mkdirSync, cpSync } = require('fs')
+const { tmpdir } = require('os')
+const { join, dirname } = require('path')
 
-function resolveBrowsersPath(): string | undefined {
-  const here = path.join(process.cwd(), '.next', 'server', 'playwright-browsers')
-  if (existsSync(here)) return here
-  const project = path.join(process.cwd(), 'playwright-browsers')
-  if (existsSync(project)) return project
-  return process.env.PLAYWRIGHT_BROWSERS_PATH || undefined
+// Loaded once per cold start
+let browsersReady: Promise<void> | null = null
+
+async function ensureBrowsers() {
+  if (browsersReady) return browsersReady
+
+  browsersReady = (async () => {
+    // Priority 1: use the browsers we shipped in .next/server/ (post-build copy)
+    const shipped = join(process.cwd(), '.next', 'server', 'playwright-browsers')
+    if (existsSync(shipped)) {
+      process.env.PLAYWRIGHT_BROWSERS_PATH = shipped
+      console.log('[PDF] Using shipped browsers at', shipped)
+      return
+    }
+
+    // Priority 2: download to /tmp (writable on Vercel, survives function warm starts)
+    const dest = join(tmpdir(), 'playwright-browsers')
+    if (!existsSync(dest)) {
+      mkdirSync(dest, { recursive: true })
+      console.log('[PDF] Downloading Chromium to', dest)
+      try {
+        execSync('npx playwright install chromium-headless-shell', {
+          env: { ...process.env, PLAYWRIGHT_BROWSERS_PATH: dest },
+          cwd: process.cwd(),
+          timeout: 180000,
+          stdio: 'inherit',
+        })
+        console.log('[PDF] Download complete')
+      } catch (e: any) {
+        // Some versions use 'chromium' instead
+        console.log('[PDF] chromium-headless-shell failed, trying chromium:', e.message)
+        try {
+          execSync('npx playwright install chromium', {
+            env: { ...process.env, PLAYWRIGHT_BROWSERS_PATH: dest },
+            cwd: process.cwd(),
+            timeout: 180000,
+            stdio: 'inherit',
+          })
+          console.log('[PDF] chromium download complete')
+        } catch (e2: any) {
+          throw new Error('Browser download failed: ' + e2.message)
+        }
+      }
+    } else {
+      console.log('[PDF] Reusing cached browsers at', dest)
+    }
+    process.env.PLAYWRIGHT_BROWSERS_PATH = dest
+  })()
+
+  return browsersReady
 }
-
-const browsersPath = resolveBrowsersPath()
-if (browsersPath) process.env.PLAYWRIGHT_BROWSERS_PATH = browsersPath
 
 export async function POST(
   request: NextRequest,
@@ -46,20 +88,14 @@ export async function POST(
 
   let browser: any = null
   let page: any = null
-  const step = (name: string) => console.log(`[PDF] ${name}`)
 
   try {
-    step('launching Chromium via Playwright')
+    await ensureBrowsers()
+
     browser = await chromium.launch({
       headless: true,
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-gpu',
-      ],
+      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu'],
     })
-    step('browser launched')
 
     page = await browser.newPage()
 
@@ -67,30 +103,25 @@ export async function POST(
     const protocol = host.includes('localhost') ? 'http' : 'https'
     const renderUrl = `${protocol}://${host}/pdf-render/${id}`
 
-    step(`navigating to ${renderUrl}`)
     await page.goto(renderUrl, { waitUntil: 'domcontentloaded', timeout: 60000 })
-    step('navigated')
 
     const pageContent = await page.content()
     if (!pageContent.includes('Laporan Sidang Skripsi')) {
-      console.error('PDF render page content mismatch. First 500 chars:', pageContent.slice(0, 500))
+      console.error('PDF render page content mismatch. First 300 chars:', pageContent.slice(0, 300))
       return NextResponse.json({ error: 'Render page returned invalid content', url: renderUrl }, { status: 500 })
     }
 
-    step('generating PDF')
     const pdfBuffer = await page.pdf({
       format: 'A4',
       margin: { top: '15mm', right: '20mm', bottom: '20mm', left: '20mm' },
       printBackground: true,
       preferCSSPageSize: false,
     })
-    step(`PDF generated, size: ${pdfBuffer.length} bytes`)
 
     const safeName = (session.nama || 'unknown').replace(/[^a-zA-Z0-9]/g, '_')
     const fileName = `BA_Sidang_${safeName}_${session.nim || 'unknown'}.pdf`
     const storagePath = `${session.id}/${fileName}`
 
-    step('uploading to storage')
     const { error: uploadError } = await supabase.storage
       .from('pdf-archive')
       .upload(storagePath, pdfBuffer, { contentType: 'application/pdf', upsert: true })
@@ -99,20 +130,14 @@ export async function POST(
       console.error('Storage upload error:', uploadError)
       return NextResponse.json({ error: 'Upload failed', details: uploadError.message }, { status: 500 })
     }
-    step('storage upload OK')
 
     const publicUrl = `${supabaseUrl}/storage/v1/object/public/pdf-archive/${storagePath}`
-    const { error: updateError } = await supabase.from('sessions').update({ pdf_url: publicUrl }).eq('id', session.id)
-    if (updateError) console.error('DB update error:', updateError)
+    await supabase.from('sessions').update({ pdf_url: publicUrl }).eq('id', session.id)
 
-    step('done')
     return NextResponse.json({ url: publicUrl, fileName })
   } catch (err: any) {
     console.error('[PDF] FATAL error:', err)
-    return NextResponse.json({
-      error: err.message || 'PDF generation failed',
-      stack: err.stack,
-    }, { status: 500 })
+    return NextResponse.json({ error: err.message || 'PDF generation failed', stack: err.stack }, { status: 500 })
   } finally {
     if (page) try { await page.close() } catch {}
     if (browser) try { await browser.close() } catch {}
