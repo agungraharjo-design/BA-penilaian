@@ -1082,97 +1082,127 @@ function PreviewAll({ session }: { session: Session }) {
     const original = previewRef.current
     setPdfStatus('saving')
 
-    // Clone the preview and render it in a hidden offscreen container
-    // that matches the preview's ACTUAL rendered width on screen.
-    // This ensures html2canvas captures exactly what you see on screen.
-    const cloned = original.cloneNode(true) as HTMLElement
+    // Clone the preview content
+    const docFrag = original.cloneNode(true) as HTMLElement
 
-    // Create offscreen container matching the preview's real width
-    const offscreen = document.createElement('div')
-    offscreen.style.position = 'absolute'
-    offscreen.style.left = '-9999px'
-    offscreen.style.top = '0'
-    offscreen.style.width = original.scrollWidth + 'px'
-    offscreen.style.background = 'white'
-    offscreen.style.fontFamily = "'Times New Roman', Georgia, serif"
-    offscreen.style.color = '#000'
-    offscreen.style.lineHeight = '1.5'
-    // Remove print-only hiding so no-print is hidden
-    offscreen.appendChild(cloned)
-    document.body.appendChild(offscreen)
-
-    // Hide .no-print elements in the clone
-    offscreen.querySelectorAll('.no-print').forEach(el => {
+    // Hide .no-print elements
+    docFrag.querySelectorAll('.no-print').forEach(el => {
       ;(el as HTMLElement).style.display = 'none'
     })
 
-    // Apply print styles to tables so borders/padding match the print preview
-    offscreen.querySelectorAll('table').forEach(table => {
-      ;(table as HTMLElement).style.borderCollapse = 'collapse'
-    })
+    // Split content into sections at .page-break boundaries
+    const children = Array.from(docFrag.children)
+    const sections: HTMLElement[] = []
+    let currentParts: HTMLElement[] = []
 
-    // Wait for images (kop surat, signatures) to load
-    const images = offscreen.querySelectorAll('img')
-    await Promise.all(Array.from(images).map(img => {
-      if (img.complete) return Promise.resolve()
-      return new Promise<void>(resolve => { img.onload = () => resolve(); img.onerror = () => resolve() })
-    }))
+    for (const child of children) {
+      const el = child as HTMLElement
+      if (el.classList.contains('page-break') && currentParts.length > 0) {
+        const section = document.createElement('div')
+        section.style.width = '100%'
+        currentParts.forEach(c => section.appendChild(c.cloneNode(true)))
+        sections.push(section)
+        currentParts = [el.cloneNode(true) as HTMLElement]
+      } else {
+        currentParts.push(el.cloneNode(true) as HTMLElement)
+      }
+    }
+    if (currentParts.length > 0) {
+      const section = document.createElement('div')
+      section.style.width = '100%'
+      currentParts.forEach(c => section.appendChild(c))
+      sections.push(section)
+    }
+    if (sections.length === 0) {
+      const section = document.createElement('div')
+      section.style.width = '100%'
+      children.forEach(c => section.appendChild(c.cloneNode(true)))
+      sections.push(section)
+    }
 
-    // Small delay for layout
-    await new Promise(r => setTimeout(r, 200))
-
-    // Capture the full content at 2x resolution for sharpness
-    const canvas = await html2canvas(offscreen, {
-      scale: 2,
-      useCORS: true,
-      logging: false,
-      width: offscreen.scrollWidth,
-      height: offscreen.scrollHeight,
-    })
-
-    document.body.removeChild(offscreen)
-
-    // Create A4 PDF
+    // A4 PDF dimensions
     const pdf = new jsPDF('p', 'mm', 'a4')
-    const pageW = pdf.internal.pageSize.getWidth()   // 210mm
-    const pageH = pdf.internal.pageSize.getHeight()  // 297mm
+    const pageW = 210
+    const pageH = 297
     const marginLR = 15
-    const marginTop = 10
+    const marginTop = 12
     const marginBottom = 10
-    const contentW = pageW - marginLR * 2            // 180mm
-    const contentH = pageH - marginTop - marginBottom // 277mm
+    const contentW = pageW - marginLR * 2
+    const contentH = pageH - marginTop - marginBottom
 
-    // Scale canvas to content width
-    const imgWidth = contentW
-    const imgHeight = (canvas.height * contentW) / canvas.width
+    // Render each section separately
+    for (let sIdx = 0; sIdx < sections.length; sIdx++) {
+      const section = sections[sIdx]
 
-    if (imgHeight <= contentH) {
-      // Fits on one page
-      const imgData = canvas.toDataURL('image/jpeg', 0.9)
-      pdf.addImage(imgData, 'JPEG', marginLR, marginTop, imgWidth, imgHeight)
-    } else {
-      // Multi-page: slice the canvas into page-sized chunks
-      let yOffset = 0
-      let pageIdx = 0
-      while (yOffset < imgHeight) {
-        if (pageIdx > 0) pdf.addPage()
+      // Create offscreen container matching preview width
+      const offscreen = document.createElement('div')
+      offscreen.style.position = 'absolute'
+      offscreen.style.left = '-9999px'
+      offscreen.style.top = '0'
+      offscreen.style.width = original.scrollWidth + 'px'
+      offscreen.style.background = 'white'
+      offscreen.style.fontFamily = "'Times New Roman', Georgia, serif"
+      offscreen.style.color = '#000'
+      offscreen.style.lineHeight = '1.5'
+      offscreen.appendChild(section)
+      document.body.appendChild(offscreen)
 
-        const sliceH = Math.min(contentH, imgHeight - yOffset)
-        const srcY = (yOffset / imgHeight) * canvas.height
-        const srcH = (sliceH / imgHeight) * canvas.height
+      // Apply print styles to tables
+      offscreen.querySelectorAll('table').forEach(table => {
+        ;(table as HTMLElement).style.borderCollapse = 'collapse'
+      })
 
-        // Crop the canvas for this page
-        const pageCanvas = document.createElement('canvas')
-        pageCanvas.width = canvas.width
-        pageCanvas.height = Math.round(srcH)
-        const ctx = pageCanvas.getContext('2d')!
-        ctx.drawImage(canvas, 0, srcY, canvas.width, srcH, 0, 0, canvas.width, srcH)
+      // Wait for images
+      const images = offscreen.querySelectorAll('img')
+      await Promise.all(Array.from(images).map(img => {
+        if (img.complete) return Promise.resolve()
+        return new Promise<void>(resolve => { img.onload = () => resolve(); img.onerror = () => resolve() })
+      }))
 
-        const pageImg = pageCanvas.toDataURL('image/jpeg', 0.9)
-        pdf.addImage(pageImg, 'JPEG', marginLR, marginTop, contentW, sliceH)
+      await new Promise(r => setTimeout(r, 150))
 
-        yOffset += sliceH
-        pageIdx++
+      // Capture this section
+      const canvas = await html2canvas(offscreen, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        width: offscreen.scrollWidth,
+        height: offscreen.scrollHeight,
+      })
+
+      document.body.removeChild(offscreen)
+
+      const imgHeight = (canvas.height * contentW) / canvas.width
+
+      if (imgHeight <= contentH) {
+        // Section fits on one page
+        if (sIdx > 0) pdf.addPage()
+        const imgData = canvas.toDataURL('image/jpeg', 0.9)
+        pdf.addImage(imgData, 'JPEG', marginLR, marginTop, contentW, imgHeight)
+      } else {
+        // Section is taller than one page — slice with top margin on each page
+        let yOffset = 0
+        let isFirstSlice = true
+
+        while (yOffset < imgHeight) {
+          if (!isFirstSlice || sIdx > 0) pdf.addPage()
+          isFirstSlice = false
+
+          const sliceH = Math.min(contentH, imgHeight - yOffset)
+          const srcY = (yOffset / imgHeight) * canvas.height
+          const srcH = (sliceH / imgHeight) * canvas.height
+
+          const pageCanvas = document.createElement('canvas')
+          pageCanvas.width = canvas.width
+          pageCanvas.height = Math.round(srcH)
+          const ctx = pageCanvas.getContext('2d')!
+          ctx.drawImage(canvas, 0, srcY, canvas.width, srcH, 0, 0, canvas.width, srcH)
+
+          const pageImg = pageCanvas.toDataURL('image/jpeg', 0.9)
+          pdf.addImage(pageImg, 'JPEG', marginLR, marginTop, contentW, sliceH)
+
+          yOffset += contentH
+        }
       }
     }
 
@@ -1225,8 +1255,8 @@ function PreviewAll({ session }: { session: Session }) {
         <button onClick={handleDownloadPDF} disabled={pdfStatus === 'saving'} className="bg-green-800 text-white px-6 py-2 rounded hover:bg-green-700 font-sans text-sm font-medium flex items-center gap-2 disabled:opacity-50">
           {pdfStatus === 'saving' ? '⏳ Menyimpan...' : '⬇ Generate PDF'}
         </button>
-        {pdfStatus === 'saved' && (
-          <span className="text-green-700 text-sm font-sans self-center">✓ PDF tersimpan di server</span>
+        {pdfStatus === 'saved' && !session.pdf_url && (
+          <span className="text-green-700 text-sm font-sans self-center">✓ PDF tersimpan</span>
         )}
         {pdfStatus === 'error' && (
           <span className="text-red-600 text-sm font-sans self-center">⚠ Gagal simpan ke database</span>
