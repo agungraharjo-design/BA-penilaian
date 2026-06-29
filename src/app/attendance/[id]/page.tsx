@@ -59,11 +59,12 @@ export default function PublicAttendancePage() {
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [saving, setSaving] = useState(false)
-  const [saved, setSaved] = useState(false)
+  const [status, setStatus] = useState<'idle' | 'saving' | 'saved'>('idle')
 
   const [peserta, setPeserta] = useState<{ nama: string; nim: string; ttd?: string }[]>([])
   const [audience, setAudience] = useState<{ nama: string; nim: string; ttd?: string }[]>([])
+  const pesertaRef = useRef<{ nama: string; nim: string; ttd?: string }[]>([])
+  const audienceRef = useRef<{ nama: string; nim: string; ttd?: string }[]>([])
   const saveTimer = useRef<NodeJS.Timeout | null>(null)
 
   useEffect(() => {
@@ -81,8 +82,12 @@ export default function PublicAttendancePage() {
       }
       const data = await res.json()
       setSession(data)
-      setPeserta(data.peserta_hadir || [{ nama: data.nama, nim: data.nim }])
-      setAudience(data.audience_hadir || [])
+      const p = data.peserta_hadir || [{ nama: data.nama, nim: data.nim }]
+      const a = data.audience_hadir || []
+      setPeserta(p)
+      setAudience(a)
+      pesertaRef.current = p
+      audienceRef.current = a
     } catch {
       setError('Gagal memuat data')
     }
@@ -90,21 +95,24 @@ export default function PublicAttendancePage() {
   }
 
   async function saveAttendance() {
-    setSaving(true)
+    const toSaveP = pesertaRef.current
+    const toSaveA = audienceRef.current
+    setStatus('saving')
     try {
       const res = await fetch('/api/attendance', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionId, peserta_hadir: peserta, audience_hadir: audience }),
+        body: JSON.stringify({ sessionId, peserta_hadir: toSaveP, audience_hadir: toSaveA }),
       })
       if (res.ok) {
-        setSaved(true)
-        setTimeout(() => setSaved(false), 3000)
+        setStatus('saved')
+      } else {
+        setStatus('idle')
       }
     } catch (err) {
       console.error('Save error:', err)
+      setStatus('idle')
     }
-    setSaving(false)
   }
 
   const debouncedSave = () => {
@@ -113,34 +121,42 @@ export default function PublicAttendancePage() {
   }
 
   const updatePeserta = (idx: number, field: string, value: string) => {
-    const newP = [...peserta]
-    newP[idx] = { ...newP[idx], [field]: value }
+    const newP = peserta.map((item, i) => i === idx ? { ...item, [field]: value } : item)
     setPeserta(newP)
+    pesertaRef.current = newP
     debouncedSave()
   }
 
   const updateAudience = (idx: number, field: string, value: string) => {
-    const newA = [...audience]
-    newA[idx] = { ...newA[idx], [field]: value }
+    const newA = audience.map((item, i) => i === idx ? { ...item, [field]: value } : item)
     setAudience(newA)
+    audienceRef.current = newA
     debouncedSave()
   }
 
   const addPeserta = () => {
-    setPeserta([...peserta, { nama: '', nim: '' }])
+    const newP = [...peserta, { nama: '', nim: '' }]
+    setPeserta(newP)
+    pesertaRef.current = newP
   }
 
   const removePeserta = (idx: number) => {
-    setPeserta(peserta.filter((_, i) => i !== idx))
+    const newP = peserta.filter((_, i) => i !== idx)
+    setPeserta(newP)
+    pesertaRef.current = newP
     debouncedSave()
   }
 
   const addAudience = () => {
-    setAudience([...audience, { nama: '', nim: '' }])
+    const newA = [...audience, { nama: '', nim: '' }]
+    setAudience(newA)
+    audienceRef.current = newA
   }
 
   const removeAudience = (idx: number) => {
-    setAudience(audience.filter((_, i) => i !== idx))
+    const newA = audience.filter((_, i) => i !== idx)
+    setAudience(newA)
+    audienceRef.current = newA
     debouncedSave()
   }
 
@@ -170,8 +186,8 @@ export default function PublicAttendancePage() {
 
         <div className="flex items-center justify-between mb-4">
           <p className="text-xs text-gray-500">Isi data diri Anda pada tabel di bawah, perubahan tersimpan otomatis.</p>
-          {saved && <span className="text-xs text-green-700 font-semibold">Tersimpan ✓</span>}
-          {saving && <span className="text-xs text-yellow-700 font-semibold">Menyimpan...</span>}
+          {status === 'saved' && <span className="text-xs text-green-700 font-semibold">Tersimpan ✓</span>}
+          {status === 'saving' && <span className="text-xs text-yellow-700 font-semibold">Menyimpan...</span>}
         </div>
 
         <div className="mb-8">

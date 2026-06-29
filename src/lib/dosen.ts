@@ -32,6 +32,12 @@ export const DOSEN_WHITELIST: { email: string; nama: string }[] = [
   { email: 'h.iswanto@upnvj.ac.id', nama: 'Prof. Dr. Acim Heri Iswanto, S.K.M, MARS' },
 ]
 
+export const SUPERADMIN_EMAILS = ['agungraharjo@upnvj.ac.id']
+
+export function isSuperadmin(email: string): boolean {
+  return SUPERADMIN_EMAILS.some(e => e.toLowerCase() === email.toLowerCase())
+}
+
 export function isDosenEmail(email: string): { isDosen: boolean; nama: string } {
   const found = DOSEN_WHITELIST.find(
     (d) => d.email.toLowerCase() === email.toLowerCase()

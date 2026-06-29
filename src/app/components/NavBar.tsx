@@ -5,7 +5,8 @@ import { useAuth } from './AuthProvider'
 export default function NavBar() {
   const { user, profile, signOut } = useAuth()
 
-  const isDosen = profile?.role === 'dosen'
+  const isDosen = profile?.role === 'dosen' || profile?.role === 'superadmin'
+  const isSuperadmin = profile?.role === 'superadmin'
 
   if (!user || !profile) return null
 
@@ -17,8 +18,8 @@ export default function NavBar() {
       <div className="flex items-center gap-4">
         <span className="text-xs text-blue-200 font-sans">
           {profile?.full_name || user.email}
-          <span className="ml-2 px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-blue-700 text-blue-100">
-            {isDosen ? 'Dosen' : 'Mahasiswa'}
+          <span className={`ml-2 px-2 py-0.5 rounded text-[10px] font-bold uppercase ${isSuperadmin ? 'bg-purple-700 text-purple-100' : 'bg-blue-700 text-blue-100'}`}>
+            {isSuperadmin ? 'Superadmin' : isDosen ? 'Dosen' : 'Mahasiswa'}
           </span>
         </span>
         <button

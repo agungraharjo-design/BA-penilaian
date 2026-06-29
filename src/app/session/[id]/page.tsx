@@ -17,6 +17,7 @@ export default function SessionPage() {
   const sessionId = params.id as string
 
   const { isDosen, profile } = useAuth()
+  const isSuperadmin = profile?.role === 'superadmin'
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<Tab>(isDosen ? 'berita-acara' : 'daftar-hadir')
@@ -136,7 +137,7 @@ export default function SessionPage() {
   }
 
   let allowedPenilaian: number[] | null = null // null = all allowed
-  if (isDosen && session) {
+  if (!isSuperadmin && isDosen && session) {
     const matched = [
       matchPenguji(session.penguji1),
       matchPenguji(session.penguji2),
@@ -756,16 +757,22 @@ function DaftarHadirForm({ session, onUpdate, isDosen, sessionId }: { session: S
   const [localPeserta, setLocalPeserta] = useState(session.peserta_hadir || [{ nama: session.nama, nim: session.nim }])
   const [localAudience, setLocalAudience] = useState(session.audience_hadir || [])
   const fromRealtime = useRef(false)
+  const pesertaRef = useRef(localPeserta)
+  const audienceRef = useRef(localAudience)
 
   useEffect(() => {
     if (fromRealtime.current) {
       fromRealtime.current = false
       setLocalPeserta(session.peserta_hadir || [{ nama: session.nama, nim: session.nim }])
       setLocalAudience(session.audience_hadir || [])
+      pesertaRef.current = session.peserta_hadir || [{ nama: session.nama, nim: session.nim }]
+      audienceRef.current = session.audience_hadir || []
     }
   }, [session.peserta_hadir, session.audience_hadir, session.nama, session.nim])
 
   const persistAttendance = async (newPeserta: typeof localPeserta, newAudience: typeof localAudience) => {
+    pesertaRef.current = newPeserta
+    audienceRef.current = newAudience
     if (isDosen) {
       fromRealtime.current = true
       onUpdate({ ...session, peserta_hadir: newPeserta, audience_hadir: newAudience })
@@ -783,37 +790,47 @@ function DaftarHadirForm({ session, onUpdate, isDosen, sessionId }: { session: S
   }
 
   const updatePeserta = (idx: number, field: string, value: string) => {
-    const newP = [...localPeserta]
-    newP[idx] = { ...newP[idx], [field]: value }
+    const newP = localPeserta.map((item, i) => i === idx ? { ...item, [field]: value } : item)
     setLocalPeserta(newP)
+    pesertaRef.current = newP
     return newP
   }
 
   const updateAudience = (idx: number, field: string, value: string) => {
-    const newA = [...localAudience]
-    newA[idx] = { ...newA[idx], [field]: value }
+    const newA = localAudience.map((item, i) => i === idx ? { ...item, [field]: value } : item)
     setLocalAudience(newA)
+    audienceRef.current = newA
     return newA
   }
 
   const addPeserta = () => {
-    setLocalPeserta([...localPeserta, { nama: '', nim: '' }])
+    const newP = [...localPeserta, { nama: '', nim: '' }]
+    setLocalPeserta(newP)
+    pesertaRef.current = newP
   }
 
   const removePeserta = (idx: number) => {
-    setLocalPeserta(localPeserta.filter((_, i) => i !== idx))
+    const newP = localPeserta.filter((_, i) => i !== idx)
+    setLocalPeserta(newP)
+    pesertaRef.current = newP
+    persistAttendance(newP, audienceRef.current)
   }
 
   const addAudience = () => {
-    setLocalAudience([...localAudience, { nama: '', nim: '' }])
+    const newA = [...localAudience, { nama: '', nim: '' }]
+    setLocalAudience(newA)
+    audienceRef.current = newA
   }
 
   const removeAudience = (idx: number) => {
-    setLocalAudience(localAudience.filter((_, i) => i !== idx))
+    const newA = localAudience.filter((_, i) => i !== idx)
+    setLocalAudience(newA)
+    audienceRef.current = newA
+    persistAttendance(pesertaRef.current, newA)
   }
 
   const persistChanges = () => {
-    persistAttendance(localPeserta, localAudience)
+    persistAttendance(pesertaRef.current, audienceRef.current)
   }
 
   return (

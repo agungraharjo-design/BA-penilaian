@@ -1,7 +1,7 @@
 'use client'
 
 import { createClient } from '@/lib/supabase/client'
-import { isDosenEmail } from '@/lib/dosen'
+import { isDosenEmail, isSuperadmin } from '@/lib/dosen'
 import { useRouter, usePathname } from 'next/navigation'
 import { useEffect, useState, createContext, useContext } from 'react'
 
@@ -11,7 +11,7 @@ export interface UserProfile {
   id: string
   email: string
   full_name: string
-  role: 'dosen' | 'mahasiswa'
+  role: 'dosen' | 'mahasiswa' | 'superadmin'
 }
 
 interface AuthContextType {
@@ -19,6 +19,7 @@ interface AuthContextType {
   profile: UserProfile | null
   loading: boolean
   isDosen: boolean
+  isSuperadmin: boolean
   signIn: (email: string, password: string) => Promise<string | null>
   signOut: () => Promise<void>
 }
@@ -28,6 +29,7 @@ const AuthContext = createContext<AuthContextType>({
   profile: null,
   loading: true,
   isDosen: false,
+  isSuperadmin: false,
   signIn: async () => null,
   signOut: async () => {},
 })
@@ -63,7 +65,8 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
   async function loadProfile(u: User) {
     const email = u.email || ''
     const check = isDosenEmail(email)
-    const expectedRole = check.isDosen ? 'dosen' : 'mahasiswa'
+    const isSuper = isSuperadmin(email)
+    const expectedRole = isSuper ? 'superadmin' : check.isDosen ? 'dosen' : 'mahasiswa'
 
     const { data } = await supabase
       .from('profiles')
@@ -182,7 +185,8 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
       user,
       profile,
       loading: false,
-      isDosen: profile?.role === 'dosen',
+      isDosen: profile?.role === 'dosen' || profile?.role === 'superadmin',
+      isSuperadmin: profile?.role === 'superadmin',
       signIn,
       signOut,
     }}>
