@@ -1120,21 +1120,22 @@ function PreviewAll({ session }: { session: Session }) {
       sections.push(section)
     }
 
-    // A4 PDF dimensions
+    // A4 PDF: @page { margin: 15mm 20mm 20mm } → content = 170mm wide, 262mm tall
     const pdf = new jsPDF('p', 'mm', 'a4')
-    const pageW = 210
-    const pageH = 297
-    const marginLR = 15
-    const marginTop = 12
-    const marginBottom = 10
-    const contentW = pageW - marginLR * 2
-    const contentH = pageH - marginTop - marginBottom
+    const marginLeft = 20
+    const marginRight = 20
+    const marginTop = 15
+    const marginBottom = 20
+    const contentW = 210 - marginLeft - marginRight  // 170mm
+    const contentH = 297 - marginTop - marginBottom    // 262mm
 
-    // Render each section separately
-    for (let sIdx = 0; sIdx < sections.length; sIdx++) {
-      const section = sections[sIdx]
+    const pxPerMM = original.scrollWidth / (contentW + marginLeft + marginRight)
+    // More accurate: the preview is rendered at screen resolution
+    // offscreen width = original.scrollWidth px, which maps to full page width 210mm
+    const screenToMM = 210 / original.scrollWidth
 
-      // Create offscreen container matching preview width
+    // Helper: render a DOM element to canvas via offscreen container
+    const renderToCanvas = async (el: HTMLElement): Promise<HTMLCanvasElement> => {
       const offscreen = document.createElement('div')
       offscreen.style.position = 'absolute'
       offscreen.style.left = '-9999px'
@@ -1144,66 +1145,205 @@ function PreviewAll({ session }: { session: Session }) {
       offscreen.style.fontFamily = "'Times New Roman', Georgia, serif"
       offscreen.style.color = '#000'
       offscreen.style.lineHeight = '1.5'
-      offscreen.appendChild(section)
+      offscreen.appendChild(el)
       document.body.appendChild(offscreen)
 
-      // Apply print styles to tables
-      offscreen.querySelectorAll('table').forEach(table => {
-        ;(table as HTMLElement).style.borderCollapse = 'collapse'
+      offscreen.querySelectorAll('table').forEach(t => {
+        ;(t as HTMLElement).style.borderCollapse = 'collapse'
       })
 
-      // Wait for images
       const images = offscreen.querySelectorAll('img')
       await Promise.all(Array.from(images).map(img => {
         if (img.complete) return Promise.resolve()
-        return new Promise<void>(resolve => { img.onload = () => resolve(); img.onerror = () => resolve() })
+        return new Promise<void>(r => { img.onload = () => r(); img.onerror = () => r() })
       }))
-
       await new Promise(r => setTimeout(r, 150))
 
-      // Capture this section
       const canvas = await html2canvas(offscreen, {
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        width: offscreen.scrollWidth,
-        height: offscreen.scrollHeight,
+        scale: 2, useCORS: true, logging: false,
+        width: offscreen.scrollWidth, height: offscreen.scrollHeight,
       })
-
       document.body.removeChild(offscreen)
+      return canvas
+    }
 
-      const imgHeight = (canvas.height * contentW) / canvas.width
+    // Helper: add a canvas image to the PDF at a given page position
+    const addCanvasToPage = (canvas: HTMLCanvasElement, pdfX: number, pdfY: number, pdfW: number, pdfH: number) => {
+      const imgData = canvas.toDataURL('image/jpeg', 0.9)
+      pdf.addImage(imgData, 'JPEG', pdfX, pdfY, pdfW, pdfH)
+    }
 
-      if (imgHeight <= contentH) {
-        // Section fits on one page
-        if (sIdx > 0) pdf.addPage()
-        const imgData = canvas.toDataURL('image/jpeg', 0.9)
-        pdf.addImage(imgData, 'JPEG', marginLR, marginTop, contentW, imgHeight)
-      } else {
-        // Section is taller than one page — slice with top margin on each page
+    // Helper: convert canvas pixel height to mm
+    const pxToMM = (px: number, canvasW: number) => (px * contentW) / canvasW
+
+    // For each section, try to split tables that are too tall
+    // by duplicating the thead on each sub-page
+    const processSection = async (section: HTMLElement, sIdx: number, isFirstSection: boolean) => {
+      const canvas = await renderToCanvas(section)
+      const imgH = pxToMM(canvas.height, canvas.width)
+
+      if (imgH <= contentH) {
+        // Fits on one page
+        if (!isFirstSection || sIdx > 0) pdf.addPage()
+        addCanvasToPage(canvas, marginLeft, marginTop, contentW, imgH)
+        return
+      }
+
+      // Section is too tall. Try to split at template-table boundaries.
+      // Find all template-table elements in the section
+      const tables = section.querySelectorAll('.template-table')
+      if (tables.length === 0) {
+        // No splittable tables — just slice the canvas
         let yOffset = 0
-        let isFirstSlice = true
-
-        while (yOffset < imgHeight) {
-          if (!isFirstSlice || sIdx > 0) pdf.addPage()
-          isFirstSlice = false
-
-          const sliceH = Math.min(contentH, imgHeight - yOffset)
-          const srcY = (yOffset / imgHeight) * canvas.height
-          const srcH = (sliceH / imgHeight) * canvas.height
-
-          const pageCanvas = document.createElement('canvas')
-          pageCanvas.width = canvas.width
-          pageCanvas.height = Math.round(srcH)
-          const ctx = pageCanvas.getContext('2d')!
+        let first = true
+        while (yOffset < imgH) {
+          if (!first || sIdx > 0) pdf.addPage()
+          first = false
+          const sliceH = Math.min(contentH, imgH - yOffset)
+          const srcY = (yOffset / imgH) * canvas.height
+          const srcH = (sliceH / imgH) * canvas.height
+          const tmp = document.createElement('canvas')
+          tmp.width = canvas.width
+          tmp.height = Math.round(srcH)
+          const ctx = tmp.getContext('2d')!
           ctx.drawImage(canvas, 0, srcY, canvas.width, srcH, 0, 0, canvas.width, srcH)
-
-          const pageImg = pageCanvas.toDataURL('image/jpeg', 0.9)
-          pdf.addImage(pageImg, 'JPEG', marginLR, marginTop, contentW, sliceH)
-
+          addCanvasToPage(tmp, marginLeft, marginTop, contentW, sliceH)
           yOffset += contentH
         }
+        return
       }
+
+      // Split: render everything ABOVE the first table as page 1,
+      // then split the table rows with repeated headers
+      const firstTable = tables[0]
+      const thead = firstTable.querySelector('thead')
+      const tbody = firstTable.querySelector('tbody')
+      const tfoot = firstTable.querySelector('tfoot')
+      const rows = tbody ? Array.from(tbody.children) : []
+      const theadHTML = thead ? thead.outerHTML : ''
+      const tfootHTML = tfoot ? tfoot.outerHTML : ''
+
+      if (rows.length <= 3 || !thead) {
+        // Table too small to split, just slice the canvas
+        let yOffset = 0
+        let first = true
+        while (yOffset < imgH) {
+          if (!first || sIdx > 0) pdf.addPage()
+          first = false
+          const sliceH = Math.min(contentH, imgH - yOffset)
+          const srcY = (yOffset / imgH) * canvas.height
+          const srcH = (sliceH / imgH) * canvas.height
+          const tmp = document.createElement('canvas')
+          tmp.width = canvas.width
+          tmp.height = Math.round(srcH)
+          const ctx = tmp.getContext('2d')!
+          ctx.drawImage(canvas, 0, srcY, canvas.width, srcH, 0, 0, canvas.width, srcH)
+          addCanvasToPage(tmp, marginLeft, marginTop, contentW, sliceH)
+          yOffset += contentH
+        }
+        return
+      }
+
+      // Split table rows into chunks that fit on a page
+      // First, render "everything before table" to measure its height
+      const nodesAboveTable: Node[] = []
+      let node: ChildNode | null = section.firstChild
+      while (node && node !== firstTable) {
+        nodesAboveTable.push(node.cloneNode(true))
+        node = node.nextSibling
+      }
+      const nodesBelowTable: Node[] = []
+      node = firstTable.nextSibling
+      while (node) {
+        nodesBelowTable.push(node.cloneNode(true))
+        node = node.nextSibling
+      }
+
+      // Render the "header area" (kop + info above table) to measure
+      const headerArea = document.createElement('div')
+      headerArea.style.width = '100%'
+      nodesAboveTable.forEach(n => headerArea.appendChild(n.cloneNode(true)))
+      const headerCanvas = await renderToCanvas(headerArea)
+      const headerH = pxToMM(headerCanvas.height, headerCanvas.width)
+
+      // Render the "footer area" (signature below table) to measure
+      const footerArea = document.createElement('div')
+      footerArea.style.width = '100%'
+      nodesBelowTable.forEach(n => footerArea.appendChild(n.cloneNode(true)))
+      const footerCanvas = await renderToCanvas(footerArea)
+      const footerH = pxToMM(footerCanvas.height, footerCanvas.width)
+
+      // Available height for table rows per page
+      const tableRowBudget = contentH - headerH - footerH - 10 // 10mm breathing room
+
+      // Render a full-height reference table to measure row heights
+      const refTable = document.createElement('table')
+      refTable.className = firstTable.className
+      refTable.style.width = '100%'
+      refTable.style.borderCollapse = 'collapse'
+      if (thead) refTable.appendChild(thead.cloneNode(true))
+      if (tbody) refTable.appendChild(tbody.cloneNode(true))
+      if (tfoot) refTable.appendChild(tfoot.cloneNode(true))
+      const refCanvas = await renderToCanvas(refTable)
+      const fullTableH = pxToMM(refCanvas.height, refCanvas.width)
+      const rowHeight = fullTableH / rows.length
+
+      // How many rows fit per page
+      const rowsPerPage = Math.max(1, Math.floor(tableRowBudget / rowHeight))
+
+      // Now build pages: header + N rows + (if more rows, new page with header again)
+      let isFirstPart = true
+      let rowIdx = 0
+
+      while (rowIdx < rows.length) {
+        if (!isFirstPart || sIdx > 0) pdf.addPage()
+        isFirstPart = false
+
+        const pageDiv = document.createElement('div')
+        pageDiv.style.width = '100%'
+
+        // Add nodes above table (kop, info) only on first page
+        if (rowIdx === 0) {
+          nodesAboveTable.forEach(n => pageDiv.appendChild(n.cloneNode(true)))
+        }
+
+        // Add table with header + current chunk of rows + footer (only on last chunk)
+        const tableClone = document.createElement('table')
+        tableClone.className = firstTable.className
+        tableClone.style.width = '100%'
+        tableClone.style.borderCollapse = 'collapse'
+        if (thead) tableClone.appendChild(thead.cloneNode(true))
+
+        const chunkTbody = document.createElement('tbody')
+        const endRow = Math.min(rowIdx + rowsPerPage, rows.length)
+        for (let r = rowIdx; r < endRow; r++) {
+          chunkTbody.appendChild(rows[r].cloneNode(true))
+        }
+        tableClone.appendChild(chunkTbody)
+
+        // Add tfoot only on last chunk
+        if (endRow >= rows.length && tfoot) {
+          tableClone.appendChild(tfoot.cloneNode(true))
+        }
+        pageDiv.appendChild(tableClone)
+
+        // Add nodes below table (signature) only on last chunk
+        if (endRow >= rows.length) {
+          nodesBelowTable.forEach(n => pageDiv.appendChild(n.cloneNode(true)))
+        }
+
+        const pageCanvas = await renderToCanvas(pageDiv)
+        const pageImgH = pxToMM(pageCanvas.height, pageCanvas.width)
+        const drawH = Math.min(contentH, pageImgH)
+        addCanvasToPage(pageCanvas, marginLeft, marginTop, contentW, drawH)
+
+        rowIdx = endRow
+      }
+    }
+
+    // Process each section
+    for (let sIdx = 0; sIdx < sections.length; sIdx++) {
+      await processSection(sections[sIdx], sIdx, sIdx === 0)
     }
 
     // Upload to Supabase Storage
@@ -1261,25 +1401,13 @@ function PreviewAll({ session }: { session: Session }) {
         {pdfStatus === 'error' && (
           <span className="text-red-600 text-sm font-sans self-center">⚠ Gagal simpan ke database</span>
         )}
-        {(session.pdf_url || pdfStatus === 'saved') && (() => {
+        {session.pdf_url && (() => {
           const cleanUrl = session.pdf_url?.split('?token=')[0] || ''
           return cleanUrl ? (
             <a href={cleanUrl} target="_blank" rel="noopener noreferrer" className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-500 font-sans text-sm font-medium flex items-center gap-2 no-print">
               📄 PDF Tersimpan
             </a>
-          ) : (
-            <span className="text-green-600 text-sm font-sans self-center">✓ PDF tersimpan di server</span>
-          )
-        })()}
-        {(session.pdf_url || pdfStatus === 'saved') && (() => {
-          const cleanUrl = session.pdf_url?.split('?token=')[0] || ''
-          return cleanUrl ? (
-            <a href={cleanUrl} target="_blank" rel="noopener noreferrer" className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-500 font-sans text-sm font-medium flex items-center gap-2 no-print">
-              📄 PDF Tersimpan
-            </a>
-          ) : (
-            <span className="text-green-600 text-sm font-sans self-center">✓ PDF tersimpan di server</span>
-          )
+          ) : null
         })()}
         <span className="text-xs text-gray-500 self-center ml-2 font-sans">(PDF akan sesuai dengan template asli)</span>
       </div>
