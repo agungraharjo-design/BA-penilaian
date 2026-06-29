@@ -1082,7 +1082,7 @@ function PreviewAll({ session }: { session: Session }) {
     const original = previewRef.current
     const docFrag = original.cloneNode(true) as HTMLElement
 
-    // Create offscreen container with A4-like dimensions for per-section rendering
+    // Create offscreen container matching print preview exactly
     const offscreen = document.createElement('div')
     offscreen.style.position = 'absolute'
     offscreen.style.left = '-9999px'
@@ -1092,8 +1092,50 @@ function PreviewAll({ session }: { session: Session }) {
     offscreen.style.fontFamily = "'Times New Roman', Georgia, serif"
     offscreen.style.fontSize = '12pt'
     offscreen.style.lineHeight = '1.5'
-    offscreen.style.padding = '15mm 20mm 20mm'
+    offscreen.style.padding = '0'
+    offscreen.style.color = '#000'
     document.body.appendChild(offscreen)
+
+    // Apply print styles to offscreen content
+    const applyPrintStyles = (root: HTMLElement) => {
+      root.querySelectorAll('.page-break').forEach(el => {
+        const htmlEl = el as HTMLElement
+        htmlEl.style.pageBreakBefore = 'always'
+        htmlEl.style.breakBefore = 'page'
+        htmlEl.style.paddingTop = '8mm'
+        htmlEl.style.borderTop = 'none'
+        htmlEl.style.marginTop = '0'
+      })
+      root.querySelectorAll('.avoid-break').forEach(el => {
+        (el as HTMLElement).style.pageBreakInside = 'avoid'
+        ;(el as HTMLElement).style.breakInside = 'avoid'
+      })
+      root.querySelectorAll('.template-table').forEach(el => {
+        (el as HTMLElement).style.fontSize = '10pt'
+        ;(el as HTMLElement).style.borderCollapse = 'collapse'
+        ;(el as HTMLElement).style.width = '100%'
+      })
+      root.querySelectorAll('.template-table th, .template-table td').forEach(el => {
+        const htmlEl = el as HTMLElement
+        htmlEl.style.border = '1px solid black'
+        htmlEl.style.padding = '2px 4px'
+        htmlEl.style.verticalAlign = 'top'
+      })
+      root.querySelectorAll('.template-table th').forEach(el => {
+        const htmlEl = el as HTMLElement
+        htmlEl.style.backgroundColor = '#f0f0f0'
+        htmlEl.style.textAlign = 'center'
+        htmlEl.style.fontWeight = 'bold'
+      })
+      root.querySelectorAll('.no-print').forEach(el => {
+        (el as HTMLElement).style.display = 'none'
+      })
+      // Signature blocks: keep together
+      root.querySelectorAll('.avoid-break').forEach(el => {
+        (el as HTMLElement).style.pageBreakInside = 'avoid'
+        ;(el as HTMLElement).style.breakInside = 'avoid'
+      })
+    }
 
     const pdf = new jsPDF('p', 'mm', 'a4')
     const pdfWidth = pdf.internal.pageSize.getWidth()
@@ -1136,14 +1178,7 @@ function PreviewAll({ session }: { session: Session }) {
       // Clear and render this section in the offscreen container
       offscreen.innerHTML = ''
       offscreen.appendChild(sections[sIdx])
-
-      // Remove page-break visual artifacts for PDF rendering
-      offscreen.querySelectorAll('.page-break').forEach(el => {
-        const htmlEl = el as HTMLElement
-        htmlEl.style.borderTop = 'none'
-        htmlEl.style.marginTop = '0'
-        htmlEl.style.paddingTop = '0'
-      })
+      applyPrintStyles(offscreen)
 
       // Wait a tick for layout
       await new Promise(r => setTimeout(r, 50))
@@ -1256,11 +1291,16 @@ function PreviewAll({ session }: { session: Session }) {
         {pdfStatus === 'error' && (
           <span className="text-red-600 text-sm font-sans self-center">⚠ Gagal simpan ke database</span>
         )}
-        {(session.pdf_url || pdfStatus === 'saved') && (
-          <a href={session.pdf_url || '#'} target="_blank" rel="noopener noreferrer" className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-500 font-sans text-sm font-medium flex items-center gap-2 no-print">
-            📄 PDF Tersimpan
-          </a>
-        )}
+        {(session.pdf_url || pdfStatus === 'saved') && (() => {
+          const cleanUrl = session.pdf_url?.split('?token=')[0] || ''
+          return cleanUrl ? (
+            <a href={cleanUrl} target="_blank" rel="noopener noreferrer" className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-500 font-sans text-sm font-medium flex items-center gap-2 no-print">
+              📄 PDF Tersimpan
+            </a>
+          ) : (
+            <span className="text-green-600 text-sm font-sans self-center">✓ PDF tersimpan di server</span>
+          )
+        })()}
         <span className="text-xs text-gray-500 self-center ml-2 font-sans">(PDF akan sesuai dengan template asli)</span>
       </div>
 
