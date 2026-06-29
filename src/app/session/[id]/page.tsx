@@ -127,17 +127,17 @@ export default function SessionPage() {
     const a = normalize(userName)
     const b = normalize(pengujiName)
     if (a === b) return true
-    // Check if one contains the other (handles "Dr. X" vs "X")
     if (a.includes(b) || b.includes(a)) return true
-    // Check if first 2 significant words match
     const wordsA = a.split(' ').filter((w: string) => w.length > 2)
     const wordsB = b.split(' ').filter((w: string) => w.length > 2)
     if (wordsA.length >= 2 && wordsB.length >= 2 && wordsA[0] === wordsB[0] && wordsA[1] === wordsB[1]) return true
     return false
   }
 
-  let allowedPenilaian: number[] | null = null // null = all allowed
-  if (!isSuperadmin && isDosen && session) {
+  const isKoordinator = isDosen && session ? matchPenguji(session.koordinator) : false
+
+  let allowedPenilaian: number[] | null = null // null = no penilaian access
+  if (!isSuperadmin && isDosen && session && !isKoordinator) {
     const matched = [
       matchPenguji(session.penguji1),
       matchPenguji(session.penguji2),
@@ -151,8 +151,9 @@ export default function SessionPage() {
 
   const tabs = isDosen
     ? allTabs.filter(t => {
-        if (allowedPenilaian === null) return true // coordinator sees all
+        if (isSuperadmin || isKoordinator) return true // superadmin & coordinator see all
         if (t.key.startsWith('penilaian-')) {
+          if (allowedPenilaian === null) return false // not a penguji → no penilaian
           const idx = parseInt(t.key.split('-')[1]) - 1
           return allowedPenilaian.includes(idx)
         }
