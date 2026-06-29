@@ -596,7 +596,7 @@ const PenilaianForm = memo(function PenilaianForm({
     }
     const num = Number(value)
     if (isNaN(num)) return
-    const v = Math.min(4, Math.max(1, Math.round(num)))
+    const v = Math.min(4, Math.max(1, num))
     setLocalSkor(prev => {
       const next = [...prev]
       next[examinerIndex] = [...(next[examinerIndex] || [null,null,null,null,null,null,null,null,null,null])]
@@ -689,7 +689,7 @@ const PenilaianForm = memo(function PenilaianForm({
                     type="number"
                     min={1}
                     max={4}
-                    step={1}
+                    step="0.01"
                     value={scores[i] ?? ''}
                     onChange={(e) => setScore(i, e.target.value)}
                     onBlur={persist}
@@ -713,7 +713,7 @@ const PenilaianForm = memo(function PenilaianForm({
             <td colSpan={4} className="text-center">
               NILAI AKHIR [(Total Skor Nilai × Bobot)/400 × 100]
             </td>
-            <td className="text-center">{nilaiAkhir > 0 ? nilaiAkhir.toFixed(1) : ''}</td>
+            <td className="text-center">{nilaiAkhir > 0 ? nilaiAkhir.toFixed(2) : ''}</td>
           </tr>
           <tr className="font-bold">
             <td colSpan={4} className="text-center">HURUF MUTU</td>
@@ -826,10 +826,10 @@ function RekapNilaiForm({ session, onUpdate }: { session: Session; onUpdate: (s:
               <td className="text-center">{i + 1}.</td>
               <td><input value={e.nama} onChange={(ev) => updateEntry(i, 'nama', ev.target.value)} className="w-full bg-transparent" /></td>
               <td><input value={e.nim} onChange={(ev) => updateEntry(i, 'nim', ev.target.value)} className="w-full bg-transparent" /></td>
-              <td className="text-center">{nilaiI !== null ? nilaiI.toFixed(1) : ''}</td>
-              <td className="text-center">{nilaiII !== null ? nilaiII.toFixed(1) : ''}</td>
-              <td className="text-center">{nilaiIII !== null ? nilaiIII.toFixed(1) : ''}</td>
-              <td className="text-center font-bold">{rataRata !== null ? rataRata.toFixed(1) : ''}</td>
+              <td className="text-center">{nilaiI !== null ? nilaiI.toFixed(2) : ''}</td>
+              <td className="text-center">{nilaiII !== null ? nilaiII.toFixed(2) : ''}</td>
+              <td className="text-center">{nilaiIII !== null ? nilaiIII.toFixed(2) : ''}</td>
+              <td className="text-center font-bold">{rataRata !== null ? rataRata.toFixed(2) : ''}</td>
             </tr>
           ))}
         </tbody>
@@ -1375,7 +1375,7 @@ function PreviewAll({ session }: { session: Session }) {
                   </tr>
                   <tr className="font-bold">
                     <td colSpan={4} className="text-center">NILAI AKHIR [(Total Skor Nilai × Bobot)/400 × 100]</td>
-                    <td className="text-center">{calc.scoresByExaminer[examIdx].nilaiAkhir > 0 ? calc.scoresByExaminer[examIdx].nilaiAkhir.toFixed(1) : ''}</td>
+                    <td className="text-center">{calc.scoresByExaminer[examIdx].nilaiAkhir > 0 ? calc.scoresByExaminer[examIdx].nilaiAkhir.toFixed(2) : ''}</td>
                   </tr>
                   <tr className="font-bold">
                     <td colSpan={4} className="text-center">HURUF MUTU</td>
@@ -1434,10 +1434,10 @@ function PreviewAll({ session }: { session: Session }) {
             <tbody>
               <tr>
                 <td className="text-center">1.</td><td>{session.nama}</td><td>{session.nim}</td>
-                <td className="text-center">{calc.scoresByExaminer[0].nilaiAkhir > 0 ? calc.scoresByExaminer[0].nilaiAkhir.toFixed(1) : ''}</td>
-                <td className="text-center">{calc.scoresByExaminer[1].nilaiAkhir > 0 ? calc.scoresByExaminer[1].nilaiAkhir.toFixed(1) : ''}</td>
-                <td className="text-center">{calc.scoresByExaminer[2].nilaiAkhir > 0 ? calc.scoresByExaminer[2].nilaiAkhir.toFixed(1) : ''}</td>
-                <td className="text-center font-bold">{calc.rataRata > 0 ? calc.rataRata.toFixed(1) : ''}</td>
+                <td className="text-center">{calc.scoresByExaminer[0].nilaiAkhir > 0 ? calc.scoresByExaminer[0].nilaiAkhir.toFixed(2) : ''}</td>
+                <td className="text-center">{calc.scoresByExaminer[1].nilaiAkhir > 0 ? calc.scoresByExaminer[1].nilaiAkhir.toFixed(2) : ''}</td>
+                <td className="text-center">{calc.scoresByExaminer[2].nilaiAkhir > 0 ? calc.scoresByExaminer[2].nilaiAkhir.toFixed(2) : ''}</td>
+                <td className="text-center font-bold">{calc.rataRata > 0 ? calc.rataRata.toFixed(2) : ''}</td>
               </tr>
             </tbody>
           </table>
