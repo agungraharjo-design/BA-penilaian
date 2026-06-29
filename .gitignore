@@ -3,8 +3,9 @@ node_modules/
 .next/
 out/
 
-# Playwright browsers — downloaded by scripts/playwright-install.mjs during build
+# Browser downloads
 playwright-browsers/
+puppeteer-browsers/
 
 # Environment
 .env.local

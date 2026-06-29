@@ -1074,39 +1074,154 @@ function PreviewAll({ session, onUpdate }: { session: Session; onUpdate: (s: Ses
   }
 
   const handleDownloadPDF = async () => {
+    if (!previewRef.current) return
     setPdfStatus('preparing')
+    
     try {
-      const res = await fetch(`/api/generate-pdf/${session.id}`, { method: 'POST' })
-
-      if (!res.ok) {
-        const text = await res.text()
-        console.error('PDF API HTTP error:', res.status, text.slice(0, 500))
-        alert(`Gagal generate PDF (HTTP ${res.status}): ${text.slice(0, 200)}`)
+      const { default: html2canvas } = await import('html2canvas')
+      const { jsPDF } = await import('jspdf')
+      
+      const container = previewRef.current
+      const scale = 2 // Higher scale for better quality
+      
+      // Get all sections that have .page-break
+      const sections = container.querySelectorAll('.page-break')
+      
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4',
+        putOnlyUsedFonts: true,
+      })
+      
+      const pageWidth = 210
+      const pageHeight = 297
+      const marginTop = 15
+      const marginRight = 20
+      const marginBottom = 20
+      const marginLeft = 20
+      const contentWidth = pageWidth - marginLeft - marginRight
+      
+      let yOffset = 0
+      let pageCount = 0
+      
+      // Process each section
+      for (let i = 0; i < sections.length; i++) {
+        const section = sections[i] as HTMLElement
+        
+        // Hide page-break indicator for capture
+        const originalBreak = section.style.pageBreakBefore
+        section.style.pageBreakBefore = 'auto'
+        
+        const canvas = await html2canvas(section, {
+          scale,
+          useCORS: true,
+          allowTaint: true,
+          backgroundColor: '#ffffff',
+          logging: false,
+        })
+        
+        // Restore page-break
+        section.style.pageBreakBefore = originalBreak
+        
+        const imgData = canvas.toDataURL('image/jpeg', 0.95)
+        const imgHeight = (canvas.height * contentWidth) / canvas.width
+        
+        // Check if we need a new page
+        if (yOffset + imgHeight > pageHeight - marginBottom) {
+          if (pageCount > 0 || i > 0) {
+            pdf.addPage()
+          }
+          yOffset = marginTop
+          pageCount++
+        }
+        
+        // Add the image
+        if (pageCount === 0 && yOffset === 0) {
+          pdf.addImage(imgData, 'JPEG', marginLeft, marginTop, contentWidth, imgHeight)
+          yOffset += imgHeight
+        } else {
+          pdf.addImage(imgData, 'JPEG', marginLeft, yOffset, contentWidth, imgHeight)
+          yOffset += imgHeight
+        }
+        
+        // Add new page after each section except the last
+        if (i < sections.length - 1) {
+          pdf.addPage()
+          yOffset = 0
+          pageCount++
+        }
+      }
+      
+      // If no sections, handle the whole container
+      if (sections.length === 0) {
+        const canvas = await html2canvas(container, {
+          scale,
+          useCORS: true,
+          allowTaint: true,
+          backgroundColor: '#ffffff',
+          logging: false,
+        })
+        
+        const imgData = canvas.toDataURL('image/jpeg', 0.95)
+        const imgHeight = (canvas.height * contentWidth) / canvas.width
+        
+        pdf.addImage(imgData, 'JPEG', marginLeft, marginTop, contentWidth, imgHeight)
+      }
+      
+      // Set PDF properties
+      pdf.setProperties({
+        title: `BA_Sidang_${session.nim || 'unknown'}`,
+        subject: 'Laporan Sidang Skripsi',
+        creator: 'SKRIPSI BA SYSTEM',
+      })
+      
+      // Save to array buffer
+      const pdfBuffer = pdf.output('arraybuffer')
+      
+      // Upload to Supabase Storage
+      const { createClient: createServiceClient } = await import('@supabase/supabase-js')
+      const adminClient = createServiceClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+      )
+      
+      const safeName = (session.nama || 'unknown').replace(/[^a-zA-Z0-9]/g, '_')
+      const fileName = `BA_Sidang_${safeName}_${session.nim || 'unknown'}.pdf`
+      const storagePath = `${session.id}/${fileName}`
+      
+      const { error: uploadError } = await adminClient.storage
+        .from('pdf-archive')
+        .upload(storagePath, pdfBuffer, { 
+          contentType: 'application/pdf', 
+          upsert: true 
+        })
+      
+      if (uploadError) {
+        console.error('Upload error:', uploadError)
+        alert('Gagal upload PDF: ' + uploadError.message)
         setPdfStatus('idle')
         return
       }
-
-      const contentType = res.headers.get('content-type') || ''
-      if (!contentType.includes('application/json')) {
-        const text = await res.text()
-        console.error('PDF API returned non-JSON:', text.slice(0, 500))
-        alert('Server mengembalikan data tidak valid. Cek console untuk detail.')
-        setPdfStatus('idle')
-        return
+      
+      const publicUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/pdf-archive/${storagePath}`
+      
+      // Update session with PDF URL
+      const { error: updateError } = await adminClient
+        .from('sessions')
+        .update({ pdf_url: publicUrl })
+        .eq('id', session.id)
+      
+      if (updateError) {
+        console.error('Update error:', updateError)
       }
-
-      const data = await res.json()
-      if (!data.url) {
-        console.error('PDF API missing url in response:', data)
-        alert('Gagal generate PDF: ' + (data.error || 'URL tidak ditemukan'))
-        setPdfStatus('idle')
-        return
-      }
-      onUpdate({ ...session, pdf_url: data.url })
+      
+      onUpdate({ ...session, pdf_url: publicUrl })
       setPdfStatus('saved')
+      
     } catch (err: any) {
       console.error('PDF generation error:', err)
-      alert('Terjadi kesalahan: ' + (err.message || 'Unknown error'))
+      alert('Gagal generate PDF: ' + err.message)
       setPdfStatus('idle')
     }
   }
