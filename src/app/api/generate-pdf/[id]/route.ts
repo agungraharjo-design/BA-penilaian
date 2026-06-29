@@ -6,20 +6,6 @@ import { NextRequest, NextResponse } from 'next/server'
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
 
-function getSystemChromePath(): string | undefined {
-  if (process.platform === 'win32') {
-    const paths = [
-      'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
-      'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chromed.exe',
-      `${process.env.LOCALAPPDATA}\\Google\\Chrome\\Application\\chrome.exe`,
-    ]
-    const fs = require('fs')
-    for (const p of paths) { if (fs.existsSync(p)) return p }
-  }
-  if (process.platform === 'darwin') return '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
-  return undefined
-}
-
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -35,8 +21,8 @@ export async function POST(
     }
 
     const { createClient } = await import('@supabase/supabase-js')
-    // Use full playwright package - handles browser downloads automatically
-    const { chromium } = await import('playwright')
+    // Puppeteer auto-downloads chromium on first launch
+    const puppeteer = await import('puppeteer')
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey, {
       auth: { autoRefreshToken: false, persistSession: false },
@@ -52,19 +38,8 @@ export async function POST(
       return NextResponse.json({ error: 'Session not found', details: fetchError?.message }, { status: 404 })
     }
 
-    // Try system Chrome first, fallback to playwright's bundled browser
-    let executablePath: string | undefined
-    const systemChrome = getSystemChromePath()
-    if (systemChrome && process.platform !== 'linux') {
-      executablePath = systemChrome
-      console.log(`[PDF] Using system Chrome: ${executablePath}`)
-    } else {
-      console.log('[PDF] Using playwright bundled browser')
-    }
-
-    console.log('[PDF] Launching...')
-    browser = await chromium.launch({
-      executablePath,
+    console.log('[PDF] Launching Puppeteer...')
+    browser = await puppeteer.launch({
       headless: true,
       args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu'],
     })

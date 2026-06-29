@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "npx playwright install chromium && next build",
+    "build": "next build",
     "start": "next start",
     "lint": "next lint"
   },
@@ -18,7 +18,7 @@
     "jspdf": "^2.5.1",
     "lucide-react": "^0.400.0",
     "next": "^14.2.0",
-    "playwright": "^1.61.1",
+    "puppeteer": "^25.2.1",
     "react": "^18.3.0",
     "react-dom": "^18.3.0",
     "react-hook-form": "^7.52.0",
