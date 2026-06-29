@@ -39,7 +39,12 @@ export async function POST(
     }
 
     console.log('[PDF] Launching Puppeteer...')
-    browser = await puppeteer.launch({
+    const puppeteerCore = await import('puppeteer-core')
+    const browser = await puppeteerCore.launch({
+      headless: true,
+      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu'],
+      executablePath: './puppeteer-browsers/chrome/linux-1500.7871.24/chrome-linux64/chrome',
+    })
       headless: true,
       args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu'],
     })
