@@ -1139,9 +1139,10 @@ function PreviewAll({ session }: { session: Session }) {
 
       // Remove page-break visual artifacts for PDF rendering
       offscreen.querySelectorAll('.page-break').forEach(el => {
-        el.style.borderTop = 'none'
-        el.style.marginTop = '0'
-        el.style.paddingTop = '0'
+        const htmlEl = el as HTMLElement
+        htmlEl.style.borderTop = 'none'
+        htmlEl.style.marginTop = '0'
+        htmlEl.style.paddingTop = '0'
       })
 
       // Wait a tick for layout
