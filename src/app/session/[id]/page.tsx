@@ -37,6 +37,7 @@ export default function SessionPage() {
         if (!s.peserta_hadir) s.peserta_hadir = [{ nama: s.nama, nim: s.nim }]
         if (!s.audience_hadir) s.audience_hadir = []
         lastSavedSkorRef.current = s.skor_penguji
+        lastSavedTtdRef.current = { ttd_penguji1: s.ttd_penguji1, ttd_penguji2: s.ttd_penguji2, ttd_penguji3: s.ttd_penguji3, ttd_koordinator: s.ttd_koordinator, peserta_hadir: s.peserta_hadir, audience_hadir: s.audience_hadir }
         setSession(s)
       }
     })
@@ -51,14 +52,40 @@ export default function SessionPage() {
       if (!s.peserta_hadir) s.peserta_hadir = [{ nama: s.nama, nim: s.nim }]
       if (!s.audience_hadir) s.audience_hadir = []
       lastSavedSkorRef.current = s.skor_penguji
+      lastSavedTtdRef.current = { ttd_penguji1: s.ttd_penguji1, ttd_penguji2: s.ttd_penguji2, ttd_penguji3: s.ttd_penguji3, ttd_koordinator: s.ttd_koordinator, peserta_hadir: s.peserta_hadir, audience_hadir: s.audience_hadir }
       setSession(s)
     }
     setLoading(false)
   }
 
-  // Auto-save with debounce — track last saved skor to detect user changes vs untouched
+  // Auto-save with debounce — track last saved data to detect user changes vs untouched
   const sessionRef = useRef<Session | null>(null)
   const lastSavedSkorRef = useRef<(number | null)[][] | null>(null)
+  const lastSavedTtdRef = useRef<{
+    ttd_penguji1?: string; ttd_penguji2?: string; ttd_penguji3?: string; ttd_koordinator?: string
+    peserta_hadir?: { nama: string; nim: string; ttd?: string }[]
+    audience_hadir?: { nama: string; nim: string; ttd?: string }[]
+  } | null>(null)
+
+  // Helper to merge attendance arrays by name+nim key
+  function mergeAttendance(
+    local: { nama: string; nim: string; ttd?: string }[],
+    db: { nama: string; nim: string; ttd?: string }[],
+    lastSaved: { nama: string; nim: string; ttd?: string }[]
+  ) {
+    const dbMap = new Map(db.map(e => [e.nama + '|' + e.nim, e]))
+    const lastMap = new Map(lastSaved.map(e => [e.nama + '|' + e.nim, e]))
+    return local.map(entry => {
+      const key = entry.nama + '|' + entry.nim
+      const lastEntry = lastMap.get(key)
+      // If user didn't change this entry's ttd, use DB value
+      if (lastEntry && JSON.stringify(entry.ttd) === JSON.stringify(lastEntry.ttd)) {
+        const dbEntry = dbMap.get(key)
+        if (dbEntry?.ttd) return { ...entry, ttd: dbEntry.ttd }
+      }
+      return entry
+    })
+  }
 
   const saveNow = useCallback(async () => {
     if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current)
@@ -68,28 +95,82 @@ export default function SessionPage() {
     try {
       const { data: currentDb } = await supabase
         .from('sessions')
-        .select('skor_penguji')
+        .select('skor_penguji, ttd_penguji1, ttd_penguji2, ttd_penguji3, ttd_koordinator, peserta_hadir, audience_hadir')
         .eq('id', sessionId)
         .single()
 
       let mergedSkor = toSave.skor_penguji
+      let mergedTtd1 = toSave.ttd_penguji1
+      let mergedTtd2 = toSave.ttd_penguji2
+      let mergedTtd3 = toSave.ttd_penguji3
+      let mergedTtdKoordinator = toSave.ttd_koordinator
+      let mergedPeserta = toSave.peserta_hadir
+      let mergedAudience = toSave.audience_hadir
       const lastSaved = lastSavedSkorRef.current
-      if (currentDb?.skor_penguji && lastSaved) {
-        mergedSkor = toSave.skor_penguji.map((localArr: (number | null)[], i: number) => {
-          const userModified = JSON.stringify(localArr) !== JSON.stringify(lastSaved[i])
-          if (userModified) return localArr
-          return currentDb.skor_penguji[i] || localArr
-        })
+      const lastSavedTtd = lastSavedTtdRef.current
+
+      if (currentDb) {
+        // Merge skor_penguji — per examiner
+        if (currentDb.skor_penguji && lastSaved) {
+          mergedSkor = toSave.skor_penguji.map((localArr: (number | null)[], i: number) => {
+            const userModified = JSON.stringify(localArr) !== JSON.stringify(lastSaved[i])
+            if (userModified) return localArr
+            return currentDb.skor_penguji[i] || localArr
+          })
+        }
+
+        // Merge TTD fields — only overwrite if this user changed them
+        if (lastSavedTtd) {
+          if (JSON.stringify(toSave.ttd_penguji1) === JSON.stringify(lastSavedTtd.ttd_penguji1) && currentDb.ttd_penguji1) {
+            mergedTtd1 = currentDb.ttd_penguji1
+          }
+          if (JSON.stringify(toSave.ttd_penguji2) === JSON.stringify(lastSavedTtd.ttd_penguji2) && currentDb.ttd_penguji2) {
+            mergedTtd2 = currentDb.ttd_penguji2
+          }
+          if (JSON.stringify(toSave.ttd_penguji3) === JSON.stringify(lastSavedTtd.ttd_penguji3) && currentDb.ttd_penguji3) {
+            mergedTtd3 = currentDb.ttd_penguji3
+          }
+          if (JSON.stringify(toSave.ttd_koordinator) === JSON.stringify(lastSavedTtd.ttd_koordinator) && currentDb.ttd_koordinator) {
+            mergedTtdKoordinator = currentDb.ttd_koordinator
+          }
+          // Merge peserta/audience — per entry by name+nim
+          if (currentDb.peserta_hadir && lastSavedTtd.peserta_hadir) {
+            mergedPeserta = mergeAttendance(toSave.peserta_hadir, currentDb.peserta_hadir, lastSavedTtd.peserta_hadir)
+          }
+          if (currentDb.audience_hadir && lastSavedTtd.audience_hadir) {
+            mergedAudience = mergeAttendance(toSave.audience_hadir, currentDb.audience_hadir, lastSavedTtd.audience_hadir)
+          }
+        }
+      }
+
+      const merged = {
+        ...toSave,
+        skor_penguji: mergedSkor,
+        ttd_penguji1: mergedTtd1,
+        ttd_penguji2: mergedTtd2,
+        ttd_penguji3: mergedTtd3,
+        ttd_koordinator: mergedTtdKoordinator,
+        peserta_hadir: mergedPeserta,
+        audience_hadir: mergedAudience,
+        updated_at: new Date().toISOString(),
       }
 
       const { error } = await supabase
         .from('sessions')
-        .upsert({ ...toSave, skor_penguji: mergedSkor, updated_at: new Date().toISOString() })
+        .upsert(merged)
         .eq('id', sessionId)
       if (!error) {
         lastSavedSkorRef.current = mergedSkor
+        lastSavedTtdRef.current = {
+          ttd_penguji1: mergedTtd1,
+          ttd_penguji2: mergedTtd2,
+          ttd_penguji3: mergedTtd3,
+          ttd_koordinator: mergedTtdKoordinator,
+          peserta_hadir: mergedPeserta,
+          audience_hadir: mergedAudience,
+        }
         setLastSaved(new Date())
-        startTransition(() => setSession({ ...toSave, skor_penguji: mergedSkor }))
+        startTransition(() => setSession(merged))
         setSyncStatus('live')
       } else {
         setSyncStatus('offline')
@@ -618,7 +699,7 @@ const PenilaianForm = memo(function PenilaianForm({
             <td colSpan={4} className="text-center">
               NILAI AKHIR [(Total Skor Nilai × Bobot)/400 × 100]
             </td>
-            <td className="text-center">{nilaiAkhir > 0 ? nilaiAkhir.toFixed(2) : ''}</td>
+            <td className="text-center">{nilaiAkhir > 0 ? nilaiAkhir.toFixed(1) : ''}</td>
           </tr>
           <tr className="font-bold">
             <td colSpan={4} className="text-center">HURUF MUTU</td>
@@ -731,10 +812,10 @@ function RekapNilaiForm({ session, onUpdate }: { session: Session; onUpdate: (s:
               <td className="text-center">{i + 1}.</td>
               <td><input value={e.nama} onChange={(ev) => updateEntry(i, 'nama', ev.target.value)} className="w-full bg-transparent" /></td>
               <td><input value={e.nim} onChange={(ev) => updateEntry(i, 'nim', ev.target.value)} className="w-full bg-transparent" /></td>
-              <td className="text-center">{nilaiI !== null ? nilaiI.toFixed(2) : ''}</td>
-              <td className="text-center">{nilaiII !== null ? nilaiII.toFixed(2) : ''}</td>
-              <td className="text-center">{nilaiIII !== null ? nilaiIII.toFixed(2) : ''}</td>
-              <td className="text-center font-bold">{rataRata !== null ? rataRata.toFixed(2) : ''}</td>
+              <td className="text-center">{nilaiI !== null ? nilaiI.toFixed(1) : ''}</td>
+              <td className="text-center">{nilaiII !== null ? nilaiII.toFixed(1) : ''}</td>
+              <td className="text-center">{nilaiIII !== null ? nilaiIII.toFixed(1) : ''}</td>
+              <td className="text-center font-bold">{rataRata !== null ? rataRata.toFixed(1) : ''}</td>
             </tr>
           ))}
         </tbody>
@@ -1280,7 +1361,7 @@ function PreviewAll({ session }: { session: Session }) {
                   </tr>
                   <tr className="font-bold">
                     <td colSpan={4} className="text-center">NILAI AKHIR [(Total Skor Nilai × Bobot)/400 × 100]</td>
-                    <td className="text-center">{calc.scoresByExaminer[examIdx].nilaiAkhir > 0 ? calc.scoresByExaminer[examIdx].nilaiAkhir.toFixed(2) : ''}</td>
+                    <td className="text-center">{calc.scoresByExaminer[examIdx].nilaiAkhir > 0 ? calc.scoresByExaminer[examIdx].nilaiAkhir.toFixed(1) : ''}</td>
                   </tr>
                   <tr className="font-bold">
                     <td colSpan={4} className="text-center">HURUF MUTU</td>
@@ -1339,10 +1420,10 @@ function PreviewAll({ session }: { session: Session }) {
             <tbody>
               <tr>
                 <td className="text-center">1.</td><td>{session.nama}</td><td>{session.nim}</td>
-                <td className="text-center">{calc.scoresByExaminer[0].nilaiAkhir > 0 ? calc.scoresByExaminer[0].nilaiAkhir.toFixed(2) : ''}</td>
-                <td className="text-center">{calc.scoresByExaminer[1].nilaiAkhir > 0 ? calc.scoresByExaminer[1].nilaiAkhir.toFixed(2) : ''}</td>
-                <td className="text-center">{calc.scoresByExaminer[2].nilaiAkhir > 0 ? calc.scoresByExaminer[2].nilaiAkhir.toFixed(2) : ''}</td>
-                <td className="text-center font-bold">{calc.rataRata > 0 ? calc.rataRata.toFixed(2) : ''}</td>
+                <td className="text-center">{calc.scoresByExaminer[0].nilaiAkhir > 0 ? calc.scoresByExaminer[0].nilaiAkhir.toFixed(1) : ''}</td>
+                <td className="text-center">{calc.scoresByExaminer[1].nilaiAkhir > 0 ? calc.scoresByExaminer[1].nilaiAkhir.toFixed(1) : ''}</td>
+                <td className="text-center">{calc.scoresByExaminer[2].nilaiAkhir > 0 ? calc.scoresByExaminer[2].nilaiAkhir.toFixed(1) : ''}</td>
+                <td className="text-center font-bold">{calc.rataRata > 0 ? calc.rataRata.toFixed(1) : ''}</td>
               </tr>
             </tbody>
           </table>
