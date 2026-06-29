@@ -31,55 +31,52 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { id } = await params
-
-  if (!supabaseUrl || !supabaseServiceKey) {
-    return NextResponse.json({ error: 'Supabase not configured' }, { status: 500 })
-  }
-
-  const { createClient } = await import('@supabase/supabase-js')
-  const supabase = createClient(supabaseUrl, supabaseServiceKey, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  })
-
-  const { data: session, error: fetchError } = await supabase
-    .from('sessions')
-    .select('*')
-    .eq('id', id)
-    .single()
-
-  if (fetchError || !session) {
-    return NextResponse.json({ error: 'Session not found' }, { status: 404 })
-  }
-
+  const step = (name: string) => console.log(`[PDF] ${name}`)
   let browser: any = null
   let page: any = null
 
   try {
-    // On Vercel (Linux): use @sparticuz/chromium
-    // On local Windows/Mac: fall back to system Chrome
+    const { id } = await params
+
+    if (!supabaseUrl || !supabaseServiceKey) {
+      return NextResponse.json({ error: 'Supabase not configured' }, { status: 500 })
+    }
+
+    const { createClient } = await import('@supabase/supabase-js')
+    const supabase = createClient(supabaseUrl, supabaseServiceKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    })
+
+    const { data: session, error: fetchError } = await supabase
+      .from('sessions')
+      .select('*')
+      .eq('id', id)
+      .single()
+
+    if (fetchError || !session) {
+      return NextResponse.json({ error: 'Session not found', details: fetchError?.message }, { status: 404 })
+    }
+
     let executablePath: string | undefined
     const systemChrome = getSystemChromePath()
 
     if (systemChrome && process.platform !== 'linux') {
-      // Local dev — use system Chrome
       executablePath = systemChrome
-      console.log('[PDF] Using system Chrome:', executablePath)
+      step(`System Chrome: ${executablePath}`)
     } else {
-      // Vercel Linux (or fallback) — use @sparticuz/chromium
       const binPath = getSparticuzBinPath()
-      console.log('[PDF] @sparticuz/chromium bin:', binPath)
+      step(`@sparticuz bin: ${binPath}`)
       executablePath = await ChromiumPkg.executablePath(binPath)
-      console.log('[PDF] Chromium executable:', executablePath)
+      step(`Chromium exe: ${executablePath}`)
     }
 
-    console.log('[PDF] Launching Chromium...')
+    step('Launching...')
     browser = await chromium.launch({
       executablePath,
       headless: true,
       args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu'],
     })
-    console.log('[PDF] Browser launched')
+    step('Launched')
 
     page = await browser.newPage()
 
@@ -87,56 +84,51 @@ export async function POST(
     const protocol = host.includes('localhost') ? 'http' : 'https'
     const renderUrl = `${protocol}://${host}/pdf-render/${id}`
 
-    console.log('[PDF] Navigating to:', renderUrl)
+    step(`Navigating: ${renderUrl}`)
     await page.goto(renderUrl, { waitUntil: 'domcontentloaded', timeout: 60000 })
-    console.log('[PDF] Navigated OK')
+    step('Navigated')
 
     const pageContent = await page.content()
     if (!pageContent.includes('Laporan Sidang Skripsi')) {
-      console.error('[PDF] Render page content mismatch. First 300 chars:', pageContent.slice(0, 300))
-      return NextResponse.json({ error: 'Render page returned invalid content', url: renderUrl }, { status: 500 })
+      console.error('[PDF] Bad content. First 200 chars:', pageContent.slice(0, 200))
+      return NextResponse.json({ error: 'Render page invalid', url: renderUrl }, { status: 500 })
     }
 
-    console.log('[PDF] Generating PDF...')
+    step('Generating PDF...')
     const pdfBuffer = await page.pdf({
       format: 'A4',
       margin: { top: '15mm', right: '20mm', bottom: '20mm', left: '20mm' },
       printBackground: true,
       preferCSSPageSize: false,
     })
-    console.log('[PDF] PDF generated, size:', pdfBuffer.length, 'bytes')
+    step(`PDF size: ${pdfBuffer.length}`)
 
     const safeName = (session.nama || 'unknown').replace(/[^a-zA-Z0-9]/g, '_')
     const fileName = `BA_Sidang_${safeName}_${session.nim || 'unknown'}.pdf`
     const storagePath = `${session.id}/${fileName}`
 
-    console.log('[PDF] Uploading to storage:', storagePath)
     const { error: uploadError } = await supabase.storage
       .from('pdf-archive')
       .upload(storagePath, pdfBuffer, { contentType: 'application/pdf', upsert: true })
 
     if (uploadError) {
-      console.error('[PDF] Storage upload error:', uploadError)
+      console.error('[PDF] Upload error:', uploadError)
       return NextResponse.json({ error: 'Upload failed', details: uploadError.message }, { status: 500 })
     }
-    console.log('[PDF] Storage upload OK')
 
     const publicUrl = `${supabaseUrl}/storage/v1/object/public/pdf-archive/${storagePath}`
-    console.log('[PDF] Public URL:', publicUrl)
-    const { error: updateError } = await supabase.from('sessions').update({ pdf_url: publicUrl }).eq('id', session.id)
-    if (updateError) console.error('[PDF] DB update error:', updateError)
+    await supabase.from('sessions').update({ pdf_url: publicUrl }).eq('id', session.id)
 
-    console.log('[PDF] DONE')
+    step('DONE')
     return NextResponse.json({ url: publicUrl, fileName })
   } catch (err: any) {
-    console.error('[PDF] FATAL error:', err)
+    console.error('[PDF] FATAL:', err)
     return NextResponse.json({
       error: err.message || 'PDF generation failed',
-      stack: err.stack,
+      ...(err.stack ? { stack: err.stack } : {}),
     }, { status: 500 })
   } finally {
     if (page) try { await page.close() } catch {}
     if (browser) try { await browser.close() } catch {}
   }
 }
-

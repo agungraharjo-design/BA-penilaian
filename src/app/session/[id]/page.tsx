@@ -1077,10 +1077,28 @@ function PreviewAll({ session, onUpdate }: { session: Session; onUpdate: (s: Ses
     setPdfStatus('preparing')
     try {
       const res = await fetch(`/api/generate-pdf/${session.id}`, { method: 'POST' })
-      const data = await res.json()
+
       if (!res.ok) {
-        console.error('PDF API error:', data)
-        alert('Gagal generate PDF: ' + (data.error || 'Unknown error'))
+        const text = await res.text()
+        console.error('PDF API HTTP error:', res.status, text.slice(0, 500))
+        alert(`Gagal generate PDF (HTTP ${res.status}): ${text.slice(0, 200)}`)
+        setPdfStatus('idle')
+        return
+      }
+
+      const contentType = res.headers.get('content-type') || ''
+      if (!contentType.includes('application/json')) {
+        const text = await res.text()
+        console.error('PDF API returned non-JSON:', text.slice(0, 500))
+        alert('Server mengembalikan data tidak valid. Cek console untuk detail.')
+        setPdfStatus('idle')
+        return
+      }
+
+      const data = await res.json()
+      if (!data.url) {
+        console.error('PDF API missing url in response:', data)
+        alert('Gagal generate PDF: ' + (data.error || 'URL tidak ditemukan'))
         setPdfStatus('idle')
         return
       }
@@ -1088,7 +1106,7 @@ function PreviewAll({ session, onUpdate }: { session: Session; onUpdate: (s: Ses
       setPdfStatus('saved')
     } catch (err: any) {
       console.error('PDF generation error:', err)
-      alert('Terjadi kesalahan: ' + err.message)
+      alert('Terjadi kesalahan: ' + (err.message || 'Unknown error'))
       setPdfStatus('idle')
     }
   }
