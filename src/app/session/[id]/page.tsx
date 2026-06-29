@@ -1176,38 +1176,36 @@ function PreviewAll({ session, onUpdate }: { session: Session; onUpdate: (s: Ses
         creator: 'SKRIPSI BA SYSTEM',
       })
       
-      // Save to array buffer
-      const pdfBuffer = pdf.output('arraybuffer')
-      
-      // Upload to Supabase Storage
-      const { createClient: createServiceClient } = await import('@supabase/supabase-js')
-      const adminClient = createServiceClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!
-      )
+      // Convert to base64 for API upload
+      const pdfBase64 = pdf.output('datauristring').split(',')[1]
       
       const safeName = (session.nama || 'unknown').replace(/[^a-zA-Z0-9]/g, '_')
       const fileName = `BA_Sidang_${safeName}_${session.nim || 'unknown'}.pdf`
-      const storagePath = `${session.id}/${fileName}`
       
-      const { error: uploadError } = await adminClient.storage
-        .from('pdf-archive')
-        .upload(storagePath, pdfBuffer, { 
-          contentType: 'application/pdf', 
-          upsert: true 
+      // Call API to upload
+      const uploadRes = await fetch('/api/upload-pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionId: session.id,
+          pdfBase64,
+          fileName
         })
+      })
       
-      if (uploadError) {
-        console.error('Upload error:', uploadError)
-        alert('Gagal upload PDF: ' + uploadError.message)
+      const uploadData = await uploadRes.json()
+      
+      if (!uploadRes.ok || uploadData.error) {
+        console.error('Upload error:', uploadData.error)
+        alert('Gagal upload PDF: ' + (uploadData.error || 'Unknown error'))
         setPdfStatus('idle')
         return
       }
       
-      const publicUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/pdf-archive/${storagePath}`
+      const publicUrl = uploadData.url
       
       // Update session with PDF URL
-      const { error: updateError } = await adminClient
+      const { error: updateError } = await supabase
         .from('sessions')
         .update({ pdf_url: publicUrl })
         .eq('id', session.id)
