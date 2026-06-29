@@ -3,12 +3,21 @@
 -- Run this in Supabase SQL Editor
 -- ============================================================
 
+-- MIGRATION: Add superadmin role (run once if table already exists)
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_constraint WHERE conname LIKE '%profiles_role_check%') THEN
+    ALTER TABLE profiles DROP CONSTRAINT IF EXISTS profiles_role_check;
+    ALTER TABLE profiles ADD CONSTRAINT profiles_role_check CHECK (role IN ('dosen', 'mahasiswa', 'superadmin'));
+  END IF;
+END $$;
+
 -- 1. Profiles table (linked to auth.users)
 CREATE TABLE IF NOT EXISTS profiles (
   id UUID REFERENCES auth.users ON DELETE CASCADE PRIMARY KEY,
   email TEXT,
   full_name TEXT,
-  role TEXT NOT NULL DEFAULT 'mahasiswa' CHECK (role IN ('dosen', 'mahasiswa')),
+  role TEXT NOT NULL DEFAULT 'mahasiswa' CHECK (role IN ('dosen', 'mahasiswa', 'superadmin')),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 

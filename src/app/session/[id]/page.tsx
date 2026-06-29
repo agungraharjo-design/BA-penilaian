@@ -119,18 +119,27 @@ export default function SessionPage() {
     { key: 'preview', label: 'Preview & PDF' },
   ]
 
-  // Match current user to their penguji assignment
-  const userName = profile?.full_name || ''
+  // Match current user to their penguji assignment — use both DB name AND whitelist name
+  const whitelistMatch = profile?.email ? isDosenEmail(profile.email) : null
+  const canonicalName = whitelistMatch?.nama || ''
+  const dbFullName = profile?.full_name || ''
+  const emailPrefix = profile?.email?.split('@')[0] || ''
+  // Try matching against all name variants
+  const allUserNames = [canonicalName, dbFullName, emailPrefix].filter(Boolean)
+
   const matchPenguji = (pengujiName: string) => {
-    if (!userName || !pengujiName) return false
+    if (allUserNames.length === 0 || !pengujiName) return false
     const normalize = (s: string) => s.toLowerCase().replace(/[,.\-]/g, '').replace(/\s+/g, ' ').trim()
-    const a = normalize(userName)
     const b = normalize(pengujiName)
-    if (a === b) return true
-    if (a.includes(b) || b.includes(a)) return true
-    const wordsA = a.split(' ').filter((w: string) => w.length > 2)
-    const wordsB = b.split(' ').filter((w: string) => w.length > 2)
-    if (wordsA.length >= 2 && wordsB.length >= 2 && wordsA[0] === wordsB[0] && wordsA[1] === wordsB[1]) return true
+
+    for (const name of allUserNames) {
+      const a = normalize(name)
+      if (a === b) return true
+      if (a.includes(b) || b.includes(a)) return true
+      const wordsA = a.split(' ').filter((w: string) => w.length > 2)
+      const wordsB = b.split(' ').filter((w: string) => w.length > 2)
+      if (wordsA.length >= 2 && wordsB.length >= 2 && wordsA[0] === wordsB[0] && wordsA[1] === wordsB[1]) return true
+    }
     return false
   }
 
