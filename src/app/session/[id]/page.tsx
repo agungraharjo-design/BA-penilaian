@@ -1100,7 +1100,13 @@ function PreviewAll({ session, onUpdate }: { session: Session; onUpdate: (s: Ses
       const marginRight = 20
       const marginBottom = 20
       const marginLeft = 20
+      const minimalMarginTop = 5 // Minimal top margin for 2nd page of Form Penilaian
       const contentWidth = pageWidth - marginLeft - marginRight
+      
+      const isPenilaianSection = (section: HTMLElement) => {
+        return section.querySelector('.template-table') !== null &&
+               section.querySelector('.avoid-break') !== null
+      }
       
       let yOffset = 0
       let pageCount = 0
@@ -1132,7 +1138,8 @@ function PreviewAll({ session, onUpdate }: { session: Session; onUpdate: (s: Ses
           if (pageCount > 0 || i > 0) {
             pdf.addPage()
           }
-          yOffset = marginTop
+          const nextPageMarginTop = (isPenilaianSection(section) && pageCount > 0) ? minimalMarginTop : marginTop
+          yOffset = nextPageMarginTop
           pageCount++
         }
         
@@ -1141,7 +1148,8 @@ function PreviewAll({ session, onUpdate }: { session: Session; onUpdate: (s: Ses
           pdf.addImage(imgData, 'JPEG', marginLeft, marginTop, contentWidth, imgHeight)
           yOffset += imgHeight
         } else {
-          pdf.addImage(imgData, 'JPEG', marginLeft, yOffset, contentWidth, imgHeight)
+          const currentMarginTop = (isPenilaianSection(section) && pageCount > 0 && yOffset === minimalMarginTop) ? minimalMarginTop : marginTop
+          pdf.addImage(imgData, 'JPEG', marginLeft, currentMarginTop, contentWidth, imgHeight)
           yOffset += imgHeight
         }
         
@@ -1264,73 +1272,168 @@ function PreviewAll({ session, onUpdate }: { session: Session; onUpdate: (s: Ses
       </div>
 
       <div ref={previewRef} className="print-area bg-white p-8 md:p-12 print:p-0 space-y-10 print:space-y-0" style={{ fontFamily: "'Times New Roman', Georgia, serif" }}>
-        {/* ===== LAPORAN SIDANG SKRIPSI (replaces BA) ===== */}
-        <div className="text-center border-b-2 border-black pb-4">
-          <img src="/kop-surat-resize.png" alt="KOP UPN Veteran Jakarta" style={{ display: 'block', margin: '0 auto 0.5rem', maxWidth: '100%', maxHeight: '100px', width: 'auto', height: 'auto' }} />
-          <h1 className="text-xl font-bold text-center uppercase">Laporan Sidang Skripsi</h1>
-          <p className="text-sm text-center">PROGRAM STUDI KESEHATAN MASYARAKAT PROGRAM SARJANA</p>
-          <p className="text-sm text-center">FAKULTAS ILMU KESEHATAN UPN &ldquo;VETERAN&rdquo; JAKARTA</p>
-          <p className="text-sm text-center font-bold">T.A. {session.ta}</p>
+        {/* ===== LAPORAN SIDANG SKRIPSI (BA) ===== */}
+        <div className="page-break">
+          <div className="text-center border-b-2 border-black pb-4">
+            <img src="/kop-surat-resize.png" alt="KOP UPN Veteran Jakarta" style={{ display: 'block', margin: '0 auto 0.5rem', maxWidth: '100%', maxHeight: '100px', width: 'auto', height: 'auto' }} />
+            <h1 className="text-xl font-bold text-center uppercase">Laporan Sidang Skripsi</h1>
+            <p className="text-sm text-center">PROGRAM STUDI KESEHATAN MASYARAKAT PROGRAM SARJANA</p>
+            <p className="text-sm text-center">FAKULTAS ILMU KESEHATAN UPN &ldquo;VETERAN&rdquo; JAKARTA</p>
+            <p className="text-sm text-center font-bold">T.A. {session.ta}</p>
+          </div>
+
+          <p className="text-justify">
+            Pada hari {session.hari_tanggal || '______________'}, telah dilaksanakan sidang skripsi mahasiswa:
+          </p>
+
+          <table className="w-full">
+            <tbody>
+              <tr><td className="w-32">Nama Mahasiswa</td><td className="w-4">:</td><td>{session.nama || '______________'}</td></tr>
+              <tr><td>NIM</td><td>:</td><td>{session.nim || '______________'}</td></tr>
+              <tr><td>Waktu Sidang</td><td>:</td><td>{session.waktu || '______________'}</td></tr>
+              <tr><td>Peminatan</td><td>:</td><td>{session.peminatan || '______________'}</td></tr>
+            </tbody>
+          </table>
+
+          {session.catatan && (
+            <div className="mt-4">
+              <p className="font-bold">Hasil Pelaksanaan :</p>
+              <p className="whitespace-pre-wrap">{session.catatan}</p>
+            </div>
+          )}
+
+          <p className="mt-4">
+            Dinyatakan yang bersangkutan:<br />
+            <span className="ml-4">{session.decision === 'lulus_perbaikan' ? '✓' : '○'} Lulus</span><br />
+            <span className="ml-4">{session.decision === 'tidak_lulus_ulang' ? '✓' : '○'} Tidak Lulus</span>
+          </p>
+
+          <p className="italic text-sm text-justify mt-4">
+            Demikian laporan sidang ini dibuat sebagai laporan selama sidang berlangsung untuk diketahui dan dipergunakan sebagaimana mestinya.
+          </p>
+
+          <div className="mt-6">
+            <h3 className="font-bold text-center">TIM PENGUJI</h3>
+            <table className="template-table mt-1">
+              <thead><tr><th className="w-12">NO</th><th>NAMA PENGUJI</th><th>JABATAN</th><th className="w-24">TANDA TANGAN</th></tr></thead>
+              <tbody>
+                <tr><td className="text-center">1.</td><td>{session.penguji1 || '______________'}</td><td>Ketua Penguji</td><td className="text-center align-middle">{session.ttd_penguji1 ? <img src={session.ttd_penguji1} alt="TTD" className="max-h-12 max-w-24 mx-auto object-contain" /> : ''}</td></tr>
+                <tr><td className="text-center">2.</td><td>{session.penguji2 || '______________'}</td><td>Anggota Penguji I</td><td className="text-center align-middle">{session.ttd_penguji2 ? <img src={session.ttd_penguji2} alt="TTD" className="max-h-12 max-w-24 mx-auto object-contain" /> : ''}</td></tr>
+                <tr><td className="text-center">3.</td><td>{session.penguji3 || '______________'}</td><td>Anggota Penguji II</td><td className="text-center align-middle">{session.ttd_penguji3 ? <img src={session.ttd_penguji3} alt="TTD" className="max-h-12 max-w-24 mx-auto object-contain" /> : ''}</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div className="text-right mt-10 avoid-break">
+            <p>Jakarta, {session.tanggal_ba || '______________'}</p>
+            <p className="mt-4">Koordinator Program Studi Kesehatan Masyarakat</p>
+            <p>Program Sarjana</p>
+            {session.ttd_koordinator ? <img src={session.ttd_koordinator} alt="TTD Koordinator" className="max-h-16 max-w-32 ml-auto my-2 object-contain" /> : <div className="h-16"></div>}
+            <p className="font-bold">{session.koordinator}</p>
+            <p className="text-sm">NIP. {session.nip_koordinator}</p>
+          </div>
         </div>
 
-        <p className="text-justify">
-          Pada hari {session.hari_tanggal || '______________'}, telah dilaksanakan sidang skripsi mahasiswa:
-        </p>
-
-        <table className="w-full">
-          <tbody>
-            <tr><td className="w-32">Nama Mahasiswa</td><td className="w-4">:</td><td>{session.nama || '______________'}</td></tr>
-            <tr><td>NIM</td><td>:</td><td>{session.nim || '______________'}</td></tr>
-            <tr><td>Waktu Sidang</td><td>:</td><td>{session.waktu || '______________'}</td></tr>
-            <tr><td>Peminatan</td><td>:</td><td>{session.peminatan || '______________'}</td></tr>
-          </tbody>
-        </table>
-
-        {session.catatan && (
-          <div className="mt-4">
-            <p className="font-bold">Hasil Pelaksanaan :</p>
-            <p className="whitespace-pre-wrap">{session.catatan}</p>
+        {/* ===== DAFTAR HADIR PENGUJI ===== */}
+        <div className="page-break">
+          <div className="text-center border-b-2 border-black pb-4">
+            <img src="/kop-surat-resize.png" alt="KOP UPN Veteran Jakarta" style={{ display: 'block', margin: '0 auto 0.5rem', maxWidth: '100%', maxHeight: '100px', width: 'auto', height: 'auto' }} />
+            <h1 className="text-xl font-bold uppercase">Daftar Hadir Penguji Sidang Skripsi</h1>
+            <p className="text-sm">PROGRAM STUDI KESEHATAN MASYARAKAT PROGRAM SARJANA</p>
+            <p className="text-sm">FAKULTAS ILMU KESEHATAN UPN &ldquo;VETERAN&rdquo; JAKARTA</p>
+            <p className="text-sm font-semibold">T.A. {session.ta}</p>
           </div>
-        )}
-
-        <p className="mt-4">
-          Dinyatakan yang bersangkutan:<br />
-          <span className="ml-4">{session.decision === 'lulus_perbaikan' ? '✓' : '○'} Lulus</span><br />
-          <span className="ml-4">{session.decision === 'tidak_lulus_ulang' ? '✓' : '○'} Tidak Lulus</span>
-        </p>
-
-        <p className="italic text-sm text-justify mt-4">
-          Demikian laporan sidang ini dibuat sebagai laporan selama sidang berlangsung untuk diketahui dan dipergunakan sebagaimana mestinya.
-        </p>
-
-        <div className="mt-6">
-          <h3 className="font-bold text-center">TIM PENGUJI</h3>
-          <table className="template-table mt-1">
-            <thead><tr><th className="w-12">NO</th><th>NAMA PENGUJI</th><th>JABATAN</th><th className="w-24">TANDA TANGAN</th></tr></thead>
+          <table className="w-full mt-2 text-sm">
             <tbody>
-              <tr><td className="text-center">1.</td><td>{session.penguji1 || '______________'}</td><td>Ketua Penguji</td><td className="text-center align-middle">{session.ttd_penguji1 ? <img src={session.ttd_penguji1} alt="TTD" className="max-h-12 max-w-24 mx-auto object-contain" /> : ''}</td></tr>
-              <tr><td className="text-center">2.</td><td>{session.penguji2 || '______________'}</td><td>Anggota Penguji I</td><td className="text-center align-middle">{session.ttd_penguji2 ? <img src={session.ttd_penguji2} alt="TTD" className="max-h-12 max-w-24 mx-auto object-contain" /> : ''}</td></tr>
-              <tr><td className="text-center">3.</td><td>{session.penguji3 || '______________'}</td><td>Anggota Penguji II</td><td className="text-center align-middle">{session.ttd_penguji3 ? <img src={session.ttd_penguji3} alt="TTD" className="max-h-12 max-w-24 mx-auto object-contain" /> : ''}</td></tr>
+              <tr><td className="w-32">Nama Mahasiswa</td><td className="w-4">:</td><td>{session.nama}</td></tr>
+              <tr><td>NIM</td><td>:</td><td>{session.nim}</td></tr>
+              <tr><td>Tanggal Ujian</td><td>:</td><td>{session.hari_tanggal}</td></tr>
+              <tr><td>Peminatan</td><td>:</td><td>{session.peminatan}</td></tr>
+            </tbody>
+          </table>
+          <table className="template-table text-sm mt-4">
+            <thead><tr><th className="w-8">NO</th><th className="w-28">NIP</th><th>NAMA PENGUJI</th><th>JABATAN</th><th className="w-24">TANDA TANGAN</th></tr></thead>
+            <tbody>
+              {[
+                { no: 1, nip: session.nip_penguji1, nama: session.penguji1, jabatan: 'Ketua Penguji', ttd: session.ttd_penguji1 },
+                { no: 2, nip: session.nip_penguji2, nama: session.penguji2, jabatan: 'Anggota Penguji I', ttd: session.ttd_penguji2 },
+                { no: 3, nip: session.nip_penguji3, nama: session.penguji3, jabatan: 'Anggota Penguji II', ttd: session.ttd_penguji3 },
+              ].map((p) => (
+                <tr key={p.no}>
+                  <td className="text-center">{p.no}.</td>
+                  <td>{p.nip || ''}</td>
+                  <td>{p.nama || '______________'}</td>
+                  <td>{p.jabatan}</td>
+                  <td className="text-center align-middle">
+                    {p.ttd ? <img src={p.ttd} alt="TTD" className="max-h-12 max-w-24 mx-auto object-contain" /> : <span className="text-gray-400">-</span>}
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
 
-        <div className="text-right mt-10 avoid-break">
-          <p>Jakarta, {session.tanggal_ba || '______________'}</p>
-          <p className="mt-4">Koordinator Program Studi Kesehatan Masyarakat</p>
-          <p>Program Sarjana</p>
-          {session.ttd_koordinator ? <img src={session.ttd_koordinator} alt="TTD Koordinator" className="max-h-16 max-w-32 ml-auto my-2 object-contain" /> : <div className="h-16"></div>}
-          <p className="font-bold">{session.koordinator}</p>
-          <p className="text-sm">NIP. {session.nip_koordinator}</p>
+        {/* ===== DAFTAR HADIR PESERTA ===== */}
+        <div className="page-break">
+          <div className="text-center border-b-2 border-black pb-4">
+            <img src="/kop-surat-resize.png" alt="KOP UPN Veteran Jakarta" style={{ display: 'block', margin: '0 auto 0.5rem', maxWidth: '100%', maxHeight: '100px', width: 'auto', height: 'auto' }} />
+            <h1 className="text-xl font-bold uppercase">Daftar Hadir Peserta Sidang Skripsi</h1>
+            <p className="text-sm">PROGRAM STUDI KESEHATAN MASYARAKAT PROGRAM SARJANA</p>
+            <p className="text-sm">FAKULTAS ILMU KESEHATAN UPN &ldquo;VETERAN&rdquo; JAKARTA</p>
+            <p className="text-sm font-semibold">SEMESTER {session.semester} T.A. {session.ta}</p>
+          </div>
+          <table className="template-table text-sm mt-4">
+            <thead><tr><th className="w-8">NO</th><th>NAMA PESERTA</th><th className="w-24">NIM</th><th className="w-24">TANDA TANGAN</th><th className="w-16">KET</th></tr></thead>
+            <tbody>
+              {(session.peserta_hadir || [{ nama: session.nama, nim: session.nim }]).map((p: any, i: number) => (
+                <tr key={i}>
+                  <td className="text-center">{i + 1}.</td>
+                  <td>{p.nama || ''}</td>
+                  <td>{p.nim || ''}</td>
+                  <td className="text-center align-middle">
+                    {p.ttd ? <img src={p.ttd} alt="TTD" className="max-h-12 max-w-24 mx-auto object-contain" /> : <span className="text-gray-400">-</span>}
+                  </td>
+                  <td className="text-center"></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
 
-        {/* ===== FORM PENILAIAN (3 examiners) ===== */}
+        {/* ===== DAFTAR HADIR AUDIENS ===== */}
+        <div className="page-break">
+          <div className="text-center border-b-2 border-black pb-4">
+            <img src="/kop-surat-resize.png" alt="KOP UPN Veteran Jakarta" style={{ display: 'block', margin: '0 auto 0.5rem', maxWidth: '100%', maxHeight: '100px', width: 'auto', height: 'auto' }} />
+            <h1 className="text-xl font-bold uppercase">Daftar Hadir Mahasiswa Sebagai Audiens Sidang Skripsi</h1>
+            <p className="text-sm">PROGRAM STUDI KESEHATAN MASYARAKAT PROGRAM SARJANA</p>
+            <p className="text-sm">FAKULTAS ILMU KESEHATAN UPN &ldquo;VETERAN&rdquo; JAKARTA</p>
+            <p className="text-sm font-semibold">SEMESTER {session.semester} T.A. {session.ta}</p>
+          </div>
+          <table className="template-table text-sm mt-4">
+            <thead><tr><th className="w-8">NO</th><th>NAMA MAHASISWA</th><th className="w-24">NIM</th><th className="w-24">TANDA TANGAN</th><th className="w-16">KET</th></tr></thead>
+            <tbody>
+              {(session.audience_hadir || []).map((a: any, i: number) => (
+                <tr key={i}>
+                  <td className="text-center">{i + 1}.</td>
+                  <td>{a.nama || <span className="text-gray-400">Nama mahasiswa</span>}</td>
+                  <td>{a.nim || ''}</td>
+                  <td className="text-center align-middle">
+                    {a.ttd ? <img src={a.ttd} alt="TTD" className="max-h-12 max-w-24 mx-auto object-contain" /> : <span className="text-gray-400">-</span>}
+                  </td>
+                  <td className="text-center"></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* ===== FORM PENILAIAN (3 examiners, 2 pages each) ===== */}
         {[0, 1, 2].map((examIdx) => {
           const scores = session.skor_penguji?.[examIdx] || [null,null,null,null,null,null,null,null,null,null]
           const labels = ['Penguji I/Ketua Penguji', 'Penguji II/Anggota Penguji', 'Penguji III/Anggota Penguji']
           const namaPenguji = [session.penguji1, session.penguji2, session.penguji3]
-          return (
-            <div key={examIdx} className="page-break">
+          return [
+            <div key={`rp-${examIdx}`} className="page-break">
               <div className="text-center border-b-2 border-black pb-4">
                 <img src="/kop-surat-resize.png" alt="KOP UPN Veteran Jakarta" style={{ display: 'block', margin: '0 auto 0.5rem', maxWidth: '100%', maxHeight: '100px', width: 'auto', height: 'auto' }} />
                 <h1 className="text-xl font-bold text-center uppercase">Formulir Penilaian Sidang Skripsi</h1>
@@ -1387,8 +1490,9 @@ function PreviewAll({ session, onUpdate }: { session: Session; onUpdate: (s: Ses
               </table>
 
               <p className="text-xs mt-1 italic">*Bila presentasi skripsi dilakukan menggunakan Bahasa Inggris, nilai akhir ditambahkan 2—6 poin.</p>
-
-              <div className="mt-6 avoid-break">
+            </div>,
+            <div key={`sp-${examIdx}`} className="page-break">
+              <div className="mt-10 avoid-break">
                 <p>Hari, Tanggal: {session.hari_tanggal}</p>
                 <div className="flex justify-end mt-12">
                   <div className="text-center w-56">
@@ -1404,7 +1508,7 @@ function PreviewAll({ session, onUpdate }: { session: Session; onUpdate: (s: Ses
                 </div>
               </div>
             </div>
-          )
+          ]
         })}
 
         {/* ===== REKAPITULASI NILAI ===== */}
