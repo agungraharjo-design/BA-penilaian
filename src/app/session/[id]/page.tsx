@@ -110,10 +110,11 @@ export default function SessionPage() {
       const lastSavedTtd = lastSavedTtdRef.current
 
       if (currentDb) {
-        // Merge skor_penguji — per examiner
-        if (currentDb.skor_penguji && lastSaved) {
+        // Always merge skor_penguji — per examiner, to prevent concurrent overwrites
+        if (currentDb.skor_penguji) {
+          const baseSkor = lastSaved || currentDb.skor_penguji
           mergedSkor = toSave.skor_penguji.map((localArr: (number | null)[], i: number) => {
-            const userModified = JSON.stringify(localArr) !== JSON.stringify(lastSaved[i])
+            const userModified = JSON.stringify(localArr) !== JSON.stringify(baseSkor[i])
             if (userModified) return localArr
             return currentDb.skor_penguji[i] || localArr
           })
@@ -582,7 +583,20 @@ const PenilaianForm = memo(function PenilaianForm({
   const scores = localSkor[examinerIndex] || [null,null,null,null,null,null,null,null,null,null]
 
   const setScore = (criterionIdx: number, value: string) => {
-    const v = value === '' ? null : Math.min(4, Math.max(1, Number(value)))
+    if (value === '') {
+      // User cleared the input — set to null immediately
+      setLocalSkor(prev => {
+        const next = [...prev]
+        next[examinerIndex] = [...(next[examinerIndex] || [null,null,null,null,null,null,null,null,null,null])]
+        next[examinerIndex][criterionIdx] = null
+        localSkorRef.current = next
+        return next
+      })
+      return
+    }
+    const num = Number(value)
+    if (isNaN(num)) return
+    const v = Math.min(4, Math.max(1, Math.round(num)))
     setLocalSkor(prev => {
       const next = [...prev]
       next[examinerIndex] = [...(next[examinerIndex] || [null,null,null,null,null,null,null,null,null,null])]
