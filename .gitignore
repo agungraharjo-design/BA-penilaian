@@ -3,6 +3,9 @@ node_modules/
 .next/
 out/
 
+# Playwright browsers (OS-specific — re-downloaded on each platform during build)
+playwright-browsers/
+
 # Environment
 .env.local
 .env*.local

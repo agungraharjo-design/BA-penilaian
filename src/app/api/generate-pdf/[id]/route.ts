@@ -1,38 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server'
-import puppeteer from 'puppeteer-core'
+import { chromium } from 'playwright'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
 
-function getChromePath(): string {
-  if (process.env.CHROME_PATH) return process.env.CHROME_PATH
-  if (process.platform === 'win32') {
-    const paths = [
-      'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
-      'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
-      `${process.env.LOCALAPPDATA}\\Google\\Chrome\\Application\\chrome.exe`,
-    ]
-    for (const p of paths) {
-      const fs = require('fs')
-      if (fs.existsSync(p)) return p
-    }
-  }
-  if (process.platform === 'darwin') {
-    return '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
-  }
-  return '/usr/bin/google-chrome'
+// Locate the Playwright browsers that were copied to .next/server/ during build
+const { existsSync } = require('fs')
+const path = require('path')
+
+function resolveBrowsersPath(): string | undefined {
+  const here = path.join(process.cwd(), '.next', 'server', 'playwright-browsers')
+  if (existsSync(here)) return here
+  const project = path.join(process.cwd(), 'playwright-browsers')
+  if (existsSync(project)) return project
+  return process.env.PLAYWRIGHT_BROWSERS_PATH || undefined
 }
 
-function getSparticuzBinPath(): string | undefined {
-  try {
-    const { dirname, join } = require('path')
-    const { fileURLToPath } = require('url')
-    const pkgDir = dirname(require.resolve('@sparticuz/chromium/package.json'))
-    return join(pkgDir, 'bin')
-  } catch {
-    return undefined
-  }
-}
+const browsersPath = resolveBrowsersPath()
+if (browsersPath) process.env.PLAYWRIGHT_BROWSERS_PATH = browsersPath
 
 export async function POST(
   request: NextRequest,
@@ -59,81 +44,23 @@ export async function POST(
     return NextResponse.json({ error: 'Session not found' }, { status: 404 })
   }
 
-  const chromePath = getChromePath()
-  const sparticuzBinPath = getSparticuzBinPath()
-  const { tmpdir } = require('os')
-  const { join, dirname } = require('path')
-  const { fileURLToPath } = require('url')
-
   let browser: any = null
   let page: any = null
-  let chromeUsed: string = 'none'
   const step = (name: string) => console.log(`[PDF] ${name}`)
 
   try {
-    step('launching browser')
+    step('launching Chromium via Playwright')
+    browser = await chromium.launch({
+      headless: true,
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-gpu',
+      ],
+    })
+    step('browser launched')
 
-    // Strategy 1: system Chrome
-    try {
-      browser = await puppeteer.launch({
-        executablePath: chromePath,
-        headless: true,
-        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu'],
-      })
-      chromeUsed = `system:${chromePath}`
-      step(`system Chrome OK`)
-    } catch (e: any) {
-      step(`system Chrome failed: ${e.message}`)
-    }
-
-    // Strategy 2: @sparticuz/chromium (explicit bin path to bypass import.meta.url bundling bug)
-    if (!browser && sparticuzBinPath) {
-      try {
-        step(`@sparticuz/chromium bin at: ${sparticuzBinPath}`)
-        const { existsSync } = require('fs')
-        if (!existsSync(sparticuzBinPath)) {
-          step(`bin dir missing — package likely bundled by Next.js`)
-        }
-        const Chromium = (await import('@sparticuz/chromium')).default
-        const exePath = await Chromium.executablePath(sparticuzBinPath)
-        browser = await puppeteer.launch({
-          executablePath: exePath,
-          headless: true,
-          args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu'],
-        })
-        chromeUsed = `sparticuz:${exePath}`
-        step(`@sparticuz/chromium OK → ${exePath}`)
-      } catch (e: any) {
-        step(`@sparticuz/chromium failed: ${e.message}`)
-      }
-    } else if (!browser && !sparticuzBinPath) {
-      step('@sparticuz/chromium package not resolvable')
-    }
-
-    // Strategy 3: @puppeteer/browsers download fallback
-    if (!browser) {
-      step('trying @puppeteer/browsers download fallback')
-      try {
-        const { install, Browser } = await import('@puppeteer/browsers')
-        const installed = await install({
-          cacheDir: join(tmpdir(), 'chrome-download'),
-          browser: Browser.CHROME,
-          buildId: 'latest',
-        })
-        browser = await puppeteer.launch({
-          executablePath: installed.executablePath,
-          headless: true,
-          args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu'],
-        })
-        chromeUsed = `puppeteer-browsers:${installed.executablePath}`
-        step(`@puppeteer/browsers download OK → ${installed.executablePath}`)
-      } catch (e: any) {
-        step(`@puppeteer/browsers download failed: ${e.message}`)
-        throw new Error(`All Chrome launch strategies failed. Last error: ${e.message}`)
-      }
-    }
-
-    step(`Chrome source: ${chromeUsed}`)
     page = await browser.newPage()
 
     const host = request.headers.get('host') || 'localhost:3000'
@@ -141,11 +68,8 @@ export async function POST(
     const renderUrl = `${protocol}://${host}/pdf-render/${id}`
 
     step(`navigating to ${renderUrl}`)
-    const navResponse = await page.goto(renderUrl, {
-      waitUntil: 'networkidle0',
-      timeout: 60000,
-    })
-    step(`navigated, status: ${navResponse?.status()}`)
+    await page.goto(renderUrl, { waitUntil: 'domcontentloaded', timeout: 60000 })
+    step('navigated')
 
     const pageContent = await page.content()
     if (!pageContent.includes('Laporan Sidang Skripsi')) {
@@ -187,7 +111,6 @@ export async function POST(
     console.error('[PDF] FATAL error:', err)
     return NextResponse.json({
       error: err.message || 'PDF generation failed',
-      chromeUsed,
       stack: err.stack,
     }, { status: 500 })
   } finally {
