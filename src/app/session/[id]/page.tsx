@@ -669,9 +669,9 @@ const PenilaianForm = memo(function PenilaianForm({
           <tr>
             <th className="w-8">NO</th>
             <th>PARAMETER PENILAIAN</th>
-            <th className="w-20">SKOR NILAI (1—4)</th>
-            <th className="w-12">BOBOT</th>
-            <th className="w-20">SKOR NILAI × BOBOT</th>
+            <th className="w-24">SKOR NILAI (1—4)</th>
+            <th className="w-14">BOBOT</th>
+            <th className="w-24">SKOR NILAI × BOBOT</th>
           </tr>
         </thead>
         <tbody>
@@ -680,9 +680,9 @@ const PenilaianForm = memo(function PenilaianForm({
             return (
               <tr key={c.no} className="avoid-break">
                 <td className="text-center align-top">{c.no}.</td>
-                <td className="text-[11px] leading-snug py-2">
+                <td className="text-xs leading-snug py-1.5">
                   <div className="font-semibold">{c.label}</div>
-                  <div className="whitespace-pre-line text-[10px] text-gray-700">{c.detail}</div>
+                  <div className="whitespace-pre-line text-[11px] text-gray-700">{c.detail}</div>
                 </td>
                 <td className="text-center">
                   <input
@@ -843,7 +843,7 @@ function RekapNilaiForm({ session, onUpdate }: { session: Session; onUpdate: (s:
             { label: 'Anggota Penguji I', nama: session.penguji2, nip: session.nip_penguji2, ttd: session.ttd_penguji2 },
             { label: 'Anggota Penguji II', nama: session.penguji3, nip: session.nip_penguji3, ttd: session.ttd_penguji3 },
           ].map((p, i) => (
-            <div key={i} className="w-52">
+            <div key={i} className="w-48">
               <p className="text-sm mb-1">{p.label}</p>
               <SignatureUpload
                 value={p.ttd}
@@ -852,7 +852,7 @@ function RekapNilaiForm({ session, onUpdate }: { session: Session; onUpdate: (s:
               />
               <div className="h-8"></div>
               <p className="border-t border-black pt-1 font-semibold text-sm">{p.nama || '....................'}</p>
-              <p className="text-xs whitespace-nowrap">NIP. {p.nip || '..........................'}</p>
+              <p className="text-xs">NIP. {p.nip || '..........................'}</p>
             </div>
           ))}
         </div>
@@ -1421,56 +1421,28 @@ function PreviewAll({ session }: { session: Session }) {
                   <tr><td className="w-36">Nama Peserta</td><td className="w-4">:</td><td>{session.nama}</td><td className="w-36">NIM</td><td className="w-4">:</td><td>{session.nim}</td></tr>
                   <tr><td>Hari, Tanggal Sidang</td><td>:</td><td>{session.hari_tanggal}</td><td>Waktu Sidang</td><td>:</td><td>{session.waktu}</td></tr>
                   <tr><td>Tempat Sidang</td><td>:</td><td>{session.tempat}</td><td>Dosen Pembimbing</td><td>:</td><td>{session.pembimbing}</td></tr>
-                </tbody>
-              </table>
-              <table className="w-full mt-1 text-sm">
-                <tbody>
-                  <tr><td className="w-36">Peminatan</td><td className="w-4">:</td><td>{session.peminatan}</td></tr>
+                  <tr><td>Peminatan</td><td>:</td><td>{session.peminatan}</td><td></td><td></td><td></td></tr>
                 </tbody>
               </table>
               <p className="text-sm mt-1"><span className="font-semibold">Judul Skripsi:</span> {session.judul_skripsi}</p>
 
               <table className="template-table text-sm mt-3">
                 <thead>
-                  <tr><th className="w-8">NO</th><th>PARAMETER PENILAIAN</th><th className="w-20">SKOR NILAI (1—4)</th><th className="w-12">BOBOT</th><th className="w-20">SKOR NILAI × BOBOT</th></tr>
+                  <tr><th className="w-8">NO</th><th>PARAMETER PENILAIAN</th><th className="w-24">SKOR NILAI (1—4)</th><th className="w-14">BOBOT</th><th className="w-24">SKOR NILAI × BOBOT</th></tr>
                 </thead>
                 <tbody>
-                  {RUBRIC_CRITERIA.slice(0, 5).map((c, i) => {
+                  {RUBRIC_CRITERIA.map((c, i) => {
                     const skorXBobot = scores[i] !== null ? scores[i]! * c.bobot : null
                     return (
                       <tr key={c.no} className="avoid-break">
                         <td className="text-center align-top">{c.no}.</td>
-                        <td className="text-[11px] leading-snug py-2">
+                        <td className="text-xs leading-snug py-1.5">
                           <div className="font-semibold">{c.label}</div>
-                          <div className="whitespace-pre-line text-[10px] text-gray-700">{c.detail}</div>
+                          <div className="whitespace-pre-line text-[11px] text-gray-700">{c.detail}</div>
                         </td>
-                        <td className="text-center align-middle">{scores[i] ?? ''}</td>
-                        <td className="text-center align-middle">{c.bobot}</td>
-                        <td className="text-center align-middle font-bold">{skorXBobot ?? ''}</td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-
-              <table className="template-table text-sm mt-3">
-                <thead>
-                  <tr><th className="w-8">NO</th><th>PARAMETER PENILAIAN</th><th className="w-20">SKOR NILAI (1—4)</th><th className="w-12">BOBOT</th><th className="w-20">SKOR NILAI × BOBOT</th></tr>
-                </thead>
-                <tbody>
-                  {RUBRIC_CRITERIA.slice(5).map((c, i) => {
-                    const realIdx = i + 5
-                    const skorXBobot = scores[realIdx] !== null ? scores[realIdx]! * c.bobot : null
-                    return (
-                      <tr key={c.no} className="avoid-break">
-                        <td className="text-center align-top">{c.no}.</td>
-                        <td className="text-[11px] leading-snug py-2">
-                          <div className="font-semibold">{c.label}</div>
-                          <div className="whitespace-pre-line text-[10px] text-gray-700">{c.detail}</div>
-                        </td>
-                        <td className="text-center align-middle">{scores[realIdx] ?? ''}</td>
-                        <td className="text-center align-middle">{c.bobot}</td>
-                        <td className="text-center align-middle font-bold">{skorXBobot ?? ''}</td>
+                        <td className="text-center">{scores[i] ?? ''}</td>
+                        <td className="text-center">{c.bobot}</td>
+                        <td className="text-center font-bold">{skorXBobot ?? ''}</td>
                       </tr>
                     )
                   })}
@@ -1496,15 +1468,15 @@ function PreviewAll({ session }: { session: Session }) {
               <div className="mt-6 avoid-break">
                 <p>Hari, Tanggal: {session.hari_tanggal}</p>
                 <div className="flex justify-end mt-12">
-                  <div className="text-center w-64">
+                  <div className="text-center w-56">
                     {session[`ttd_penguji${examIdx + 1}` as keyof Session] ? (
-                      <img src={session[`ttd_penguji${examIdx + 1}` as keyof Session] as string} alt="TTD" className="max-h-14 max-w-32 mx-auto object-contain" />
+                      <img src={session[`ttd_penguji${examIdx + 1}` as keyof Session] as string} alt="TTD" className="max-h-14 max-w-28 mx-auto object-contain" />
                     ) : <div className="h-14"></div>}
                     <p>Tanda Tangan</p>
                     <div className="h-2"></div>
-                    <p className="border-t border-black pt-1 font-bold text-sm">{labels[examIdx]}</p>
+                    <p className="border-t border-black pt-1 font-bold">{labels[examIdx]}</p>
                     <p className="text-sm">{namaPenguji[examIdx]}</p>
-                    <p className="text-xs whitespace-nowrap">NIP. {session[`nip_penguji${examIdx + 1}` as keyof Session] as string || ''}</p>
+                    <p className="text-xs">NIP. {session[`nip_penguji${examIdx + 1}` as keyof Session] as string || ''}</p>
                   </div>
                 </div>
               </div>
@@ -1556,12 +1528,12 @@ function PreviewAll({ session }: { session: Session }) {
                 { label: 'Anggota Penguji I', nama: session.penguji2, nip: session.nip_penguji2, ttd: session.ttd_penguji2 },
                 { label: 'Anggota Penguji II', nama: session.penguji3, nip: session.nip_penguji3, ttd: session.ttd_penguji3 },
               ].map((p, i) => (
-                <div key={i} className="w-52">
+                <div key={i} className="w-48">
                   <p className="text-sm mb-1">{p.label}</p>
                   {p.ttd ? <img src={p.ttd} alt="TTD" className="max-h-14 max-w-28 mx-auto object-contain" /> : <div className="h-14"></div>}
                   <div className="h-8"></div>
                   <p className="border-t border-black pt-1 font-semibold text-sm">{p.nama || '....................'}</p>
-                  <p className="text-xs whitespace-nowrap">NIP. {p.nip || '..........................'}</p>
+                  <p className="text-xs">NIP. {p.nip || '..........................'}</p>
                 </div>
               ))}
             </div>
