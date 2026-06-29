@@ -1073,20 +1073,25 @@ function PreviewAll({ session, onUpdate }: { session: Session; onUpdate: (s: Ses
     window.print()
   }
 
+  const [pdfError, setPdfError] = useState<string>('')
+
   const handleDownloadPDF = async () => {
     setPdfStatus('saving')
+    setPdfError('')
     try {
       const res = await fetch(`/api/generate-pdf/${session.id}`, { method: 'POST' })
       const data = await res.json()
       if (!res.ok) {
         console.error('PDF API error:', data)
+        setPdfError(data.details || data.error || 'Gagal generate PDF')
         setPdfStatus('error')
         return
       }
       onUpdate({ ...session, pdf_url: data.url })
       setPdfStatus('saved')
-    } catch (err) {
+    } catch (err: any) {
       console.error('PDF generation error:', err)
+      setPdfError(err.message || 'Terjadi kesalahan jaringan')
       setPdfStatus('error')
     }
   }
@@ -1120,7 +1125,7 @@ function PreviewAll({ session, onUpdate }: { session: Session; onUpdate: (s: Ses
           <span className="text-green-700 text-sm font-sans self-center">✓ PDF berhasil tersimpan</span>
         )}
         {pdfStatus === 'error' && (
-          <span className="text-red-600 text-sm font-sans self-center">⚠ Gagal simpan ke database</span>
+          <span className="text-red-600 text-sm font-sans self-center">⚠ {pdfError || 'Gagal simpan ke database'}</span>
         )}
         {session.pdf_url && (() => {
           const cleanUrl = session.pdf_url?.split('?token=')[0] || ''
