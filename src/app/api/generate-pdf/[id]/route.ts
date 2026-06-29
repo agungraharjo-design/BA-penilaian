@@ -4,62 +4,28 @@ import { chromium } from 'playwright'
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
 
-const { execSync } = require('child_process')
-const { existsSync, mkdirSync, cpSync } = require('fs')
-const { tmpdir } = require('os')
-const { join, dirname } = require('path')
+// Point Playwright to the browsers directory shipped with the deployment
+const { existsSync } = require('fs')
+const path = require('path')
 
-// Loaded once per cold start
-let browsersReady: Promise<void> | null = null
-
-async function ensureBrowsers() {
-  if (browsersReady) return browsersReady
-
-  browsersReady = (async () => {
-    // Priority 1: use the browsers we shipped in .next/server/ (post-build copy)
-    const shipped = join(process.cwd(), '.next', 'server', 'playwright-browsers')
-    if (existsSync(shipped)) {
-      process.env.PLAYWRIGHT_BROWSERS_PATH = shipped
-      console.log('[PDF] Using shipped browsers at', shipped)
+function initBrowsersPath() {
+  const candidates = [
+    path.join(process.cwd(), 'playwright-browsers'),
+    path.join(process.cwd(), '.next', 'server', 'playwright-browsers'),
+    ...(process.env.PLAYWRIGHT_BROWSERS_PATH ? [process.env.PLAYWRIGHT_BROWSERS_PATH] : []),
+  ]
+  for (const c of candidates) {
+    if (existsSync(c)) {
+      process.env.PLAYWRIGHT_BROWSERS_PATH = c
+      console.log('[PDF] Using browsers at:', c)
       return
     }
-
-    // Priority 2: download to /tmp (writable on Vercel, survives function warm starts)
-    const dest = join(tmpdir(), 'playwright-browsers')
-    if (!existsSync(dest)) {
-      mkdirSync(dest, { recursive: true })
-      console.log('[PDF] Downloading Chromium to', dest)
-      try {
-        execSync('npx playwright install chromium-headless-shell', {
-          env: { ...process.env, PLAYWRIGHT_BROWSERS_PATH: dest },
-          cwd: process.cwd(),
-          timeout: 180000,
-          stdio: 'inherit',
-        })
-        console.log('[PDF] Download complete')
-      } catch (e: any) {
-        // Some versions use 'chromium' instead
-        console.log('[PDF] chromium-headless-shell failed, trying chromium:', e.message)
-        try {
-          execSync('npx playwright install chromium', {
-            env: { ...process.env, PLAYWRIGHT_BROWSERS_PATH: dest },
-            cwd: process.cwd(),
-            timeout: 180000,
-            stdio: 'inherit',
-          })
-          console.log('[PDF] chromium download complete')
-        } catch (e2: any) {
-          throw new Error('Browser download failed: ' + e2.message)
-        }
-      }
-    } else {
-      console.log('[PDF] Reusing cached browsers at', dest)
-    }
-    process.env.PLAYWRIGHT_BROWSERS_PATH = dest
-  })()
-
-  return browsersReady
+  }
+  console.warn('[PDF] No browsers found at expected paths. Listing candidates:',
+    candidates.map(c => `${c} (exists: ${existsSync(c)})`).join(', ')
+  )
 }
+initBrowsersPath()
 
 export async function POST(
   request: NextRequest,
@@ -90,12 +56,12 @@ export async function POST(
   let page: any = null
 
   try {
-    await ensureBrowsers()
-
+    console.log('[PDF] Launching Chromium...')
     browser = await chromium.launch({
       headless: true,
       args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu'],
     })
+    console.log('[PDF] Browser launched')
 
     page = await browser.newPage()
 
@@ -103,37 +69,48 @@ export async function POST(
     const protocol = host.includes('localhost') ? 'http' : 'https'
     const renderUrl = `${protocol}://${host}/pdf-render/${id}`
 
+    console.log('[PDF] Navigating to:', renderUrl)
     await page.goto(renderUrl, { waitUntil: 'domcontentloaded', timeout: 60000 })
+    console.log('[PDF] Navigated OK')
 
     const pageContent = await page.content()
+    console.log('[PDF] Page content length:', pageContent.length, 'has BA:', pageContent.includes('Laporan Sidang Skripsi'))
+
     if (!pageContent.includes('Laporan Sidang Skripsi')) {
-      console.error('PDF render page content mismatch. First 300 chars:', pageContent.slice(0, 300))
+      console.error('[PDF] Render page content mismatch. First 300 chars:', pageContent.slice(0, 300))
       return NextResponse.json({ error: 'Render page returned invalid content', url: renderUrl }, { status: 500 })
     }
 
+    console.log('[PDF] Generating PDF...')
     const pdfBuffer = await page.pdf({
       format: 'A4',
       margin: { top: '15mm', right: '20mm', bottom: '20mm', left: '20mm' },
       printBackground: true,
       preferCSSPageSize: false,
     })
+    console.log('[PDF] PDF generated, size:', pdfBuffer.length, 'bytes')
 
     const safeName = (session.nama || 'unknown').replace(/[^a-zA-Z0-9]/g, '_')
     const fileName = `BA_Sidang_${safeName}_${session.nim || 'unknown'}.pdf`
     const storagePath = `${session.id}/${fileName}`
 
+    console.log('[PDF] Uploading to storage:', storagePath)
     const { error: uploadError } = await supabase.storage
       .from('pdf-archive')
       .upload(storagePath, pdfBuffer, { contentType: 'application/pdf', upsert: true })
 
     if (uploadError) {
-      console.error('Storage upload error:', uploadError)
+      console.error('[PDF] Storage upload error:', uploadError)
       return NextResponse.json({ error: 'Upload failed', details: uploadError.message }, { status: 500 })
     }
+    console.log('[PDF] Storage upload OK')
 
     const publicUrl = `${supabaseUrl}/storage/v1/object/public/pdf-archive/${storagePath}`
-    await supabase.from('sessions').update({ pdf_url: publicUrl }).eq('id', session.id)
+    console.log('[PDF] Public URL:', publicUrl)
+    const { error: updateError } = await supabase.from('sessions').update({ pdf_url: publicUrl }).eq('id', session.id)
+    if (updateError) console.error('[PDF] DB update error:', updateError)
 
+    console.log('[PDF] DONE')
     return NextResponse.json({ url: publicUrl, fileName })
   } catch (err: any) {
     console.error('[PDF] FATAL error:', err)
