@@ -1280,39 +1280,39 @@ function PreviewAll({ session, onUpdate }: { session: Session; onUpdate: (s: Ses
           </table>
 
           {session.catatan && (
-            <div className="mt-4">
+            <div className="mt-2">
               <p className="font-bold">Hasil Pelaksanaan :</p>
               <p className="whitespace-pre-wrap">{session.catatan}</p>
             </div>
           )}
 
-          <p className="mt-4">
+          <p className="mt-2">
             Dinyatakan yang bersangkutan:<br />
             <span className="ml-4">{session.decision === 'lulus_perbaikan' ? '✓' : '○'} Lulus</span><br />
             <span className="ml-4">{session.decision === 'tidak_lulus_ulang' ? '✓' : '○'} Tidak Lulus</span>
           </p>
 
-          <p className="italic text-sm text-justify mt-4">
+          <p className="italic text-sm text-justify mt-2">
             Demikian laporan sidang ini dibuat sebagai laporan selama sidang berlangsung untuk diketahui dan dipergunakan sebagaimana mestinya.
           </p>
 
-          <div className="mt-6">
+          <div className="mt-3">
             <h3 className="font-bold text-center">TIM PENGUJI</h3>
             <table className="template-table mt-1">
               <thead><tr><th className="w-12">NO</th><th>NAMA PENGUJI</th><th>JABATAN</th><th className="w-24">TANDA TANGAN</th></tr></thead>
               <tbody>
-                <tr><td className="text-center">1.</td><td>{session.penguji1 || '______________'}</td><td>Ketua Penguji</td><td className="text-center align-middle">{session.ttd_penguji1 ? <img src={session.ttd_penguji1} alt="TTD" className="max-h-12 max-w-24 mx-auto object-contain" /> : ''}</td></tr>
-                <tr><td className="text-center">2.</td><td>{session.penguji2 || '______________'}</td><td>Anggota Penguji I</td><td className="text-center align-middle">{session.ttd_penguji2 ? <img src={session.ttd_penguji2} alt="TTD" className="max-h-12 max-w-24 mx-auto object-contain" /> : ''}</td></tr>
-                <tr><td className="text-center">3.</td><td>{session.penguji3 || '______________'}</td><td>Anggota Penguji II</td><td className="text-center align-middle">{session.ttd_penguji3 ? <img src={session.ttd_penguji3} alt="TTD" className="max-h-12 max-w-24 mx-auto object-contain" /> : ''}</td></tr>
+                <tr><td className="text-center">1.</td><td>{session.penguji1 || '______________'}</td><td>Ketua Penguji</td><td className="text-center align-middle">{session.ttd_penguji1 ? <img src={session.ttd_penguji1} alt="TTD" className="max-h-10 max-w-20 mx-auto object-contain" /> : ''}</td></tr>
+                <tr><td className="text-center">2.</td><td>{session.penguji2 || '______________'}</td><td>Anggota Penguji I</td><td className="text-center align-middle">{session.ttd_penguji2 ? <img src={session.ttd_penguji2} alt="TTD" className="max-h-10 max-w-20 mx-auto object-contain" /> : ''}</td></tr>
+                <tr><td className="text-center">3.</td><td>{session.penguji3 || '______________'}</td><td>Anggota Penguji II</td><td className="text-center align-middle">{session.ttd_penguji3 ? <img src={session.ttd_penguji3} alt="TTD" className="max-h-10 max-w-20 mx-auto object-contain" /> : ''}</td></tr>
               </tbody>
             </table>
           </div>
 
-          <div className="text-right mt-10 avoid-break">
+          <div className="text-right mt-4 avoid-break">
             <p>Jakarta, {session.tanggal_ba || '______________'}</p>
-            <p className="mt-4">Koordinator Program Studi Kesehatan Masyarakat</p>
+            <p className="mt-2">Koordinator Program Studi Kesehatan Masyarakat</p>
             <p>Program Sarjana</p>
-            {session.ttd_koordinator ? <img src={session.ttd_koordinator} alt="TTD Koordinator" className="max-h-16 max-w-32 ml-auto my-2 object-contain" /> : <div className="h-16"></div>}
+            {session.ttd_koordinator ? <img src={session.ttd_koordinator} alt="TTD Koordinator" className="max-h-12 max-w-28 ml-auto my-1 object-contain" /> : <div className="h-12"></div>}
             <p className="font-bold">{session.koordinator}</p>
             <p className="text-sm">NIP. {session.nip_koordinator}</p>
           </div>
@@ -1412,7 +1412,7 @@ function PreviewAll({ session, onUpdate }: { session: Session; onUpdate: (s: Ses
                 <p className="text-sm text-center font-bold">SEMESTER {session.semester} T.A. {session.ta}</p>
               </div>
 
-              <table className="w-full mt-2 text-sm">
+              <table className="w-full mt-2 text-base">
                 <tbody>
                   <tr><td className="w-36">Nama Peserta</td><td className="w-4">:</td><td>{session.nama}</td><td className="w-36">NIM</td><td className="w-4">:</td><td>{session.nim}</td></tr>
                   <tr><td>Hari, Tanggal Sidang</td><td>:</td><td>{session.hari_tanggal}</td><td>Waktu Sidang</td><td>:</td><td>{session.waktu}</td></tr>
@@ -1420,9 +1420,9 @@ function PreviewAll({ session, onUpdate }: { session: Session; onUpdate: (s: Ses
                   <tr><td>Peminatan</td><td>:</td><td>{session.peminatan}</td><td></td><td></td><td></td></tr>
                 </tbody>
               </table>
-              <p className="text-sm mt-1"><span className="font-semibold">Judul Skripsi:</span> {session.judul_skripsi}</p>
+              <p className="text-base mt-1"><span className="font-semibold">Judul Skripsi:</span> {session.judul_skripsi}</p>
 
-              <table className="template-table text-sm mt-3">
+              <table className="template-table text-base mt-3">
                 <thead>
                   <tr><th className="w-8">NO</th><th>PARAMETER PENILAIAN</th><th className="w-24">SKOR (1—4)</th><th className="w-14">BOBOT</th><th className="w-24">SKOR × BOBOT</th></tr>
                 </thead>
@@ -1455,7 +1455,7 @@ function PreviewAll({ session, onUpdate }: { session: Session; onUpdate: (s: Ses
                 <p className="text-sm text-center font-bold">SEMESTER {session.semester} T.A. {session.ta}</p>
               </div>
 
-              <table className="template-table text-sm mt-3">
+              <table className="template-table text-base mt-3">
                 <thead>
                   <tr><th className="w-8">NO</th><th>PARAMETER PENILAIAN</th><th className="w-24">SKOR (1—4)</th><th className="w-14">BOBOT</th><th className="w-24">SKOR × BOBOT</th></tr>
                 </thead>
