@@ -1074,92 +1074,53 @@ function PreviewAll({ session, onUpdate }: { session: Session; onUpdate: (s: Ses
   }
 
   const handleDownloadPDF = async () => {
-    if (!previewRef.current) return
+    const pdfStage = document.querySelector('.pdf-stage') as HTMLElement | null
+    if (!pdfStage) { setPdfStatus('idle'); return }
     setPdfStatus('preparing')
     
     try {
-      const { default: html2canvas } = await import('html2canvas')
-      const { jsPDF } = await import('jspdf')
+      const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
+        import('html2canvas'),
+        import('jspdf'),
+      ])
       
-      const container = previewRef.current
-      const scale = 1.5 // Reduced scale to keep PDF under Vercel payload limit
+      const pdfStage = document.querySelector('.pdf-stage') as HTMLElement
+      if (!pdfStage) { setPdfStatus('idle'); return }
       
-      // Get all sections that have .page-break
-      const sections = container.querySelectorAll('.page-break')
-      
+      const pages = Array.from(pdfStage.querySelectorAll<HTMLElement>('.pdf-page'))
+      if (!pages.length) { setPdfStatus('idle'); return }
+
+      await (document as any).fonts?.ready?.()
+
       const pdf = new jsPDF({
         orientation: 'portrait',
         unit: 'mm',
         format: 'a4',
-        putOnlyUsedFonts: true,
       })
-      
-      const pageWidth = 210
-      const pageHeight = 297
-      const marginTop = 15
-      const marginRight = 20
-      const marginBottom = 20
-      const marginLeft = 20
-      const contentWidth = pageWidth - marginLeft - marginRight
-      
-      let yOffset = 0
-      let pageCount = 0
-      
-      // Process each section
-      for (let i = 0; i < sections.length; i++) {
-        const section = sections[i] as HTMLElement
-        
-        // Hide page-break indicator for capture
-        const originalBreak = section.style.pageBreakBefore
-        section.style.pageBreakBefore = 'auto'
-        
-        const canvas = await html2canvas(section, {
+
+      const A4_W = 210
+      const A4_H = 297
+
+      for (let i = 0; i < pages.length; i++) {
+        const page = pages[i]
+        const PW = page.offsetWidth
+        const PH = page.offsetHeight
+        const scale = Math.min(2, 595 / PW)  // fit to A4 width in px at 72dpi
+
+        const canvas = await html2canvas(page, {
           scale,
-          useCORS: true,
-          allowTaint: true,
           backgroundColor: '#ffffff',
-          logging: false,
-        })
-        
-        // Restore page-break
-        section.style.pageBreakBefore = originalBreak
-        
-        const imgData = canvas.toDataURL('image/jpeg', 0.8)
-        const imgHeight = (canvas.height * contentWidth) / canvas.width
-        
-        // Check if we need a new page before placing this section
-        if (pageCount > 0 || yOffset > 0) {
-          if (yOffset + imgHeight > pageHeight - marginBottom) {
-            pdf.addPage()
-            yOffset = marginTop
-            pageCount++
-          }
-        }
-        
-        // Add the image
-        if (pageCount === 0 && yOffset === 0) {
-          pdf.addImage(imgData, 'JPEG', marginLeft, marginTop, contentWidth, imgHeight)
-          yOffset += imgHeight
-        } else {
-          pdf.addImage(imgData, 'JPEG', marginLeft, yOffset, contentWidth, imgHeight)
-          yOffset += imgHeight
-        }
-      }
-      
-      // If no sections, handle the whole container
-      if (sections.length === 0) {
-        const canvas = await html2canvas(container, {
-          scale,
           useCORS: true,
-          allowTaint: true,
-          backgroundColor: '#ffffff',
           logging: false,
+          width: PW,
+          height: PH,
         })
-        
-        const imgData = canvas.toDataURL('image/jpeg', 0.8)
-        const imgHeight = (canvas.height * contentWidth) / canvas.width
-        
-        pdf.addImage(imgData, 'JPEG', marginLeft, marginTop, contentWidth, imgHeight)
+
+        const imgData = canvas.toDataURL('image/jpeg', 0.92)
+        const imgH = (PH * A4_W) / PW
+
+        if (i > 0) pdf.addPage()
+        pdf.addImage(imgData, 'JPEG', 0, 0, A4_W, Math.min(imgH, A4_H))
       }
       
       // Set PDF properties
@@ -1255,6 +1216,197 @@ function PreviewAll({ session, onUpdate }: { session: Session; onUpdate: (s: Ses
         <span className="text-xs text-gray-500 self-center ml-2 font-sans">(PDF sesuai dengan template asli)</span>
       </div>
 
+      <div className="pdf-stage" style={{ position: 'fixed', top: 0, left: -99999, width: 595, zIndex: -1, fontFamily: "'Times New Roman', Georgia, serif", background: '#fff' }}>
+
+        <div className="pdf-page" style={{ width: 595, height: 842, boxSizing: 'border-box', padding: '15px 20px', background: '#fff', overflow: 'hidden', fontFamily: "'Times New Roman', Georgia, serif", fontSize: 12, lineHeight: 1.3 }}>
+          <div style={{ textAlign: 'center', borderBottom: '2px solid #000', paddingBottom: 4, marginBottom: 8 }}>
+            <img src="/kop-surat-resize.png" style={{ display: 'block', margin: '0 auto 4px', maxWidth: '100%', maxHeight: 52, width: 'auto', height: 'auto' }} />
+            <div style={{ fontWeight: 'bold', textAlign: 'center', textTransform: 'uppercase', fontSize: 14 }}>Laporan Sidang Skripsi</div>
+            <div style={{ fontSize: 12, textAlign: 'center' }}>PROGRAM STUDI KESEHATAN MASYARAKAT PROGRAM SARJANA</div>
+            <div style={{ fontSize: 12, textAlign: 'center' }}>FAKULTAS ILMU KESEHATAN UPN &ldquo;VETERAN&rdquo; JAKARTA</div>
+            <div style={{ fontWeight: 'bold', fontSize: 12, textAlign: 'center' }}>T.A. {session.ta}</div>
+          </div>
+          <div style={{ textAlign: 'justify' }}>Pada hari {session.hari_tanggal || '______________'}, telah dilaksanakan sidang skripsi mahasiswa:</div>
+          <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 4 }}>
+            <tbody><tr><td style={{ width: 110 }}>Nama Mahasiswa</td><td style={{ width: 14 }}>:</td><td>{session.nama || '______________'}</td></tr><tr><td>NIM</td><td>:</td><td>{session.nim || '______________'}</td></tr><tr><td>Waktu Sidang</td><td>:</td><td>{session.waktu || '______________'}</td></tr><tr><td>Peminatan</td><td>:</td><td>{session.peminatan || '______________'}</td></tr></tbody>
+          </table>
+          {session.catatan && <div style={{ marginTop: 6 }}><div style={{ fontWeight: 'bold' }}>Hasil Pelaksanaan :</div><div style={{ whiteSpace: 'pre-wrap' }}>{session.catatan}</div></div>}
+          <div style={{ marginTop: 6 }}><span style={{ marginLeft: 8 }}>{session.decision === 'lulus_perbaikan' ? '✓' : '○'} Lulus</span><br/><span style={{ marginLeft: 8 }}>{session.decision === 'tidak_lulus_ulang' ? '✓' : '○'} Tidak Lulus</span></div>
+          <div style={{ fontStyle: 'italic', fontSize: 11, textAlign: 'justify', marginTop: 6 }}>Demikian laporan sidang ini dibuat sebagai laporan selama sidang berlangsung untuk diketahui dan dipergunakan sebagaimana mestinya.</div>
+          <div style={{ fontWeight: 'bold', textAlign: 'center', marginTop: 6 }}>TIM PENGUJI</div>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, marginTop: 2 }}>
+            <thead><tr><th style={{ width: 32, border: '1px solid #000', padding: 2 }}>NO</th><th style={{ border: '1px solid #000', padding: 2 }}>NAMA PENGUJI</th><th style={{ border: '1px solid #000', padding: 2 }}>JABATAN</th><th style={{ width: 80, border: '1px solid #000', padding: 2 }}>TANDA TANGAN</th></tr></thead>
+            <tbody>
+              <tr><td style={{ textAlign: 'center', border: '1px solid #000', padding: 2 }}>1.</td><td style={{ border: '1px solid #000', padding: 2 }}>{session.penguji1 || '______________'}</td><td style={{ border: '1px solid #000', padding: 2 }}>Ketua Penguji</td><td style={{ textAlign: 'center', border: '1px solid #000', padding: 2, verticalAlign: 'middle' }}>{session.ttd_penguji1 ? <img src={session.ttd_penguji1} alt="TTD" style={{ maxHeight: 30, maxWidth: 60, margin: '0 auto', objectFit: 'contain' }} /> : ''}</td></tr>
+              <tr><td style={{ textAlign: 'center', border: '1px solid #000', padding: 2 }}>2.</td><td style={{ border: '1px solid #000', padding: 2 }}>{session.penguji2 || '______________'}</td><td style={{ border: '1px solid #000', padding: 2 }}>Anggota Penguji I</td><td style={{ textAlign: 'center', border: '1px solid #000', padding: 2, verticalAlign: 'middle' }}>{session.ttd_penguji2 ? <img src={session.ttd_penguji2} alt="TTD" style={{ maxHeight: 30, maxWidth: 60, margin: '0 auto', objectFit: 'contain' }} /> : ''}</td></tr>
+              <tr><td style={{ textAlign: 'center', border: '1px solid #000', padding: 2 }}>3.</td><td style={{ border: '1px solid #000', padding: 2 }}>{session.penguji3 || '______________'}</td><td style={{ border: '1px solid #000', padding: 2 }}>Anggota Penguji II</td><td style={{ textAlign: 'center', border: '1px solid #000', padding: 2, verticalAlign: 'middle' }}>{session.ttd_penguji3 ? <img src={session.ttd_penguji3} alt="TTD" style={{ maxHeight: 30, maxWidth: 60, margin: '0 auto', objectFit: 'contain' }} /> : ''}</td></tr>
+            </tbody>
+          </table>
+          <div style={{ textAlign: 'right', marginTop: 15 }}>
+            <p>Jakarta, {session.tanggal_ba || '______________'}</p>
+            <p style={{ marginTop: 8 }}>Koordinator Program Studi Kesehatan Masyarakat</p><p>Program Sarjana</p>
+            {session.ttd_koordinator ? <img src={session.ttd_koordinator} alt="TTD" style={{ maxHeight: 38, maxWidth: 80, marginLeft: 'auto', marginTop: 4, display: 'block', objectFit: 'contain' }} /> : <div style={{ height: 38 }}></div>}
+            <p style={{ fontWeight: 'bold' }}>{session.koordinator}</p>
+            <p style={{ fontSize: 11 }}>NIP. {session.nip_koordinator}</p>
+          </div>
+        </div>
+
+        <div className="pdf-page" style={{ width: 595, height: 842, boxSizing: 'border-box', padding: '15px 20px', background: '#fff', overflow: 'hidden', fontFamily: "'Times New Roman', Georgia, serif", fontSize: 12, lineHeight: 1.3 }}>
+          <div style={{ textAlign: 'center', borderBottom: '2px solid #000', padding: 4, marginBottom: 6 }}>
+            <img src="/kop-surat-resize.png" style={{ display: 'block', margin: '0 auto 4px', maxWidth: '100%', maxHeight: 52, width: 'auto', height: 'auto' }} />
+            <div style={{ fontWeight: 'bold', textAlign: 'center', textTransform: 'uppercase', fontSize: 14 }}>Daftar Hadir Sidang Skripsi</div>
+            <div style={{ fontSize: 12, textAlign: 'center' }}>PROGRAM STUDI KESEHATAN MASYARAKAT PROGRAM SARJANA</div>
+            <div style={{ fontSize: 12, textAlign: 'center' }}>FAKULTAS ILMU KESEHATAN UPN &ldquo;VETERAN&rdquo; JAKARTA</div>
+            <div style={{ fontWeight: 'bold', fontSize: 12, textAlign: 'center' }}>T.A. {session.ta}</div>
+          </div>
+          <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 3 }}>
+            <tbody><tr><td style={{ width: 110 }}>Nama Mahasiswa</td><td style={{ width: 14 }}>:</td><td>{session.nama}</td></tr><tr><td>NIM</td><td>:</td><td>{session.nim}</td></tr><tr><td>Hari, Tanggal</td><td>:</td><td>{session.hari_tanggal}</td></tr><tr><td>Peminatan</td><td>:</td><td>{session.peminatan}</td></tr></tbody>
+          </table>
+          <div style={{ fontWeight: 'bold', textAlign: 'center', marginTop: 4, marginBottom: 1 }}>DAFTAR HADIR PENGUJI</div>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+            <thead><tr><th style={{ width: 22, border: '1px solid #000', padding: '1px 3px' }}>NO</th><th style={{ width: 90, border: '1px solid #000', padding: '1px 3px' }}>NIP</th><th style={{ border: '1px solid #000', padding: '1px 3px' }}>NAMA PENGUJI</th><th style={{ border: '1px solid #000', padding: '1px 3px' }}>JABATAN</th><th style={{ width: 80, border: '1px solid #000', padding: '1px 3px' }}>TANDA TANGAN</th></tr></thead>
+            <tbody>
+              <tr><td style={{ textAlign: 'center', border: '1px solid #000', padding: '1px 3px' }}>1.</td><td style={{ border: '1px solid #000', padding: '1px 3px' }}>{session.nip_penguji1 || ''}</td><td style={{ border: '1px solid #000', padding: '1px 3px' }}>{session.penguji1 || '______________'}</td><td style={{ border: '1px solid #000', padding: '1px 3px' }}>Ketua Penguji</td><td style={{ textAlign: 'center', border: '1px solid #000', padding: '1px 3px', verticalAlign: 'middle' }}>{session.ttd_penguji1 ? <img src={session.ttd_penguji1} alt="TTD" style={{ maxHeight: 28, maxWidth: 56, margin: '0 auto', objectFit: 'contain' }} /> : <span style={{ color: '#999' }}>-</span>}</td></tr>
+              <tr><td style={{ textAlign: 'center', border: '1px solid #000', padding: '1px 3px' }}>2.</td><td style={{ border: '1px solid #000', padding: '1px 3px' }}>{session.nip_penguji2 || ''}</td><td style={{ border: '1px solid #000', padding: '1px 3px' }}>{session.penguji2 || '______________'}</td><td style={{ border: '1px solid #000', padding: '1px 3px' }}>Anggota Penguji I</td><td style={{ textAlign: 'center', border: '1px solid #000', padding: '1px 3px', verticalAlign: 'middle' }}>{session.ttd_penguji2 ? <img src={session.ttd_penguji2} alt="TTD" style={{ maxHeight: 28, maxWidth: 56, margin: '0 auto', objectFit: 'contain' }} /> : <span style={{ color: '#999' }}>-</span>}</td></tr>
+              <tr><td style={{ textAlign: 'center', border: '1px solid #000', padding: '1px 3px' }}>3.</td><td style={{ border: '1px solid #000', padding: '1px 3px' }}>{session.nip_penguji3 || ''}</td><td style={{ border: '1px solid #000', padding: '1px 3px' }}>{session.penguji3 || '______________'}</td><td style={{ border: '1px solid #000', padding: '1px 3px' }}>Anggota Penguji II</td><td style={{ textAlign: 'center', border: '1px solid #000', padding: '1px 3px', verticalAlign: 'middle' }}>{session.ttd_penguji3 ? <img src={session.ttd_penguji3} alt="TTD" style={{ maxHeight: 28, maxWidth: 56, margin: '0 auto', objectFit: 'contain' }} /> : <span style={{ color: '#999' }}>-</span>}</td></tr>
+            </tbody>
+          </table>
+          <div style={{ fontWeight: 'bold', textAlign: 'center', marginTop: 4, marginBottom: 1 }}>DAFTAR HADIR PESERTA</div>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+            <thead><tr><th style={{ width: 22, border: '1px solid #000', padding: '1px 3px' }}>NO</th><th style={{ border: '1px solid #000', padding: '1px 3px' }}>NAMA PESERTA</th><th style={{ width: 80, border: '1px solid #000', padding: '1px 3px' }}>NIM</th><th style={{ width: 80, border: '1px solid #000', padding: '1px 3px' }}>TTD</th><th style={{ width: 28, border: '1px solid #000', padding: '1px 3px' }}>KET</th></tr></thead>
+            <tbody>
+              {(session.peserta_hadir || [{ nama: session.nama, nim: session.nim }]).map((p: any, i: number) => (
+                <tr key={i}><td style={{ textAlign: 'center', border: '1px solid #000', padding: '1px 3px' }}>{i + 1}.</td><td style={{ border: '1px solid #000', padding: '1px 3px' }}>{p.nama || ''}</td><td style={{ border: '1px solid #000', padding: '1px 3px' }}>{p.nim || ''}</td><td style={{ textAlign: 'center', border: '1px solid #000', padding: '1px 3px', verticalAlign: 'middle' }}>{p.ttd ? <img src={p.ttd} alt="TTD" style={{ maxHeight: 24, maxWidth: 48, margin: '0 auto', objectFit: 'contain' }} /> : <span style={{ color: '#999' }}>-</span>}</td><td style={{ textAlign: 'center', border: '1px solid #000', padding: '1px 3px' }}></td></tr>
+              ))}
+            </tbody>
+          </table>
+          <div style={{ fontWeight: 'bold', textAlign: 'center', marginTop: 4, marginBottom: 1 }}>DAFTAR HADIR AUDIENS</div>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+            <thead><tr><th style={{ width: 22, border: '1px solid #000', padding: '1px 3px' }}>NO</th><th style={{ border: '1px solid #000', padding: '1px 3px' }}>NAMA MAHASISWA</th><th style={{ width: 80, border: '1px solid #000', padding: '1px 3px' }}>NIM</th><th style={{ width: 80, border: '1px solid #000', padding: '1px 3px' }}>TTD</th><th style={{ width: 28, border: '1px solid #000', padding: '1px 3px' }}>KET</th></tr></thead>
+            <tbody>
+              {(session.audience_hadir || []).map((a: any, i: number) => (
+                <tr key={i}><td style={{ textAlign: 'center', border: '1px solid #000', padding: '1px 3px' }}>{i + 1}.</td><td style={{ border: '1px solid #000', padding: '1px 3px' }}>{a.nama || 'Nama mahasiswa'}</td><td style={{ border: '1px solid #000', padding: '1px 3px' }}>{a.nim || ''}</td><td style={{ textAlign: 'center', border: '1px solid #000', padding: '1px 3px', verticalAlign: 'middle' }}>{a.ttd ? <img src={a.ttd} alt="TTD" style={{ maxHeight: 24, maxWidth: 48, margin: '0 auto', objectFit: 'contain' }} /> : <span style={{ color: '#999' }}>-</span>}</td><td style={{ textAlign: 'center', border: '1px solid #000', padding: '1px 3px' }}></td></tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Form Penilaian P1 + P2 per examiner */}
+        {[0, 1, 2].map((examIdx) => {
+          const scores = session.skor_penguji?.[examIdx] || [null,null,null,null,null,null,null,null,null,null]
+          const labels = ['Penguji I/Ketua Penguji', 'Penguji II/Anggota Penguji', 'Penguji III/Anggota Penguji']
+          const namaPenguji = [session.penguji1, session.penguji2, session.penguji3]
+          const half = Math.ceil(RUBRIC_CRITERIA.length / 2)
+          return [
+            <div key={`${examIdx}-p1`} className="pdf-page" style={{ width: 595, height: 842, boxSizing: 'border-box', padding: '15px 20px', background: '#fff', overflow: 'hidden', fontFamily: "'Times New Roman', Georgia, serif", fontSize: 12, lineHeight: 1.3 }}>
+              <div style={{ textAlign: 'center', borderBottom: '2px solid #000', paddingBottom: 4, marginBottom: 6 }}>
+                <img src="/kop-surat-resize.png" style={{ display: 'block', margin: '0 auto 4px', maxWidth: '100%', maxHeight: 52, width: 'auto', height: 'auto' }} />
+                <div style={{ fontWeight: 'bold', textAlign: 'center', textTransform: 'uppercase', fontSize: 14 }}>Formulir Penilaian Sidang Skripsi</div>
+                <div style={{ fontSize: 12, textAlign: 'center' }}>PROGRAM STUDI KESEHATAN MASYARAKAT PROGRAM SARJANA</div>
+                <div style={{ fontSize: 12, textAlign: 'center' }}>FAKULTAS ILMU KESEHATAN UPN &ldquo;VETERAN&rdquo; JAKARTA</div>
+                <div style={{ fontWeight: 'bold', fontSize: 12, textAlign: 'center' }}>SEMESTER {session.semester} T.A. {session.ta}</div>
+              </div>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, marginTop: 4 }}>
+                <tbody>
+                  <tr><td style={{ width: 110 }}>Nama Peserta</td><td style={{ width: 14 }}>:</td><td>{session.nama}</td><td style={{ width: 80 }}>NIM</td><td style={{ width: 14 }}>:</td><td>{session.nim}</td></tr>
+                  <tr><td>Hari, Tanggal</td><td>:</td><td>{session.hari_tanggal}</td><td>Waktu</td><td>:</td><td>{session.waktu}</td></tr>
+                  <tr><td>Tempat</td><td>:</td><td>{session.tempat}</td><td>Pembimbing</td><td>:</td><td>{session.pembimbing}</td></tr>
+                  <tr><td>Peminatan</td><td>:</td><td colSpan={3}>{session.peminatan}</td></tr>
+                </tbody>
+              </table>
+              <div style={{ fontSize: 12, marginTop: 3 }}><b>Judul Skripsi:</b> {session.judul_skripsi}</div>
+              <table className="template-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, marginTop: 3 }}>
+                <thead><tr><th style={{ width: 24, border: '1px solid #000', padding: '1px 3px', textAlign: 'center' }}>NO</th><th style={{ border: '1px solid #000', padding: '1px 3px' }}>PARAMETER PENILAIAN</th><th style={{ width: 52, border: '1px solid #000', padding: '1px 3px', textAlign: 'center' }}>SKOR (1–4)</th><th style={{ width: 36, border: '1px solid #000', padding: '1px 3px', textAlign: 'center' }}>BOBOT</th><th style={{ width: 70, border: '1px solid #000', padding: '1px 3px', textAlign: 'center' }}>SKOR × BOBOT</th></tr></thead>
+                <tbody>
+                  {RUBRIC_CRITERIA.slice(0, half).map((c) => {
+                    const skorXBobot = scores[c.no - 1] !== null ? scores[c.no - 1]! * c.bobot : null
+                    return <tr key={c.no}><td style={{ textAlign: 'center', border: '1px solid #000', padding: '1px 3px', verticalAlign: 'top' }}>{c.no}.</td><td style={{ border: '1px solid #000', padding: '1px 3px', verticalAlign: 'top' }}><div style={{ fontWeight: 'bold', fontSize: 11 }}>{c.label}</div><div style={{ fontSize: 10, color: '#444', whiteSpace: 'pre-line' }}>{c.detail}</div></td><td style={{ textAlign: 'center', border: '1px solid #000', padding: '1px 3px', verticalAlign: 'top' }}>{scores[c.no - 1] ?? ''}</td><td style={{ textAlign: 'center', border: '1px solid #000', padding: '1px 3px', verticalAlign: 'top' }}>{c.bobot}</td><td style={{ textAlign: 'center', border: '1px solid #000', padding: '1px 3px', fontWeight: 'bold', verticalAlign: 'top' }}>{skorXBobot ?? ''}</td></tr>
+                  })}
+                </tbody>
+              </table>
+            </div>,
+            <div key={`${examIdx}-p2`} className="pdf-page" style={{ width: 595, height: 842, boxSizing: 'border-box', padding: '15px 20px', background: '#fff', overflow: 'hidden', fontFamily: "'Times New Roman', Georgia, serif", fontSize: 12, lineHeight: 1.3 }}>
+              <div style={{ textAlign: 'center', borderBottom: '2px solid #000', paddingBottom: 4, marginBottom: 6 }}>
+                <img src="/kop-surat-resize.png" style={{ display: 'block', margin: '0 auto 4px', maxWidth: '100%', maxHeight: 52, width: 'auto', height: 'auto' }} />
+                <div style={{ fontWeight: 'bold', textAlign: 'center', textTransform: 'uppercase', fontSize: 14 }}>Formulir Penilaian Sidang Skripsi</div>
+                <div style={{ fontSize: 12, textAlign: 'center' }}>PROGRAM STUDI KESEHATAN MASYARAKAT PROGRAM SARJANA</div>
+                <div style={{ fontSize: 12, textAlign: 'center' }}>FAKULTAS ILMU KESEHATAN UPN &ldquo;VETERAN&rdquo; JAKARTA</div>
+                <div style={{ fontWeight: 'bold', fontSize: 12, textAlign: 'center' }}>SEMESTER {session.semester} T.A. {session.ta}</div>
+              </div>
+              <table className="template-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, marginTop: 0 }}>
+                <thead><tr><th style={{ width: 24, border: '1px solid #000', padding: '1px 3px', textAlign: 'center' }}>NO</th><th style={{ border: '1px solid #000', padding: '1px 3px' }}>PARAMETER PENILAIAN</th><th style={{ width: 52, border: '1px solid #000', padding: '1px 3px', textAlign: 'center' }}>SKOR (1–4)</th><th style={{ width: 36, border: '1px solid #000', padding: '1px 3px', textAlign: 'center' }}>BOBOT</th><th style={{ width: 70, border: '1px solid #000', padding: '1px 3px', textAlign: 'center' }}>SKOR × BOBOT</th></tr></thead>
+                <tbody>
+                  {RUBRIC_CRITERIA.slice(half).map((c) => {
+                    const skorXBobot = scores[c.no - 1] !== null ? scores[c.no - 1]! * c.bobot : null
+                    return <tr key={c.no}><td style={{ textAlign: 'center', border: '1px solid #000', padding: '1px 3px', verticalAlign: 'top' }}>{c.no}.</td><td style={{ border: '1px solid #000', padding: '1px 3px', verticalAlign: 'top' }}><div style={{ fontWeight: 'bold', fontSize: 11 }}>{c.label}</div><div style={{ fontSize: 10, color: '#444', whiteSpace: 'pre-line' }}>{c.detail}</div></td><td style={{ textAlign: 'center', border: '1px solid #000', padding: '1px 3px', verticalAlign: 'top' }}>{scores[c.no - 1] ?? ''}</td><td style={{ textAlign: 'center', border: '1px solid #000', padding: '1px 3px', verticalAlign: 'top' }}>{c.bobot}</td><td style={{ textAlign: 'center', border: '1px solid #000', padding: '1px 3px', fontWeight: 'bold', verticalAlign: 'top' }}>{skorXBobot ?? ''}</td></tr>
+                  })}
+                  <tr style={{ fontWeight: 'bold', borderTop: '2px solid #000' }}><td colSpan={2} style={{ border: '1px solid #000', padding: '1px 3px', textAlign: 'center' }}>TOTAL SKOR × BOBOT</td><td style={{ border: '1px solid #000', padding: '1px 3px' }}></td><td style={{ border: '1px solid #000', padding: '1px 3px' }}></td><td style={{ textAlign: 'center', border: '1px solid #000', padding: '1px 3px' }}>{calc.scoresByExaminer[examIdx].totalSkorXBobot}</td></tr>
+                  <tr style={{ fontWeight: 'bold' }}><td colSpan={2} style={{ border: '1px solid #000', padding: '1px 3px', textAlign: 'center' }}>NILAI AKHIR [/400 × 100]</td><td style={{ border: '1px solid #000', padding: '1px 3px' }}></td><td style={{ border: '1px solid #000', padding: '1px 3px' }}></td><td style={{ textAlign: 'center', border: '1px solid #000', padding: '1px 3px' }}>{calc.scoresByExaminer[examIdx].nilaiAkhir > 0 ? calc.scoresByExaminer[examIdx].nilaiAkhir.toFixed(2) : ''}</td></tr>
+                  <tr style={{ fontWeight: 'bold' }}><td colSpan={2} style={{ border: '1px solid #000', padding: '1px 3px', textAlign: 'center' }}>HURUF MUTU</td><td style={{ border: '1px solid #000', padding: '1px 3px' }}></td><td style={{ border: '1px solid #000', padding: '1px 3px' }}></td><td style={{ textAlign: 'center', border: '1px solid #000', padding: '1px 3px' }}>{calc.scoresByExaminer[examIdx].nilaiAkhir > 0 ? calcGrade(calc.scoresByExaminer[examIdx].nilaiAkhir) : ''}</td></tr>
+                </tbody>
+              </table>
+              <div style={{ fontSize: 10, fontStyle: 'italic', marginTop: 3 }}>*Bila presentasi skripsi dilakukan menggunakan Bahasa Inggris, nilai akhir ditambahkan 2—6 poin.</div>
+              <div style={{ marginTop: 8 }}>
+                <p>Hari, Tanggal: {session.hari_tanggal}</p>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 20 }}>
+                  <div style={{ textAlign: 'center', width: 160 }}>
+                    {session[`ttd_penguji${examIdx + 1}` as keyof Session] ? <img src={session[`ttd_penguji${examIdx + 1}` as keyof Session] as string} alt="TTD" style={{ maxHeight: 38, maxWidth: 80, margin: '0 auto', display: 'block', objectFit: 'contain' }} /> : <div style={{ height: 38 }}></div>}
+                    <p style={{ margin: '2px 0' }}>Tanda Tangan</p>
+                    <div style={{ height: 6 }}></div>
+                    <p style={{ borderTop: '1px solid #000', paddingTop: 2, fontWeight: 'bold', fontSize: 12 }}>{labels[examIdx]}</p>
+                    <p style={{ fontSize: 12, margin: '1px 0' }}>{namaPenguji[examIdx]}</p>
+                    <p style={{ fontSize: 10, margin: 0 }}>NIP. {session[`nip_penguji${examIdx + 1}` as keyof Session] as string || ''}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ]
+        })}
+
+        {/* P8: REKAPITULASI NILAI */}
+        <div className="pdf-page" style={{ width: 595, height: 842, boxSizing: 'border-box', padding: '15px 20px', background: '#fff', overflow: 'hidden', fontFamily: "'Times New Roman', Georgia, serif", fontSize: 12, lineHeight: 1.3 }}>
+          <div style={{ textAlign: 'center', borderBottom: '2px solid #000', paddingBottom: 4, marginBottom: 8 }}>
+            <img src="/kop-surat-resize.png" style={{ display: 'block', margin: '0 auto 4px', maxWidth: '100%', maxHeight: 52, width: 'auto', height: 'auto' }} />
+            <div style={{ fontWeight: 'bold', textAlign: 'center', textTransform: 'uppercase', fontSize: 14 }}>Rekapitulasi Nilai Sidang Skripsi</div>
+            <div style={{ fontSize: 12, textAlign: 'center' }}>PROGRAM STUDI KESEHATAN MASYARAKAT PROGRAM SARJANA</div>
+            <div style={{ fontSize: 12, textAlign: 'center' }}>FAKULTAS ILMU KESEHATAN UPN &ldquo;VETERAN&rdquo; JAKARTA</div>
+            <div style={{ fontWeight: 'bold', fontSize: 12, textAlign: 'center' }}>SEMESTER {session.semester} T.A. {session.ta}</div>
+          </div>
+          <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 4 }}>
+            <tbody>
+              <tr><td style={{ width: 130 }}>Dosen Pembimbing</td><td style={{ width: 14 }}>:</td><td>{session.pembimbing}</td><td style={{ width: 80 }}>Peminatan</td><td style={{ width: 14 }}>:</td><td>{session.peminatan}</td></tr>
+              <tr><td>Hari, Tanggal</td><td>:</td><td>{session.hari_tanggal}</td><td>Waktu</td><td>:</td><td>{session.waktu}</td><td>Tempat</td><td>:</td><td>{session.tempat}</td></tr>
+              <tr><td>Judul Skripsi</td><td>:</td><td colSpan={7} style={{ fontSize: 11 }}>{session.judul_skripsi}</td></tr>
+            </tbody>
+          </table>
+          <table className="template-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, marginTop: 6 }}>
+            <thead><tr><th style={{ width: 22, border: '1px solid #000', padding: '1px 3px', textAlign: 'center' }}>NO</th><th style={{ border: '1px solid #000', padding: '1px 3px' }}>NAMA</th><th style={{ width: 60, border: '1px solid #000', padding: '1px 3px' }}>NIM</th><th style={{ width: 52, border: '1px solid #000', padding: '1px 2px', textAlign: 'center', fontSize: 11 }}>NILAI<br/>PENGUJI I</th><th style={{ width: 52, border: '1px solid #000', padding: '1px 2px', textAlign: 'center', fontSize: 11 }}>NILAI<br/>PENGUJI II</th><th style={{ width: 52, border: '1px solid #000', padding: '1px 2px', textAlign: 'center', fontSize: 11 }}>NILAI<br/>PENGUJI III</th><th style={{ width: 60, border: '1px solid #000', padding: '1px 2px', textAlign: 'center', fontSize: 11 }}>RERATA<br/>NILAI</th></tr></thead>
+            <tbody>
+              <tr><td style={{ textAlign: 'center', border: '1px solid #000', padding: '1px 3px' }}>1.</td><td style={{ border: '1px solid #000', padding: '1px 3px' }}>{session.nama}</td><td style={{ border: '1px solid #000', padding: '1px 3px' }}>{session.nim}</td><td style={{ textAlign: 'center', border: '1px solid #000', padding: '1px 3px', fontSize: 11 }}>{calc.scoresByExaminer[0].nilaiAkhir > 0 ? calc.scoresByExaminer[0].nilaiAkhir.toFixed(2) : ''}</td><td style={{ textAlign: 'center', border: '1px solid #000', padding: '1px 3px', fontSize: 11 }}>{calc.scoresByExaminer[1].nilaiAkhir > 0 ? calc.scoresByExaminer[1].nilaiAkhir.toFixed(2) : ''}</td><td style={{ textAlign: 'center', border: '1px solid #000', padding: '1px 3px', fontSize: 11 }}>{calc.scoresByExaminer[2].nilaiAkhir > 0 ? calc.scoresByExaminer[2].nilaiAkhir.toFixed(2) : ''}</td><td style={{ textAlign: 'center', border: '1px solid #000', padding: '1px 3px', fontWeight: 'bold', fontSize: 11 }}>{calc.rataRata > 0 ? calc.rataRata.toFixed(2) : ''}</td></tr>
+            </tbody>
+          </table>
+          <div style={{ marginTop: 20 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              {[
+                { label: 'Ketua Penguji', nama: session.penguji1, nip: session.nip_penguji1, ttd: session.ttd_penguji1 },
+                { label: 'Anggota Penguji I', nama: session.penguji2, nip: session.nip_penguji2, ttd: session.ttd_penguji2 },
+                { label: 'Anggota Penguji II', nama: session.penguji3, nip: session.nip_penguji3, ttd: session.ttd_penguji3 },
+              ].map((p, i) => (
+                <div key={i} style={{ textAlign: 'center', width: 150 }}>
+                  <p style={{ fontSize: 12, margin: '1px 0' }}>{p.label}</p>
+                  {p.ttd ? <img src={p.ttd} alt="TTD" style={{ maxHeight: 38, maxWidth: 80, margin: '0 auto', display: 'block', objectFit: 'contain' }} /> : <div style={{ height: 38 }}></div>}
+                  <div style={{ height: 8 }}></div>
+                  <p style={{ borderTop: '1px solid #000', paddingTop: 2, fontWeight: 'bold', fontSize: 12, margin: 0 }}>{p.nama || '....................'}</p>
+                  <p style={{ fontSize: 10, margin: 0 }}>NIP. {p.nip || '..........................'}</p>
+                </div>
+              ))}
+            </div>
+            <p style={{ textAlign: 'center', fontSize: 12, marginTop: 10 }}>Jakarta, {session.tanggal_ba || '______________'}</p>
+          </div>
+        </div>
+
+      </div>
+
       <div ref={previewRef} className="print-area bg-white p-8 md:p-12 print:p-0 space-y-10 print:space-y-0" style={{ fontFamily: "'Times New Roman', Georgia, serif" }}>
         {/* ===== LAPORAN SIDANG SKRIPSI (BA) ===== */}
         <div className="page-break">
@@ -1280,39 +1432,39 @@ function PreviewAll({ session, onUpdate }: { session: Session; onUpdate: (s: Ses
           </table>
 
           {session.catatan && (
-            <div className="mt-2">
+            <div className="mt-4">
               <p className="font-bold">Hasil Pelaksanaan :</p>
               <p className="whitespace-pre-wrap">{session.catatan}</p>
             </div>
           )}
 
-          <p className="mt-2">
+          <p className="mt-4">
             Dinyatakan yang bersangkutan:<br />
             <span className="ml-4">{session.decision === 'lulus_perbaikan' ? '✓' : '○'} Lulus</span><br />
             <span className="ml-4">{session.decision === 'tidak_lulus_ulang' ? '✓' : '○'} Tidak Lulus</span>
           </p>
 
-          <p className="italic text-sm text-justify mt-2">
+          <p className="italic text-sm text-justify mt-4">
             Demikian laporan sidang ini dibuat sebagai laporan selama sidang berlangsung untuk diketahui dan dipergunakan sebagaimana mestinya.
           </p>
 
-          <div className="mt-3">
+          <div className="mt-6">
             <h3 className="font-bold text-center">TIM PENGUJI</h3>
             <table className="template-table mt-1">
               <thead><tr><th className="w-12">NO</th><th>NAMA PENGUJI</th><th>JABATAN</th><th className="w-24">TANDA TANGAN</th></tr></thead>
               <tbody>
-                <tr><td className="text-center">1.</td><td>{session.penguji1 || '______________'}</td><td>Ketua Penguji</td><td className="text-center align-middle">{session.ttd_penguji1 ? <img src={session.ttd_penguji1} alt="TTD" className="max-h-10 max-w-20 mx-auto object-contain" /> : ''}</td></tr>
-                <tr><td className="text-center">2.</td><td>{session.penguji2 || '______________'}</td><td>Anggota Penguji I</td><td className="text-center align-middle">{session.ttd_penguji2 ? <img src={session.ttd_penguji2} alt="TTD" className="max-h-10 max-w-20 mx-auto object-contain" /> : ''}</td></tr>
-                <tr><td className="text-center">3.</td><td>{session.penguji3 || '______________'}</td><td>Anggota Penguji II</td><td className="text-center align-middle">{session.ttd_penguji3 ? <img src={session.ttd_penguji3} alt="TTD" className="max-h-10 max-w-20 mx-auto object-contain" /> : ''}</td></tr>
+                <tr><td className="text-center">1.</td><td>{session.penguji1 || '______________'}</td><td>Ketua Penguji</td><td className="text-center align-middle">{session.ttd_penguji1 ? <img src={session.ttd_penguji1} alt="TTD" className="max-h-12 max-w-24 mx-auto object-contain" /> : ''}</td></tr>
+                <tr><td className="text-center">2.</td><td>{session.penguji2 || '______________'}</td><td>Anggota Penguji I</td><td className="text-center align-middle">{session.ttd_penguji2 ? <img src={session.ttd_penguji2} alt="TTD" className="max-h-12 max-w-24 mx-auto object-contain" /> : ''}</td></tr>
+                <tr><td className="text-center">3.</td><td>{session.penguji3 || '______________'}</td><td>Anggota Penguji II</td><td className="text-center align-middle">{session.ttd_penguji3 ? <img src={session.ttd_penguji3} alt="TTD" className="max-h-12 max-w-24 mx-auto object-contain" /> : ''}</td></tr>
               </tbody>
             </table>
           </div>
 
-          <div className="text-right mt-4 avoid-break">
+          <div className="text-right mt-10 avoid-break">
             <p>Jakarta, {session.tanggal_ba || '______________'}</p>
-            <p className="mt-2">Koordinator Program Studi Kesehatan Masyarakat</p>
+            <p className="mt-4">Koordinator Program Studi Kesehatan Masyarakat</p>
             <p>Program Sarjana</p>
-            {session.ttd_koordinator ? <img src={session.ttd_koordinator} alt="TTD Koordinator" className="max-h-12 max-w-28 ml-auto my-1 object-contain" /> : <div className="h-12"></div>}
+            {session.ttd_koordinator ? <img src={session.ttd_koordinator} alt="TTD Koordinator" className="max-h-16 max-w-32 ml-auto my-2 object-contain" /> : <div className="h-16"></div>}
             <p className="font-bold">{session.koordinator}</p>
             <p className="text-sm">NIP. {session.nip_koordinator}</p>
           </div>
@@ -1395,15 +1547,13 @@ function PreviewAll({ session, onUpdate }: { session: Session; onUpdate: (s: Ses
           </table>
         </div>
 
-        {/* ===== FORM PENILAIAN (3 examiners, 2 pages each) ===== */}
+        {/* ===== FORM PENILAIAN (3 examiners, 1 page each, font 12pt) ===== */}
         {[0, 1, 2].map((examIdx) => {
           const scores = session.skor_penguji?.[examIdx] || [null,null,null,null,null,null,null,null,null,null]
           const labels = ['Penguji I/Ketua Penguji', 'Penguji II/Anggota Penguji', 'Penguji III/Anggota Penguji']
           const namaPenguji = [session.penguji1, session.penguji2, session.penguji3]
-          const half = Math.ceil(RUBRIC_CRITERIA.length / 2)
-          
-          return [
-            <div key={`${examIdx}-p1`} className="page-break">
+          return (
+            <div key={examIdx} className="page-break">
               <div className="text-center border-b-2 border-black pb-4">
                 <img src="/kop-surat-resize.png" alt="KOP UPN Veteran Jakarta" style={{ display: 'block', margin: '0 auto 0.5rem', maxWidth: '100%', maxHeight: '100px', width: 'auto', height: 'auto' }} />
                 <h1 className="text-xl font-bold text-center uppercase">Formulir Penilaian Sidang Skripsi</h1>
@@ -1424,17 +1574,17 @@ function PreviewAll({ session, onUpdate }: { session: Session; onUpdate: (s: Ses
 
               <table className="template-table text-base mt-3">
                 <thead>
-                  <tr><th className="w-8">NO</th><th>PARAMETER PENILAIAN</th><th className="w-24">SKOR (1—4)</th><th className="w-14">BOBOT</th><th className="w-24">SKOR × BOBOT</th></tr>
+                  <tr><th className="w-8">NO</th><th className="w-64">PARAMETER PENILAIAN</th><th className="w-24">SKOR (1—4)</th><th className="w-14">BOBOT</th><th className="w-24">SKOR × BOBOT</th></tr>
                 </thead>
                 <tbody>
-                  {RUBRIC_CRITERIA.slice(0, half).map((c) => {
+                  {RUBRIC_CRITERIA.map((c) => {
                     const skorXBobot = scores[c.no - 1] !== null ? scores[c.no - 1]! * c.bobot : null
                     return (
                       <tr key={c.no} className="avoid-break">
                         <td className="text-center align-top">{c.no}.</td>
-                        <td className="text-xs leading-snug py-1">
+                        <td className="leading-snug py-1.5">
                           <div className="font-semibold">{c.label}</div>
-                          <div className="whitespace-pre-line text-[10px] text-gray-700">{c.detail}</div>
+                          <div className="text-[11px] text-gray-700 whitespace-pre-line">{c.detail}</div>
                         </td>
                         <td className="text-center">{scores[c.no - 1] ?? ''}</td>
                         <td className="text-center">{c.bobot}</td>
@@ -1443,57 +1593,21 @@ function PreviewAll({ session, onUpdate }: { session: Session; onUpdate: (s: Ses
                     )
                   })}
                 </tbody>
-              </table>
-            </div>,
-            
-            <div key={`${examIdx}-p2`} className="page-break">
-              <div className="text-center border-b-2 border-black pb-4">
-                <img src="/kop-surat-resize.png" alt="KOP UPN Veteran Jakarta" style={{ display: 'block', margin: '0 auto 0.5rem', maxWidth: '100%', maxHeight: '100px', width: 'auto', height: 'auto' }} />
-                <h1 className="text-xl font-bold text-center uppercase">Formulir Penilaian Sidang Skripsi</h1>
-                <p className="text-sm text-center">PROGRAM STUDI KESEHATAN MASYARAKAT PROGRAM SARJANA</p>
-                <p className="text-sm text-center">FAKULTAS ILMU KESEHATAN UPN &ldquo;VETERAN&rdquo; JAKARTA</p>
-                <p className="text-sm text-center font-bold">SEMESTER {session.semester} T.A. {session.ta}</p>
-              </div>
-
-              <table className="template-table text-base mt-3">
-                <thead>
-                  <tr><th className="w-8">NO</th><th>PARAMETER PENILAIAN</th><th className="w-24">SKOR (1—4)</th><th className="w-14">BOBOT</th><th className="w-24">SKOR × BOBOT</th></tr>
-                </thead>
-                <tbody>
-                  {RUBRIC_CRITERIA.slice(half).map((c) => {
-                    const skorXBobot = scores[c.no - 1] !== null ? scores[c.no - 1]! * c.bobot : null
-                    return (
-                      <tr key={c.no} className="avoid-break">
-                        <td className="text-center align-top">{c.no}.</td>
-                        <td className="text-xs leading-snug py-1">
-                          <div className="font-semibold">{c.label}</div>
-                          <div className="whitespace-pre-line text-[10px] text-gray-700">{c.detail}</div>
-                        </td>
-                        <td className="text-center">{scores[c.no - 1] ?? ''}</td>
-                        <td className="text-center">{c.bobot}</td>
-                        <td className="text-center font-bold">{skorXBobot ?? ''}</td>
-                      </tr>
-                    )
-                  })}
-                  <tr className="font-bold border-t-2 border-black">
-                    <td colSpan={3} className="text-center py-1">TOTAL SKOR × BOBOT</td>
-                    <td className="text-center"></td>
+                <tfoot>
+                  <tr className="font-bold">
+                    <td colSpan={4} className="text-center">TOTAL SKOR × BOBOT</td>
                     <td className="text-center">{calc.scoresByExaminer[examIdx].totalSkorXBobot}</td>
                   </tr>
                   <tr className="font-bold">
-                    <td colSpan={3} className="text-center py-1">NILAI AKHIR [/400 × 100]</td>
-                    <td className="text-center"></td>
+                    <td colSpan={4} className="text-center">NILAI AKHIR [/400 × 100]</td>
                     <td className="text-center">{calc.scoresByExaminer[examIdx].nilaiAkhir > 0 ? calc.scoresByExaminer[examIdx].nilaiAkhir.toFixed(2) : ''}</td>
                   </tr>
                   <tr className="font-bold">
-                    <td colSpan={3} className="text-center py-1">HURUF MUTU</td>
-                    <td className="text-center"></td>
+                    <td colSpan={4} className="text-center">HURUF MUTU</td>
                     <td className="text-center">{calc.scoresByExaminer[examIdx].nilaiAkhir > 0 ? calcGrade(calc.scoresByExaminer[examIdx].nilaiAkhir) : ''}</td>
                   </tr>
-                </tbody>
+                </tfoot>
               </table>
-
-              <p className="text-xs mt-1 italic">*Bila presentasi skripsi dilakukan menggunakan Bahasa Inggris, nilai akhir ditambahkan 2—6 poin.</p>
 
               <div className="mt-4 avoid-break">
                 <p>Hari, Tanggal: {session.hari_tanggal}</p>
@@ -1511,7 +1625,7 @@ function PreviewAll({ session, onUpdate }: { session: Session; onUpdate: (s: Ses
                 </div>
               </div>
             </div>
-          ]
+          )
         })}
 
         {/* ===== REKAPITULASI NILAI ===== */}
