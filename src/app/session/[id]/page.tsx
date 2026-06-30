@@ -1121,6 +1121,30 @@ function PreviewAll({ session, onUpdate }: { session: Session; onUpdate: (s: Ses
           windowHeight: page.offsetHeight,
           scrollX: 0,
           scrollY: 0,
+          onclone: (clonedDoc) => {
+            const style = clonedDoc.createElement('style')
+            style.textContent = `
+              .pdf-page table { border-collapse: collapse !important; table-layout: fixed !important; }
+              .pdf-page th[style*="border"], .pdf-page td[style*="border"], .pdf-page .template-table th, .pdf-page .template-table td {
+                box-sizing: border-box !important; line-height: 1.18 !important; vertical-align: middle !important;
+                padding-top: 4px !important; padding-bottom: 4px !important; padding-left: 4px !important; padding-right: 4px !important;
+                overflow: visible !important; overflow-wrap: anywhere !important; word-break: normal !important; white-space: normal !important;
+              }
+              .pdf-page th[style*="border"], .pdf-page .template-table th {
+                line-height: 1.08 !important; padding-top: 5px !important; padding-bottom: 5px !important;
+                text-align: center !important; vertical-align: middle !important;
+              }
+              .pdf-page td[style*="border"] *, .pdf-page th[style*="border"] *, .pdf-page .template-table td *, .pdf-page .template-table th * {
+                line-height: inherit !important; max-height: none !important;
+              }
+              .pdf-page input, .pdf-page textarea, .pdf-page select {
+                margin: 0 !important; padding: 0 !important; height: auto !important; min-height: 16px !important;
+                line-height: 1.15 !important; font: inherit !important; background: transparent !important; color: black !important; vertical-align: middle !important;
+              }
+              .pdf-page img { vertical-align: middle !important; }
+            `
+            clonedDoc.head.appendChild(style)
+          },
         })
 
         const imgData = canvas.toDataURL('image/jpeg', JPEG_QUALITY)
