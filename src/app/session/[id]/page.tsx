@@ -1070,74 +1070,7 @@ function PreviewAll({ session, onUpdate }: { session: Session; onUpdate: (s: Ses
   const [pdfStatus, setPdfStatus] = useState<'idle' | 'preparing' | 'saved' | 'error'>('idle')
 
   const handlePrint = () => {
-    const pdfStage = document.querySelector('.pdf-stage') as HTMLElement | null
-    if (!pdfStage) { alert('Template PDF tidak ditemukan'); return }
-
-    const printWindow = window.open('', '_blank')
-    if (!printWindow) { alert('Popup diblokir browser. Izinkan popup untuk membuka preview print.'); return }
-
-    const clonedStage = pdfStage.cloneNode(true) as HTMLElement
-    clonedStage.removeAttribute('style')
-
-    const sourceFields = pdfStage.querySelectorAll<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>('input, textarea, select')
-    const clonedFields = clonedStage.querySelectorAll<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>('input, textarea, select')
-    sourceFields.forEach((source, index) => {
-      const clone = clonedFields[index]
-      if (!clone) return
-      if (source instanceof HTMLInputElement) {
-        if (source.type === 'checkbox' || source.type === 'radio') {
-          source.checked ? clone.setAttribute('checked', 'checked') : clone.removeAttribute('checked')
-        } else {
-          clone.setAttribute('value', source.value)
-        }
-      }
-      if (source instanceof HTMLTextAreaElement) { clone.textContent = source.value }
-      if (source instanceof HTMLSelectElement && clone instanceof HTMLSelectElement) {
-        Array.from(clone.options).forEach((opt, oi) => {
-          oi === source.selectedIndex ? opt.setAttribute('selected', 'selected') : opt.removeAttribute('selected')
-        })
-      }
-    })
-
-    const safeName = (session.nama || 'unknown').replace(/[^a-zA-Z0-9]/g, '_')
-    const fileTitle = `BA_Sidang_${safeName}_${session.nim || 'unknown'}`
-
-    printWindow.document.open()
-    printWindow.document.write(`<!DOCTYPE html>
-<html><head>
-<title>${fileTitle}</title>
-<base href="${window.location.origin}/" />
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<style>
-*{box-sizing:border-box}
-html,body{margin:0;padding:0;background:#e5e7eb;font-family:"Times New Roman",Times,serif}
-.print-toolbar{position:sticky;top:0;z-index:9999;display:flex;justify-content:center;align-items:center;gap:12px;padding:12px;background:#111827;color:white;font-family:Arial,sans-serif;box-shadow:0 2px 8px rgba(0,0,0,0.2)}
-.print-toolbar button{border:0;border-radius:6px;padding:8px 14px;cursor:pointer;font-size:14px;font-weight:600}
-.print-toolbar .primary{background:#166534;color:white}
-.print-toolbar .secondary{background:#374151;color:white}
-.print-note{font-size:12px;opacity:0.8;font-family:Arial,sans-serif}
-.no-print,.sync-indicator{display:none !important}
-.pdf-stage{position:static !important;top:auto !important;left:auto !important;z-index:auto !important;width:auto !important;margin:24px auto;background:transparent !important}
-.pdf-page{background:white !important;margin:0 auto 24px auto;box-shadow:0 4px 16px rgba(0,0,0,0.16);page-break-after:always;break-after:page}
-input,textarea,select{color:black !important;background:transparent !important;font-family:inherit !important}
-img{max-width:100%}
-@page{size:A4 portrait;margin:0}
-@media print{html,body{background:white !important;margin:0 !important;padding:0 !important}
-.print-toolbar{display:none !important}
-.pdf-stage{margin:0 !important;padding:0 !important}
-.pdf-page{margin:0 !important;box-shadow:none !important;page-break-after:always;break-after:page}
-.pdf-page:last-child{page-break-after:auto;break-after:auto}}
-</style></head><body>
-<div class="print-toolbar">
-<button class="primary" onclick="window.print()">⬇ Print / Save as PDF</button>
-<button class="secondary" onclick="window.close()">Tutup</button>
-<span class="print-note">Pilih "Save as PDF" di dialog print browser untuk simpan ke komputer.</span>
-</div>
-${clonedStage.outerHTML}
-</body></html>`)
-    printWindow.document.close()
-    printWindow.focus()
+    window.print()
   }
 
   const handleDownloadPDF = async () => {
@@ -1191,43 +1124,55 @@ ${clonedStage.outerHTML}
           onclone: (clonedDoc) => {
             const style = clonedDoc.createElement('style')
             style.textContent = `
-              .pdf-page * { box-sizing: border-box !important; }
-              .pdf-page table { border-collapse: collapse !important; table-layout: fixed !important; }
-              .pdf-page th[style*="border"], .pdf-page td[style*="border"], .pdf-page .template-table th, .pdf-page .template-table td {
-                box-sizing: border-box !important; line-height: 1.18 !important; vertical-align: middle !important;
-                padding-top: 4px !important; padding-bottom: 4px !important; padding-left: 4px !important; padding-right: 4px !important;
-                overflow: visible !important; overflow-wrap: anywhere !important; word-break: normal !important; white-space: normal !important;
-              }
-              .pdf-page th[style*="border"], .pdf-page .template-table th {
-                line-height: 1.08 !important; padding-top: 5px !important; padding-bottom: 5px !important;
-                text-align: center !important; vertical-align: middle !important;
-              }
-              .pdf-page td[style*="border"] *, .pdf-page th[style*="border"] *, .pdf-page .template-table td *, .pdf-page .template-table th * {
-                line-height: inherit !important; max-height: none !important;
-              }
-              .pdf-page input, .pdf-page textarea, .pdf-page select {
-                margin: 0 !important; padding: 0 !important; height: auto !important; min-height: 16px !important;
-                line-height: 1.15 !important; font: inherit !important; background: transparent !important; color: black !important; vertical-align: middle !important;
-              }
+              .pdf-stage, .pdf-stage * { box-sizing: border-box !important; }
+              .pdf-page { color: #000 !important; overflow: hidden !important; }
+              .pdf-page p { margin: 0; }
               .pdf-page img { vertical-align: middle !important; }
-              .pdf-section-title { text-align: center !important; font-weight: bold !important; line-height: 1.1 !important; margin: 10px 0 5px 0 !important; }
-              .pdf-table th, .pdf-table td { border: 1px solid #000 !important; }
-              .pdf-table--attendance th { font-size: 10.5px !important; line-height: 1.05 !important; padding: 5px 4px !important; height: 30px !important; }
-              .pdf-table--attendance td { font-size: 11px !important; line-height: 1.12 !important; padding: 5px 5px !important; height: 28px !important; }
-              .pdf-table--attendance th:nth-child(1), .pdf-table--attendance td:nth-child(1) { width: 34px !important; text-align: center !important; white-space: nowrap !important; }
-              .pdf-table--attendance th:nth-child(3), .pdf-table--attendance td:nth-child(3) { width: 92px !important; text-align: center !important; white-space: nowrap !important; }
-              .pdf-table--attendance th:nth-child(4), .pdf-table--attendance td:nth-child(4) { width: 90px !important; text-align: center !important; }
-              .pdf-table--attendance th:nth-child(5), .pdf-table--attendance td:nth-child(5) { width: 38px !important; text-align: center !important; white-space: nowrap !important; }
-              .pdf-table--rubric th { font-size: 10.5px !important; line-height: 1.05 !important; padding: 4px 3px !important; }
-              .pdf-table--rubric td { font-size: 10px !important; line-height: 1.05 !important; padding: 3px 4px !important; vertical-align: top !important; }
-              .pdf-table--rubric th:nth-child(1), .pdf-table--rubric td:nth-child(1) { width: 28px !important; text-align: center !important; }
-              .pdf-table--rubric th:nth-child(3), .pdf-table--rubric td:nth-child(3) { width: 48px !important; text-align: center !important; vertical-align: middle !important; }
-              .pdf-table--rubric th:nth-child(4), .pdf-table--rubric td:nth-child(4) { width: 36px !important; text-align: center !important; vertical-align: middle !important; }
-              .pdf-table--rubric th:nth-child(5), .pdf-table--rubric td:nth-child(5) { width: 62px !important; text-align: center !important; vertical-align: middle !important; font-weight: bold !important; }
-              .pdf-criterion-title { font-size: 10.5px !important; line-height: 1.05 !important; font-weight: bold !important; }
-              .pdf-criterion-detail { font-size: 9px !important; line-height: 1.05 !important; color: #333 !important; white-space: pre-line !important; }
-              .pdf-table--rekap th { font-size: 10px !important; line-height: 1.05 !important; padding: 5px 3px !important; }
-              .pdf-table--rekap td { font-size: 10.5px !important; line-height: 1.1 !important; padding: 5px 4px !important; height: 30px !important; }
+              .pdf-page > table:not(.pdf-table) { width: 100% !important; border-collapse: collapse !important; table-layout: fixed !important; margin: 4px 0 8px 0 !important; }
+              .pdf-page > table:not(.pdf-table) td { padding: 0 0 2px 0 !important; line-height: 1.18 !important; vertical-align: top !important; }
+              .pdf-table { border-collapse: collapse !important; table-layout: fixed !important; margin-left: auto !important; margin-right: auto !important; border-spacing: 0 !important; }
+              .pdf-table th, .pdf-table td { border: 1px solid #000 !important; box-sizing: border-box !important; overflow: hidden !important; word-break: normal !important; overflow-wrap: break-word !important; white-space: normal !important; }
+              .pdf-table th { text-align: center !important; vertical-align: middle !important; font-weight: bold !important; }
+              .pdf-section-title { text-align: center !important; font-weight: bold !important; line-height: 1.1 !important; margin: 12px 0 5px 0 !important; }
+              .pdf-table--attendance th { font-size: 10.5px !important; line-height: 1.08 !important; padding: 5px 4px !important; }
+              .pdf-table--attendance td { font-size: 11px !important; line-height: 1.12 !important; padding: 5px 5px !important; height: 31px !important; vertical-align: middle !important; }
+              .pdf-table--penguji { width: 610px !important; }
+              .pdf-table--penguji th:nth-child(1), .pdf-table--penguji td:nth-child(1) { width: 34px !important; text-align: center !important; }
+              .pdf-table--penguji th:nth-child(2), .pdf-table--penguji td:nth-child(2) { width: 110px !important; text-align: center !important; }
+              .pdf-table--penguji th:nth-child(3), .pdf-table--penguji td:nth-child(3) { width: 225px !important; text-align: left !important; }
+              .pdf-table--penguji th:nth-child(4), .pdf-table--penguji td:nth-child(4) { width: 125px !important; text-align: center !important; }
+              .pdf-table--penguji th:nth-child(5), .pdf-table--penguji td:nth-child(5) { width: 116px !important; text-align: center !important; }
+              .pdf-table--peserta { width: 430px !important; }
+              .pdf-table--audiens { width: 470px !important; }
+              .pdf-table--peserta th:nth-child(1), .pdf-table--peserta td:nth-child(1), .pdf-table--audiens th:nth-child(1), .pdf-table--audiens td:nth-child(1) { width: 34px !important; text-align: center !important; }
+              .pdf-table--peserta th:nth-child(2), .pdf-table--peserta td:nth-child(2) { width: 150px !important; }
+              .pdf-table--audiens th:nth-child(2), .pdf-table--audiens td:nth-child(2) { width: 180px !important; }
+              .pdf-table--peserta th:nth-child(3), .pdf-table--peserta td:nth-child(3), .pdf-table--audiens th:nth-child(3), .pdf-table--audiens td:nth-child(3) { width: 100px !important; text-align: center !important; }
+              .pdf-table--peserta th:nth-child(4), .pdf-table--peserta td:nth-child(4), .pdf-table--audiens th:nth-child(4), .pdf-table--audiens td:nth-child(4) { width: 96px !important; text-align: center !important; }
+              .pdf-table--peserta th:nth-child(5), .pdf-table--peserta td:nth-child(5), .pdf-table--audiens th:nth-child(5), .pdf-table--audiens td:nth-child(5) { width: 50px !important; text-align: center !important; }
+              .pdf-table--rubric { width: 100% !important; }
+              .pdf-table--rubric th { font-size: 10px !important; line-height: 1.08 !important; padding: 5px 3px !important; }
+              .pdf-table--rubric td { font-size: 9.5px !important; line-height: 1.08 !important; padding: 4px 5px !important; vertical-align: top !important; }
+              .pdf-table--rubric th:nth-child(1), .pdf-table--rubric td:nth-child(1) { width: 28px !important; text-align: center !important; vertical-align: middle !important; }
+              .pdf-table--rubric th:nth-child(3), .pdf-table--rubric td:nth-child(3) { width: 52px !important; text-align: center !important; vertical-align: middle !important; }
+              .pdf-table--rubric th:nth-child(4), .pdf-table--rubric td:nth-child(4) { width: 40px !important; text-align: center !important; vertical-align: middle !important; }
+              .pdf-table--rubric th:nth-child(5), .pdf-table--rubric td:nth-child(5) { width: 70px !important; text-align: center !important; vertical-align: middle !important; font-weight: bold !important; }
+              .pdf-criterion-title { display: block !important; font-size: 10px !important; line-height: 1.08 !important; font-weight: bold !important; margin: 0 0 2px 0 !important; }
+              .pdf-criterion-detail { display: block !important; font-size: 8.8px !important; line-height: 1.08 !important; color: #111 !important; white-space: pre-line !important; }
+              .pdf-table--rubric-p1 tbody tr:nth-child(1) { height: 76px !important; }
+              .pdf-table--rubric-p1 tbody tr:nth-child(2) { height: 58px !important; }
+              .pdf-table--rubric-p1 tbody tr:nth-child(3) { height: 58px !important; }
+              .pdf-table--rubric-p1 tbody tr:nth-child(4) { height: 70px !important; }
+              .pdf-table--rubric-p1 tbody tr:nth-child(5) { height: 118px !important; }
+              .pdf-table--rubric-p2 tbody tr:nth-child(1) { height: 78px !important; }
+              .pdf-table--rubric-p2 tbody tr:nth-child(2) { height: 58px !important; }
+              .pdf-table--rubric-p2 tbody tr:nth-child(3) { height: 82px !important; }
+              .pdf-table--rubric-p2 tbody tr:nth-child(4) { height: 92px !important; }
+              .pdf-table--rubric-p2 tbody tr:nth-child(5) { height: 100px !important; }
+              .pdf-table--rubric-p2 tbody tr:nth-child(n+6) { height: 24px !important; }
+              .pdf-table--rekap { width: 100% !important; }
+              .pdf-table--rekap th { font-size: 10px !important; line-height: 1.08 !important; padding: 5px 3px !important; }
+              .pdf-table--rekap td { font-size: 10.5px !important; line-height: 1.1 !important; padding: 5px 4px !important; height: 30px !important; vertical-align: middle !important; }
               .pdf-table--rekap th:nth-child(1), .pdf-table--rekap td:nth-child(1) { width: 34px !important; text-align: center !important; white-space: nowrap !important; }
               .pdf-table--rekap th:nth-child(3), .pdf-table--rekap td:nth-child(3) { width: 82px !important; text-align: center !important; white-space: nowrap !important; }
               .pdf-table--rekap th:nth-child(4), .pdf-table--rekap th:nth-child(5), .pdf-table--rekap th:nth-child(6), .pdf-table--rekap td:nth-child(4), .pdf-table--rekap td:nth-child(5), .pdf-table--rekap td:nth-child(6) { width: 58px !important; text-align: center !important; }
@@ -1337,7 +1282,7 @@ ${clonedStage.outerHTML}
         <span className="text-xs text-gray-500 self-center ml-2 font-sans">(PDF sesuai dengan template asli)</span>
       </div>
 
-      <div className="pdf-stage" style={{ position: 'fixed', top: 0, left: -99999, width: 794, zIndex: -1, fontFamily: "'Times New Roman', Georgia, serif", background: '#fff' }}>
+      <div className="pdf-stage" style={{ position: 'absolute', top: -100000, left: 0, width: 794, zIndex: -1, pointerEvents: 'none', opacity: 1, fontFamily: "'Times New Roman', Georgia, serif", background: '#fff' }}>
 
         {/* P1: BA */}
         <div className="pdf-page" style={{ width: 794, height: 1123, boxSizing: 'border-box', padding: '42px 46px 54px 46px', background: '#fff', overflow: 'hidden', fontFamily: "'Times New Roman', Georgia, serif", fontSize: 14, lineHeight: 1.28 }}>
@@ -1385,7 +1330,7 @@ ${clonedStage.outerHTML}
             <tbody><tr><td style={{ width: 110 }}>Nama Mahasiswa</td><td style={{ width: 14 }}>:</td><td>{session.nama}</td></tr><tr><td>NIM</td><td>:</td><td>{session.nim}</td></tr><tr><td>Hari, Tanggal</td><td>:</td><td>{session.hari_tanggal}</td></tr><tr><td>Peminatan</td><td>:</td><td>{session.peminatan}</td></tr></tbody>
           </table>
           <div className="pdf-section-title">DAFTAR HADIR PENGUJI</div>
-          <table className="pdf-table pdf-table--attendance" style={{ fontSize: 12 }}>
+          <table className="pdf-table pdf-table--attendance pdf-table--penguji" style={{ fontSize: 12 }}>
             <thead><tr><th style={{ width: 22, border: '1px solid #000', padding: '1px 3px' }}>NO</th><th style={{ width: 90, border: '1px solid #000', padding: '1px 3px' }}>NIP</th><th style={{ border: '1px solid #000', padding: '1px 3px' }}>NAMA PENGUJI</th><th style={{ border: '1px solid #000', padding: '1px 3px' }}>JABATAN</th><th style={{ width: 80, border: '1px solid #000', padding: '1px 3px' }}>TANDA TANGAN</th></tr></thead>
             <tbody>
               <tr><td style={{ textAlign: 'center', border: '1px solid #000', padding: '1px 3px' }}>1.</td><td style={{ border: '1px solid #000', padding: '1px 3px' }}>{session.nip_penguji1 || ''}</td><td style={{ border: '1px solid #000', padding: '1px 3px' }}>{session.penguji1 || '______________'}</td><td style={{ border: '1px solid #000', padding: '1px 3px' }}>Ketua Penguji</td><td style={{ textAlign: 'center', border: '1px solid #000', padding: '1px 3px', verticalAlign: 'middle' }}>{session.ttd_penguji1 ? <img src={session.ttd_penguji1} alt="TTD" style={{ maxHeight: 28, maxWidth: 56, margin: '0 auto', objectFit: 'contain' }} /> : <span style={{ color: '#999' }}>-</span>}</td></tr>
@@ -1394,7 +1339,7 @@ ${clonedStage.outerHTML}
             </tbody>
           </table>
           <div className="pdf-section-title">DAFTAR HADIR PESERTA</div>
-          <table className="pdf-table pdf-table--attendance" style={{ fontSize: 12 }}>
+          <table className="pdf-table pdf-table--attendance pdf-table--peserta" style={{ fontSize: 12 }}>
             <thead><tr><th style={{ width: 22, border: '1px solid #000', padding: '1px 3px' }}>NO</th><th style={{ border: '1px solid #000', padding: '1px 3px' }}>NAMA PESERTA</th><th style={{ width: 80, border: '1px solid #000', padding: '1px 3px' }}>NIM</th><th style={{ width: 80, border: '1px solid #000', padding: '1px 3px' }}>TTD</th><th style={{ width: 28, border: '1px solid #000', padding: '1px 3px' }}>KET</th></tr></thead>
             <tbody>
               {(session.peserta_hadir || [{ nama: session.nama, nim: session.nim }]).map((p: any, i: number) => (
@@ -1403,7 +1348,7 @@ ${clonedStage.outerHTML}
             </tbody>
           </table>
           <div className="pdf-section-title">DAFTAR HADIR AUDIENS</div>
-          <table className="pdf-table pdf-table--attendance" style={{ fontSize: 12 }}>
+          <table className="pdf-table pdf-table--attendance pdf-table--audiens" style={{ fontSize: 12 }}>
             <thead><tr><th style={{ width: 22, border: '1px solid #000', padding: '1px 3px' }}>NO</th><th style={{ border: '1px solid #000', padding: '1px 3px' }}>NAMA MAHASISWA</th><th style={{ width: 80, border: '1px solid #000', padding: '1px 3px' }}>NIM</th><th style={{ width: 80, border: '1px solid #000', padding: '1px 3px' }}>TTD</th><th style={{ width: 28, border: '1px solid #000', padding: '1px 3px' }}>KET</th></tr></thead>
             <tbody>
               {(session.audience_hadir || []).map((a: any, i: number) => (
@@ -1437,7 +1382,7 @@ ${clonedStage.outerHTML}
                 </tbody>
               </table>
               <div style={{ fontSize: 12, marginTop: 3 }}><b>Judul Skripsi:</b> {session.judul_skripsi}</div>
-              <table className="pdf-table pdf-table--rubric" style={{ fontSize: 12, marginTop: 3 }}>
+              <table className="pdf-table pdf-table--rubric pdf-table--rubric-p1" style={{ fontSize: 12, marginTop: 3 }}>
                 <thead><tr><th style={{ width: 24, border: '1px solid #000', padding: '1px 3px', textAlign: 'center' }}>NO</th><th style={{ border: '1px solid #000', padding: '1px 3px' }}>PARAMETER PENILAIAN</th><th style={{ width: 52, border: '1px solid #000', padding: '1px 3px', textAlign: 'center' }}>SKOR (1–4)</th><th style={{ width: 36, border: '1px solid #000', padding: '1px 3px', textAlign: 'center' }}>BOBOT</th><th style={{ width: 70, border: '1px solid #000', padding: '1px 3px', textAlign: 'center' }}>SKOR × BOBOT</th></tr></thead>
                 <tbody>
                   {RUBRIC_CRITERIA.slice(0, firstPageCriteriaCount).map((c) => {
@@ -1455,7 +1400,7 @@ ${clonedStage.outerHTML}
                 <div style={{ fontSize: 12, textAlign: 'center' }}>FAKULTAS ILMU KESEHATAN UPN &ldquo;VETERAN&rdquo; JAKARTA</div>
                 <div style={{ fontWeight: 'bold', fontSize: 12, textAlign: 'center' }}>SEMESTER {session.semester} T.A. {session.ta}</div>
               </div>
-              <table className="pdf-table pdf-table--rubric" style={{ fontSize: 12, marginTop: 0 }}>
+              <table className="pdf-table pdf-table--rubric pdf-table--rubric-p2" style={{ fontSize: 12, marginTop: 0 }}>
                 <thead><tr><th style={{ width: 24, border: '1px solid #000', padding: '1px 3px', textAlign: 'center' }}>NO</th><th style={{ border: '1px solid #000', padding: '1px 3px' }}>PARAMETER PENILAIAN</th><th style={{ width: 52, border: '1px solid #000', padding: '1px 3px', textAlign: 'center' }}>SKOR (1–4)</th><th style={{ width: 36, border: '1px solid #000', padding: '1px 3px', textAlign: 'center' }}>BOBOT</th><th style={{ width: 70, border: '1px solid #000', padding: '1px 3px', textAlign: 'center' }}>SKOR × BOBOT</th></tr></thead>
                 <tbody>
                   {RUBRIC_CRITERIA.slice(firstPageCriteriaCount).map((c) => {
