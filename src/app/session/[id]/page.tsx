@@ -1660,9 +1660,7 @@ function PreviewAll({ session, onUpdate }: { session: Session; onUpdate: (s: Ses
                       </tr>
                     )
                   })}
-                </tbody>
-                <tfoot>
-                  <tr className="font-bold">
+                  <tr className="font-bold border-t-2 border-black">
                     <td colSpan={4} className="text-center">TOTAL SKOR × BOBOT</td>
                     <td className="text-center">{calc.scoresByExaminer[examIdx].totalSkorXBobot}</td>
                   </tr>
@@ -1674,7 +1672,7 @@ function PreviewAll({ session, onUpdate }: { session: Session; onUpdate: (s: Ses
                     <td colSpan={4} className="text-center">HURUF MUTU</td>
                     <td className="text-center">{calc.scoresByExaminer[examIdx].nilaiAkhir > 0 ? calcGrade(calc.scoresByExaminer[examIdx].nilaiAkhir) : ''}</td>
                   </tr>
-                </tfoot>
+                </tbody>
               </table>
 
               <div className="mt-4 avoid-break">
