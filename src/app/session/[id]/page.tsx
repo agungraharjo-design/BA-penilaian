@@ -1102,26 +1102,31 @@ function PreviewAll({ session, onUpdate }: { session: Session; onUpdate: (s: Ses
       })
 
       const A4_W = 210
+      const A4_H = 297
+      const RENDER_SCALE = 2
+      const JPEG_QUALITY = 0.88
 
       for (let i = 0; i < pages.length; i++) {
         const page = pages[i]
-        const PW = page.offsetWidth
-        const scale = Math.min(2, 595 / PW)
 
         const canvas = await html2canvas(page, {
-          scale,
+          scale: RENDER_SCALE,
           backgroundColor: '#ffffff',
           useCORS: true,
+          allowTaint: true,
           logging: false,
-          width: PW,
+          width: page.offsetWidth,
           height: page.offsetHeight,
+          windowWidth: page.offsetWidth,
+          windowHeight: page.offsetHeight,
+          scrollX: 0,
+          scrollY: 0,
         })
 
-        const imgData = canvas.toDataURL('image/jpeg', 0.92)
-        if (!imgData.startsWith('data:image/jpeg')) continue
+        const imgData = canvas.toDataURL('image/jpeg', JPEG_QUALITY)
 
         if (i > 0) pdf.addPage()
-        pdf.addImage(imgData, 'jpeg', 0, 0, A4_W, 297)
+        pdf.addImage(imgData, 'JPEG', 0, 0, A4_W, A4_H)
       }
       
       // Set PDF properties
@@ -1217,9 +1222,10 @@ function PreviewAll({ session, onUpdate }: { session: Session; onUpdate: (s: Ses
         <span className="text-xs text-gray-500 self-center ml-2 font-sans">(PDF sesuai dengan template asli)</span>
       </div>
 
-      <div className="pdf-stage" style={{ position: 'fixed', top: 0, left: -99999, width: 595, zIndex: -1, fontFamily: "'Times New Roman', Georgia, serif", background: '#fff' }}>
+      <div className="pdf-stage" style={{ position: 'fixed', top: 0, left: -99999, width: 794, zIndex: -1, fontFamily: "'Times New Roman', Georgia, serif", background: '#fff' }}>
 
-        <div className="pdf-page" style={{ width: 595, height: 842, boxSizing: 'border-box', padding: '15px 20px', background: '#fff', overflow: 'hidden', fontFamily: "'Times New Roman', Georgia, serif", fontSize: 12, lineHeight: 1.3 }}>
+        {/* P1: BA */}
+        <div className="pdf-page" style={{ width: 794, height: 1123, boxSizing: 'border-box', padding: '42px 46px 54px 46px', background: '#fff', overflow: 'hidden', fontFamily: "'Times New Roman', Georgia, serif", fontSize: 14, lineHeight: 1.28 }}>
           <div style={{ textAlign: 'center', borderBottom: '2px solid #000', paddingBottom: 4, marginBottom: 8 }}>
             <img src="/kop-surat-resize.png" style={{ display: 'block', margin: '0 auto 4px', maxWidth: '100%', maxHeight: 52, width: 'auto', height: 'auto' }} />
             <div style={{ fontWeight: 'bold', textAlign: 'center', textTransform: 'uppercase', fontSize: 14 }}>Laporan Sidang Skripsi</div>
@@ -1252,7 +1258,7 @@ function PreviewAll({ session, onUpdate }: { session: Session; onUpdate: (s: Ses
           </div>
         </div>
 
-        <div className="pdf-page" style={{ width: 595, height: 842, boxSizing: 'border-box', padding: '15px 20px', background: '#fff', overflow: 'hidden', fontFamily: "'Times New Roman', Georgia, serif", fontSize: 12, lineHeight: 1.3 }}>
+        <div className="pdf-page" style={{ width: 794, height: 1123, boxSizing: 'border-box', padding: '42px 46px 54px 46px', background: '#fff', overflow: 'hidden', fontFamily: "'Times New Roman', Georgia, serif", fontSize: 14, lineHeight: 1.28 }}>
           <div style={{ textAlign: 'center', borderBottom: '2px solid #000', padding: 4, marginBottom: 6 }}>
             <img src="/kop-surat-resize.png" style={{ display: 'block', margin: '0 auto 4px', maxWidth: '100%', maxHeight: 52, width: 'auto', height: 'auto' }} />
             <div style={{ fontWeight: 'bold', textAlign: 'center', textTransform: 'uppercase', fontSize: 14 }}>Daftar Hadir Sidang Skripsi</div>
@@ -1297,9 +1303,9 @@ function PreviewAll({ session, onUpdate }: { session: Session; onUpdate: (s: Ses
           const scores = session.skor_penguji?.[examIdx] || [null,null,null,null,null,null,null,null,null,null]
           const labels = ['Penguji I/Ketua Penguji', 'Penguji II/Anggota Penguji', 'Penguji III/Anggota Penguji']
           const namaPenguji = [session.penguji1, session.penguji2, session.penguji3]
-          const half = Math.ceil(RUBRIC_CRITERIA.length / 2)
+          const firstPageCriteriaCount = 6
           return [
-            <div key={`${examIdx}-p1`} className="pdf-page" style={{ width: 595, height: 842, boxSizing: 'border-box', padding: '15px 20px', background: '#fff', overflow: 'hidden', fontFamily: "'Times New Roman', Georgia, serif", fontSize: 12, lineHeight: 1.3 }}>
+            <div key={`${examIdx}-p1`} className="pdf-page" style={{ width: 794, height: 1123, boxSizing: 'border-box', padding: '42px 46px 54px 46px', background: '#fff', overflow: 'hidden', fontFamily: "'Times New Roman', Georgia, serif", fontSize: 14, lineHeight: 1.28 }}>
               <div style={{ textAlign: 'center', borderBottom: '2px solid #000', paddingBottom: 4, marginBottom: 6 }}>
                 <img src="/kop-surat-resize.png" style={{ display: 'block', margin: '0 auto 4px', maxWidth: '100%', maxHeight: 52, width: 'auto', height: 'auto' }} />
                 <div style={{ fontWeight: 'bold', textAlign: 'center', textTransform: 'uppercase', fontSize: 14 }}>Formulir Penilaian Sidang Skripsi</div>
@@ -1319,14 +1325,14 @@ function PreviewAll({ session, onUpdate }: { session: Session; onUpdate: (s: Ses
               <table className="template-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, marginTop: 3 }}>
                 <thead><tr><th style={{ width: 24, border: '1px solid #000', padding: '1px 3px', textAlign: 'center' }}>NO</th><th style={{ border: '1px solid #000', padding: '1px 3px' }}>PARAMETER PENILAIAN</th><th style={{ width: 52, border: '1px solid #000', padding: '1px 3px', textAlign: 'center' }}>SKOR (1–4)</th><th style={{ width: 36, border: '1px solid #000', padding: '1px 3px', textAlign: 'center' }}>BOBOT</th><th style={{ width: 70, border: '1px solid #000', padding: '1px 3px', textAlign: 'center' }}>SKOR × BOBOT</th></tr></thead>
                 <tbody>
-                  {RUBRIC_CRITERIA.slice(0, half).map((c) => {
+                  {RUBRIC_CRITERIA.slice(0, firstPageCriteriaCount).map((c) => {
                     const skorXBobot = scores[c.no - 1] !== null ? scores[c.no - 1]! * c.bobot : null
                     return <tr key={c.no}><td style={{ textAlign: 'center', border: '1px solid #000', padding: '1px 3px', verticalAlign: 'top' }}>{c.no}.</td><td style={{ border: '1px solid #000', padding: '1px 3px', verticalAlign: 'top' }}><div style={{ fontWeight: 'bold', fontSize: 11 }}>{c.label}</div><div style={{ fontSize: 10, color: '#444', whiteSpace: 'pre-line' }}>{c.detail}</div></td><td style={{ textAlign: 'center', border: '1px solid #000', padding: '1px 3px', verticalAlign: 'top' }}>{scores[c.no - 1] ?? ''}</td><td style={{ textAlign: 'center', border: '1px solid #000', padding: '1px 3px', verticalAlign: 'top' }}>{c.bobot}</td><td style={{ textAlign: 'center', border: '1px solid #000', padding: '1px 3px', fontWeight: 'bold', verticalAlign: 'top' }}>{skorXBobot ?? ''}</td></tr>
                   })}
                 </tbody>
               </table>
             </div>,
-            <div key={`${examIdx}-p2`} className="pdf-page" style={{ width: 595, height: 842, boxSizing: 'border-box', padding: '15px 20px', background: '#fff', overflow: 'hidden', fontFamily: "'Times New Roman', Georgia, serif", fontSize: 12, lineHeight: 1.3 }}>
+            <div key={`${examIdx}-p2`} className="pdf-page" style={{ width: 794, height: 1123, boxSizing: 'border-box', padding: '42px 46px 54px 46px', background: '#fff', overflow: 'hidden', fontFamily: "'Times New Roman', Georgia, serif", fontSize: 14, lineHeight: 1.28 }}>
               <div style={{ textAlign: 'center', borderBottom: '2px solid #000', paddingBottom: 4, marginBottom: 6 }}>
                 <img src="/kop-surat-resize.png" style={{ display: 'block', margin: '0 auto 4px', maxWidth: '100%', maxHeight: 52, width: 'auto', height: 'auto' }} />
                 <div style={{ fontWeight: 'bold', textAlign: 'center', textTransform: 'uppercase', fontSize: 14 }}>Formulir Penilaian Sidang Skripsi</div>
@@ -1337,7 +1343,7 @@ function PreviewAll({ session, onUpdate }: { session: Session; onUpdate: (s: Ses
               <table className="template-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, marginTop: 0 }}>
                 <thead><tr><th style={{ width: 24, border: '1px solid #000', padding: '1px 3px', textAlign: 'center' }}>NO</th><th style={{ border: '1px solid #000', padding: '1px 3px' }}>PARAMETER PENILAIAN</th><th style={{ width: 52, border: '1px solid #000', padding: '1px 3px', textAlign: 'center' }}>SKOR (1–4)</th><th style={{ width: 36, border: '1px solid #000', padding: '1px 3px', textAlign: 'center' }}>BOBOT</th><th style={{ width: 70, border: '1px solid #000', padding: '1px 3px', textAlign: 'center' }}>SKOR × BOBOT</th></tr></thead>
                 <tbody>
-                  {RUBRIC_CRITERIA.slice(half).map((c) => {
+                  {RUBRIC_CRITERIA.slice(firstPageCriteriaCount).map((c) => {
                     const skorXBobot = scores[c.no - 1] !== null ? scores[c.no - 1]! * c.bobot : null
                     return <tr key={c.no}><td style={{ textAlign: 'center', border: '1px solid #000', padding: '1px 3px', verticalAlign: 'top' }}>{c.no}.</td><td style={{ border: '1px solid #000', padding: '1px 3px', verticalAlign: 'top' }}><div style={{ fontWeight: 'bold', fontSize: 11 }}>{c.label}</div><div style={{ fontSize: 10, color: '#444', whiteSpace: 'pre-line' }}>{c.detail}</div></td><td style={{ textAlign: 'center', border: '1px solid #000', padding: '1px 3px', verticalAlign: 'top' }}>{scores[c.no - 1] ?? ''}</td><td style={{ textAlign: 'center', border: '1px solid #000', padding: '1px 3px', verticalAlign: 'top' }}>{c.bobot}</td><td style={{ textAlign: 'center', border: '1px solid #000', padding: '1px 3px', fontWeight: 'bold', verticalAlign: 'top' }}>{skorXBobot ?? ''}</td></tr>
                   })}
@@ -1349,9 +1355,9 @@ function PreviewAll({ session, onUpdate }: { session: Session; onUpdate: (s: Ses
               <div style={{ fontSize: 10, fontStyle: 'italic', marginTop: 3 }}>*Bila presentasi skripsi dilakukan menggunakan Bahasa Inggris, nilai akhir ditambahkan 2—6 poin.</div>
               <div style={{ marginTop: 8 }}>
                 <p>Hari, Tanggal: {session.hari_tanggal}</p>
-                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 20 }}>
-                  <div style={{ textAlign: 'center', width: 160 }}>
-                    {session[`ttd_penguji${examIdx + 1}` as keyof Session] ? <img src={session[`ttd_penguji${examIdx + 1}` as keyof Session] as string} alt="TTD" style={{ maxHeight: 38, maxWidth: 80, margin: '0 auto', display: 'block', objectFit: 'contain' }} /> : <div style={{ height: 38 }}></div>}
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 12 }}>
+                  <div style={{ textAlign: 'center', width: 190 }}>
+                    {session[`ttd_penguji${examIdx + 1}` as keyof Session] ? <img src={session[`ttd_penguji${examIdx + 1}` as keyof Session] as string} alt="TTD" style={{ maxHeight: 42, maxWidth: 110, margin: '0 auto', display: 'block', objectFit: 'contain' }} /> : <div style={{ height: 42 }}></div>}
                     <p style={{ margin: '2px 0' }}>Tanda Tangan</p>
                     <div style={{ height: 6 }}></div>
                     <p style={{ borderTop: '1px solid #000', paddingTop: 2, fontWeight: 'bold', fontSize: 12 }}>{labels[examIdx]}</p>
@@ -1365,7 +1371,7 @@ function PreviewAll({ session, onUpdate }: { session: Session; onUpdate: (s: Ses
         })}
 
         {/* P8: REKAPITULASI NILAI */}
-        <div className="pdf-page" style={{ width: 595, height: 842, boxSizing: 'border-box', padding: '15px 20px', background: '#fff', overflow: 'hidden', fontFamily: "'Times New Roman', Georgia, serif", fontSize: 12, lineHeight: 1.3 }}>
+        <div className="pdf-page" style={{ width: 794, height: 1123, boxSizing: 'border-box', padding: '42px 46px 54px 46px', background: '#fff', overflow: 'hidden', fontFamily: "'Times New Roman', Georgia, serif", fontSize: 14, lineHeight: 1.28 }}>
           <div style={{ textAlign: 'center', borderBottom: '2px solid #000', paddingBottom: 4, marginBottom: 8 }}>
             <img src="/kop-surat-resize.png" style={{ display: 'block', margin: '0 auto 4px', maxWidth: '100%', maxHeight: 52, width: 'auto', height: 'auto' }} />
             <div style={{ fontWeight: 'bold', textAlign: 'center', textTransform: 'uppercase', fontSize: 14 }}>Rekapitulasi Nilai Sidang Skripsi</div>
