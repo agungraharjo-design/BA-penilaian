@@ -1092,15 +1092,18 @@ function PreviewAll({ session, onUpdate }: { session: Session; onUpdate: (s: Ses
 
       await (document as any).fonts?.ready?.()
 
-      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4', compress: false })
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4',
+        compress: false,
+      })
 
       const A4_W = 210
-      const A4_H = 297
 
       for (let i = 0; i < pages.length; i++) {
         const page = pages[i]
         const PW = page.offsetWidth
-        const PH = page.offsetHeight
         const scale = Math.min(2, 595 / PW)
 
         const canvas = await html2canvas(page, {
@@ -1109,14 +1112,14 @@ function PreviewAll({ session, onUpdate }: { session: Session; onUpdate: (s: Ses
           useCORS: true,
           logging: false,
           width: PW,
-          height: PH,
+          height: page.offsetHeight,
         })
 
         const imgData = canvas.toDataURL('image/jpeg', 0.92)
         if (!imgData.startsWith('data:image/jpeg')) continue
 
         if (i > 0) pdf.addPage()
-        pdf.addImage(imgData, 'JPEG', 0, 0, A4_W, A4_H)
+        pdf.addImage(imgData, 'jpeg', 0, 0, A4_W, 297)
       }
       
       // Set PDF properties
