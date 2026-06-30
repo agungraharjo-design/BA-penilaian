@@ -260,7 +260,7 @@ export default function SessionPage() {
   return (
     <div className="max-w-5xl mx-auto p-4">
       {/* Sync indicator */}
-      <div className={`sync-indicator ${syncStatus === 'live' ? 'bg-green-100 text-green-800' : syncStatus === 'saving' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'}`}>
+      <div className={`no-print sync-indicator ${syncStatus === 'live' ? 'bg-green-100 text-green-800' : syncStatus === 'saving' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'}`}>
         <span className={`w-2 h-2 rounded-full ${syncStatus === 'live' ? 'bg-green-500' : syncStatus === 'saving' ? 'bg-yellow-500' : 'bg-red-500'}`} />
         {syncStatus === 'live' ? 'Tersimpan' : syncStatus === 'saving' ? 'Menyimpan...' : 'Offline'}
         {lastSaved && <span className="ml-1 opacity-60">{lastSaved.toLocaleTimeString('id-ID')}</span>}
@@ -1070,7 +1070,74 @@ function PreviewAll({ session, onUpdate }: { session: Session; onUpdate: (s: Ses
   const [pdfStatus, setPdfStatus] = useState<'idle' | 'preparing' | 'saved' | 'error'>('idle')
 
   const handlePrint = () => {
-    window.print()
+    const pdfStage = document.querySelector('.pdf-stage') as HTMLElement | null
+    if (!pdfStage) { alert('Template PDF tidak ditemukan'); return }
+
+    const printWindow = window.open('', '_blank')
+    if (!printWindow) { alert('Popup diblokir browser. Izinkan popup untuk membuka preview print.'); return }
+
+    const clonedStage = pdfStage.cloneNode(true) as HTMLElement
+    clonedStage.removeAttribute('style')
+
+    const sourceFields = pdfStage.querySelectorAll<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>('input, textarea, select')
+    const clonedFields = clonedStage.querySelectorAll<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>('input, textarea, select')
+    sourceFields.forEach((source, index) => {
+      const clone = clonedFields[index]
+      if (!clone) return
+      if (source instanceof HTMLInputElement) {
+        if (source.type === 'checkbox' || source.type === 'radio') {
+          source.checked ? clone.setAttribute('checked', 'checked') : clone.removeAttribute('checked')
+        } else {
+          clone.setAttribute('value', source.value)
+        }
+      }
+      if (source instanceof HTMLTextAreaElement) { clone.textContent = source.value }
+      if (source instanceof HTMLSelectElement && clone instanceof HTMLSelectElement) {
+        Array.from(clone.options).forEach((opt, oi) => {
+          oi === source.selectedIndex ? opt.setAttribute('selected', 'selected') : opt.removeAttribute('selected')
+        })
+      }
+    })
+
+    const safeName = (session.nama || 'unknown').replace(/[^a-zA-Z0-9]/g, '_')
+    const fileTitle = `BA_Sidang_${safeName}_${session.nim || 'unknown'}`
+
+    printWindow.document.open()
+    printWindow.document.write(`<!DOCTYPE html>
+<html><head>
+<title>${fileTitle}</title>
+<base href="${window.location.origin}/" />
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:#e5e7eb;font-family:"Times New Roman",Times,serif}
+.print-toolbar{position:sticky;top:0;z-index:9999;display:flex;justify-content:center;align-items:center;gap:12px;padding:12px;background:#111827;color:white;font-family:Arial,sans-serif;box-shadow:0 2px 8px rgba(0,0,0,0.2)}
+.print-toolbar button{border:0;border-radius:6px;padding:8px 14px;cursor:pointer;font-size:14px;font-weight:600}
+.print-toolbar .primary{background:#166534;color:white}
+.print-toolbar .secondary{background:#374151;color:white}
+.print-note{font-size:12px;opacity:0.8;font-family:Arial,sans-serif}
+.no-print,.sync-indicator{display:none !important}
+.pdf-stage{position:static !important;top:auto !important;left:auto !important;z-index:auto !important;width:auto !important;margin:24px auto;background:transparent !important}
+.pdf-page{background:white !important;margin:0 auto 24px auto;box-shadow:0 4px 16px rgba(0,0,0,0.16);page-break-after:always;break-after:page}
+input,textarea,select{color:black !important;background:transparent !important;font-family:inherit !important}
+img{max-width:100%}
+@page{size:A4 portrait;margin:0}
+@media print{html,body{background:white !important;margin:0 !important;padding:0 !important}
+.print-toolbar{display:none !important}
+.pdf-stage{margin:0 !important;padding:0 !important}
+.pdf-page{margin:0 !important;box-shadow:none !important;page-break-after:always;break-after:page}
+.pdf-page:last-child{page-break-after:auto;break-after:auto}}
+</style></head><body>
+<div class="print-toolbar">
+<button class="primary" onclick="window.print()">⬇ Print / Save as PDF</button>
+<button class="secondary" onclick="window.close()">Tutup</button>
+<span class="print-note">Pilih "Save as PDF" di dialog print browser untuk simpan ke komputer.</span>
+</div>
+${clonedStage.outerHTML}
+</body></html>`)
+    printWindow.document.close()
+    printWindow.focus()
   }
 
   const handleDownloadPDF = async () => {
@@ -1251,7 +1318,7 @@ function PreviewAll({ session, onUpdate }: { session: Session; onUpdate: (s: Ses
     <div>
       <div className="no-print flex gap-3 mb-6">
         <button onClick={handlePrint} className="bg-blue-900 text-white px-6 py-2 rounded hover:bg-blue-800 font-sans text-sm font-medium flex items-center gap-2">
-          🖨 Print
+          🖨 Preview Print / Save PDF
         </button>
         <button onClick={handleDownloadPDF} disabled={pdfStatus === 'preparing'} className="bg-green-800 text-white px-6 py-2 rounded hover:bg-green-700 font-sans text-sm font-medium flex items-center gap-2 disabled:opacity-50">
           {pdfStatus === 'preparing' ? '⏳ Generating PDF...' : '⬇ Menyimpan PDF'}
