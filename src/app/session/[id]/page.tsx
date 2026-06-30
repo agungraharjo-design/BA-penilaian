@@ -1090,7 +1090,9 @@ function PreviewAll({ session, onUpdate }: { session: Session; onUpdate: (s: Ses
       const pages = Array.from(pdfStage.querySelectorAll<HTMLElement>('.pdf-page'))
       if (!pages.length) { setPdfStatus('idle'); return }
 
-      await (document as any).fonts?.ready?.()
+      if (document.fonts?.ready) {
+        await document.fonts.ready
+      }
 
       const pdf = new jsPDF({
         orientation: 'portrait',
