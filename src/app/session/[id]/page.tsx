@@ -1271,14 +1271,6 @@ function PreviewAll({ session, onUpdate }: { session: Session; onUpdate: (s: Ses
         {pdfStatus === 'saved' && (
           <span className="text-green-700 text-sm font-sans self-center">✓ PDF berhasil tersimpan</span>
         )}
-        {session.pdf_url && (() => {
-          const cleanUrl = session.pdf_url?.split('?token=')[0] || ''
-          return cleanUrl ? (
-            <a href={cleanUrl} target="_blank" rel="noopener noreferrer" className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-500 font-sans text-sm font-medium flex items-center gap-2 no-print">
-              📄 Lihat PDF
-            </a>
-          ) : null
-        })()}
         <span className="text-xs text-gray-500 self-center ml-2 font-sans">(PDF sesuai dengan template asli)</span>
       </div>
 
