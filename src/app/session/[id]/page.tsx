@@ -1124,6 +1124,7 @@ function PreviewAll({ session, onUpdate }: { session: Session; onUpdate: (s: Ses
           onclone: (clonedDoc) => {
             const style = clonedDoc.createElement('style')
             style.textContent = `
+              .pdf-page * { box-sizing: border-box !important; }
               .pdf-page table { border-collapse: collapse !important; table-layout: fixed !important; }
               .pdf-page th[style*="border"], .pdf-page td[style*="border"], .pdf-page .template-table th, .pdf-page .template-table td {
                 box-sizing: border-box !important; line-height: 1.18 !important; vertical-align: middle !important;
@@ -1142,6 +1143,29 @@ function PreviewAll({ session, onUpdate }: { session: Session; onUpdate: (s: Ses
                 line-height: 1.15 !important; font: inherit !important; background: transparent !important; color: black !important; vertical-align: middle !important;
               }
               .pdf-page img { vertical-align: middle !important; }
+              .pdf-section-title { text-align: center !important; font-weight: bold !important; line-height: 1.1 !important; margin: 10px 0 5px 0 !important; }
+              .pdf-table th, .pdf-table td { border: 1px solid #000 !important; }
+              .pdf-table--attendance th { font-size: 10.5px !important; line-height: 1.05 !important; padding: 5px 4px !important; height: 30px !important; }
+              .pdf-table--attendance td { font-size: 11px !important; line-height: 1.12 !important; padding: 5px 5px !important; height: 28px !important; }
+              .pdf-table--attendance th:nth-child(1), .pdf-table--attendance td:nth-child(1) { width: 34px !important; text-align: center !important; white-space: nowrap !important; }
+              .pdf-table--attendance th:nth-child(3), .pdf-table--attendance td:nth-child(3) { width: 92px !important; text-align: center !important; white-space: nowrap !important; }
+              .pdf-table--attendance th:nth-child(4), .pdf-table--attendance td:nth-child(4) { width: 90px !important; text-align: center !important; }
+              .pdf-table--attendance th:nth-child(5), .pdf-table--attendance td:nth-child(5) { width: 38px !important; text-align: center !important; white-space: nowrap !important; }
+              .pdf-table--rubric th { font-size: 10.5px !important; line-height: 1.05 !important; padding: 4px 3px !important; }
+              .pdf-table--rubric td { font-size: 10px !important; line-height: 1.05 !important; padding: 3px 4px !important; vertical-align: top !important; }
+              .pdf-table--rubric th:nth-child(1), .pdf-table--rubric td:nth-child(1) { width: 28px !important; text-align: center !important; }
+              .pdf-table--rubric th:nth-child(3), .pdf-table--rubric td:nth-child(3) { width: 48px !important; text-align: center !important; vertical-align: middle !important; }
+              .pdf-table--rubric th:nth-child(4), .pdf-table--rubric td:nth-child(4) { width: 36px !important; text-align: center !important; vertical-align: middle !important; }
+              .pdf-table--rubric th:nth-child(5), .pdf-table--rubric td:nth-child(5) { width: 62px !important; text-align: center !important; vertical-align: middle !important; font-weight: bold !important; }
+              .pdf-criterion-title { font-size: 10.5px !important; line-height: 1.05 !important; font-weight: bold !important; }
+              .pdf-criterion-detail { font-size: 9px !important; line-height: 1.05 !important; color: #333 !important; white-space: pre-line !important; }
+              .pdf-table--rekap th { font-size: 10px !important; line-height: 1.05 !important; padding: 5px 3px !important; }
+              .pdf-table--rekap td { font-size: 10.5px !important; line-height: 1.1 !important; padding: 5px 4px !important; height: 30px !important; }
+              .pdf-table--rekap th:nth-child(1), .pdf-table--rekap td:nth-child(1) { width: 34px !important; text-align: center !important; white-space: nowrap !important; }
+              .pdf-table--rekap th:nth-child(3), .pdf-table--rekap td:nth-child(3) { width: 82px !important; text-align: center !important; white-space: nowrap !important; }
+              .pdf-table--rekap th:nth-child(4), .pdf-table--rekap th:nth-child(5), .pdf-table--rekap th:nth-child(6), .pdf-table--rekap td:nth-child(4), .pdf-table--rekap td:nth-child(5), .pdf-table--rekap td:nth-child(6) { width: 58px !important; text-align: center !important; }
+              .pdf-table--rekap th:nth-child(7), .pdf-table--rekap td:nth-child(7) { width: 66px !important; text-align: center !important; font-weight: bold !important; }
+              .pdf-signature-img { display: block !important; max-width: 110px !important; max-height: 46px !important; object-fit: contain !important; margin: 0 auto !important; }
             `
             clonedDoc.head.appendChild(style)
           },
@@ -1276,7 +1300,7 @@ function PreviewAll({ session, onUpdate }: { session: Session; onUpdate: (s: Ses
           <div style={{ textAlign: 'right', marginTop: 15 }}>
             <p>Jakarta, {session.tanggal_ba || '______________'}</p>
             <p style={{ marginTop: 8 }}>Koordinator Program Studi Kesehatan Masyarakat</p><p>Program Sarjana</p>
-            {session.ttd_koordinator ? <img src={session.ttd_koordinator} alt="TTD" style={{ maxHeight: 38, maxWidth: 80, marginLeft: 'auto', marginTop: 4, display: 'block', objectFit: 'contain' }} /> : <div style={{ height: 38 }}></div>}
+            {session.ttd_koordinator ? <img src={session.ttd_koordinator} alt="TTD" className="pdf-signature-img" style={{ maxHeight: 38, maxWidth: 80, marginLeft: 'auto', marginTop: 4, display: 'block', objectFit: 'contain' }} /> : <div style={{ height: 38 }}></div>}
             <p style={{ fontWeight: 'bold' }}>{session.koordinator}</p>
             <p style={{ fontSize: 11 }}>NIP. {session.nip_koordinator}</p>
           </div>
@@ -1293,8 +1317,8 @@ function PreviewAll({ session, onUpdate }: { session: Session; onUpdate: (s: Ses
           <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 3 }}>
             <tbody><tr><td style={{ width: 110 }}>Nama Mahasiswa</td><td style={{ width: 14 }}>:</td><td>{session.nama}</td></tr><tr><td>NIM</td><td>:</td><td>{session.nim}</td></tr><tr><td>Hari, Tanggal</td><td>:</td><td>{session.hari_tanggal}</td></tr><tr><td>Peminatan</td><td>:</td><td>{session.peminatan}</td></tr></tbody>
           </table>
-          <div style={{ fontWeight: 'bold', textAlign: 'center', marginTop: 4, marginBottom: 1 }}>DAFTAR HADIR PENGUJI</div>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+          <div className="pdf-section-title">DAFTAR HADIR PENGUJI</div>
+          <table className="pdf-table pdf-table--attendance" style={{ fontSize: 12 }}>
             <thead><tr><th style={{ width: 22, border: '1px solid #000', padding: '1px 3px' }}>NO</th><th style={{ width: 90, border: '1px solid #000', padding: '1px 3px' }}>NIP</th><th style={{ border: '1px solid #000', padding: '1px 3px' }}>NAMA PENGUJI</th><th style={{ border: '1px solid #000', padding: '1px 3px' }}>JABATAN</th><th style={{ width: 80, border: '1px solid #000', padding: '1px 3px' }}>TANDA TANGAN</th></tr></thead>
             <tbody>
               <tr><td style={{ textAlign: 'center', border: '1px solid #000', padding: '1px 3px' }}>1.</td><td style={{ border: '1px solid #000', padding: '1px 3px' }}>{session.nip_penguji1 || ''}</td><td style={{ border: '1px solid #000', padding: '1px 3px' }}>{session.penguji1 || '______________'}</td><td style={{ border: '1px solid #000', padding: '1px 3px' }}>Ketua Penguji</td><td style={{ textAlign: 'center', border: '1px solid #000', padding: '1px 3px', verticalAlign: 'middle' }}>{session.ttd_penguji1 ? <img src={session.ttd_penguji1} alt="TTD" style={{ maxHeight: 28, maxWidth: 56, margin: '0 auto', objectFit: 'contain' }} /> : <span style={{ color: '#999' }}>-</span>}</td></tr>
@@ -1302,8 +1326,8 @@ function PreviewAll({ session, onUpdate }: { session: Session; onUpdate: (s: Ses
               <tr><td style={{ textAlign: 'center', border: '1px solid #000', padding: '1px 3px' }}>3.</td><td style={{ border: '1px solid #000', padding: '1px 3px' }}>{session.nip_penguji3 || ''}</td><td style={{ border: '1px solid #000', padding: '1px 3px' }}>{session.penguji3 || '______________'}</td><td style={{ border: '1px solid #000', padding: '1px 3px' }}>Anggota Penguji II</td><td style={{ textAlign: 'center', border: '1px solid #000', padding: '1px 3px', verticalAlign: 'middle' }}>{session.ttd_penguji3 ? <img src={session.ttd_penguji3} alt="TTD" style={{ maxHeight: 28, maxWidth: 56, margin: '0 auto', objectFit: 'contain' }} /> : <span style={{ color: '#999' }}>-</span>}</td></tr>
             </tbody>
           </table>
-          <div style={{ fontWeight: 'bold', textAlign: 'center', marginTop: 4, marginBottom: 1 }}>DAFTAR HADIR PESERTA</div>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+          <div className="pdf-section-title">DAFTAR HADIR PESERTA</div>
+          <table className="pdf-table pdf-table--attendance" style={{ fontSize: 12 }}>
             <thead><tr><th style={{ width: 22, border: '1px solid #000', padding: '1px 3px' }}>NO</th><th style={{ border: '1px solid #000', padding: '1px 3px' }}>NAMA PESERTA</th><th style={{ width: 80, border: '1px solid #000', padding: '1px 3px' }}>NIM</th><th style={{ width: 80, border: '1px solid #000', padding: '1px 3px' }}>TTD</th><th style={{ width: 28, border: '1px solid #000', padding: '1px 3px' }}>KET</th></tr></thead>
             <tbody>
               {(session.peserta_hadir || [{ nama: session.nama, nim: session.nim }]).map((p: any, i: number) => (
@@ -1311,8 +1335,8 @@ function PreviewAll({ session, onUpdate }: { session: Session; onUpdate: (s: Ses
               ))}
             </tbody>
           </table>
-          <div style={{ fontWeight: 'bold', textAlign: 'center', marginTop: 4, marginBottom: 1 }}>DAFTAR HADIR AUDIENS</div>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+          <div className="pdf-section-title">DAFTAR HADIR AUDIENS</div>
+          <table className="pdf-table pdf-table--attendance" style={{ fontSize: 12 }}>
             <thead><tr><th style={{ width: 22, border: '1px solid #000', padding: '1px 3px' }}>NO</th><th style={{ border: '1px solid #000', padding: '1px 3px' }}>NAMA MAHASISWA</th><th style={{ width: 80, border: '1px solid #000', padding: '1px 3px' }}>NIM</th><th style={{ width: 80, border: '1px solid #000', padding: '1px 3px' }}>TTD</th><th style={{ width: 28, border: '1px solid #000', padding: '1px 3px' }}>KET</th></tr></thead>
             <tbody>
               {(session.audience_hadir || []).map((a: any, i: number) => (
@@ -1327,7 +1351,7 @@ function PreviewAll({ session, onUpdate }: { session: Session; onUpdate: (s: Ses
           const scores = session.skor_penguji?.[examIdx] || [null,null,null,null,null,null,null,null,null,null]
           const labels = ['Penguji I/Ketua Penguji', 'Penguji II/Anggota Penguji', 'Penguji III/Anggota Penguji']
           const namaPenguji = [session.penguji1, session.penguji2, session.penguji3]
-          const firstPageCriteriaCount = 6
+          const firstPageCriteriaCount = 5
           return [
             <div key={`${examIdx}-p1`} className="pdf-page" style={{ width: 794, height: 1123, boxSizing: 'border-box', padding: '42px 46px 54px 46px', background: '#fff', overflow: 'hidden', fontFamily: "'Times New Roman', Georgia, serif", fontSize: 14, lineHeight: 1.28 }}>
               <div style={{ textAlign: 'center', borderBottom: '2px solid #000', paddingBottom: 4, marginBottom: 6 }}>
@@ -1346,12 +1370,12 @@ function PreviewAll({ session, onUpdate }: { session: Session; onUpdate: (s: Ses
                 </tbody>
               </table>
               <div style={{ fontSize: 12, marginTop: 3 }}><b>Judul Skripsi:</b> {session.judul_skripsi}</div>
-              <table className="template-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, marginTop: 3 }}>
+              <table className="pdf-table pdf-table--rubric" style={{ fontSize: 12, marginTop: 3 }}>
                 <thead><tr><th style={{ width: 24, border: '1px solid #000', padding: '1px 3px', textAlign: 'center' }}>NO</th><th style={{ border: '1px solid #000', padding: '1px 3px' }}>PARAMETER PENILAIAN</th><th style={{ width: 52, border: '1px solid #000', padding: '1px 3px', textAlign: 'center' }}>SKOR (1–4)</th><th style={{ width: 36, border: '1px solid #000', padding: '1px 3px', textAlign: 'center' }}>BOBOT</th><th style={{ width: 70, border: '1px solid #000', padding: '1px 3px', textAlign: 'center' }}>SKOR × BOBOT</th></tr></thead>
                 <tbody>
                   {RUBRIC_CRITERIA.slice(0, firstPageCriteriaCount).map((c) => {
                     const skorXBobot = scores[c.no - 1] !== null ? scores[c.no - 1]! * c.bobot : null
-                    return <tr key={c.no}><td style={{ textAlign: 'center', border: '1px solid #000', padding: '1px 3px', verticalAlign: 'top' }}>{c.no}.</td><td style={{ border: '1px solid #000', padding: '1px 3px', verticalAlign: 'top' }}><div style={{ fontWeight: 'bold', fontSize: 11 }}>{c.label}</div><div style={{ fontSize: 10, color: '#444', whiteSpace: 'pre-line' }}>{c.detail}</div></td><td style={{ textAlign: 'center', border: '1px solid #000', padding: '1px 3px', verticalAlign: 'top' }}>{scores[c.no - 1] ?? ''}</td><td style={{ textAlign: 'center', border: '1px solid #000', padding: '1px 3px', verticalAlign: 'top' }}>{c.bobot}</td><td style={{ textAlign: 'center', border: '1px solid #000', padding: '1px 3px', fontWeight: 'bold', verticalAlign: 'top' }}>{skorXBobot ?? ''}</td></tr>
+                    return <tr key={c.no}><td style={{ textAlign: 'center', border: '1px solid #000', padding: '1px 3px', verticalAlign: 'top' }}>{c.no}.</td><td style={{ border: '1px solid #000', padding: '1px 3px', verticalAlign: 'top' }}><div className="pdf-criterion-title">{c.label}</div><div className="pdf-criterion-detail">{c.detail}</div></td><td style={{ textAlign: 'center', border: '1px solid #000', padding: '1px 3px', verticalAlign: 'top' }}>{scores[c.no - 1] ?? ''}</td><td style={{ textAlign: 'center', border: '1px solid #000', padding: '1px 3px', verticalAlign: 'top' }}>{c.bobot}</td><td style={{ textAlign: 'center', border: '1px solid #000', padding: '1px 3px', fontWeight: 'bold', verticalAlign: 'top' }}>{skorXBobot ?? ''}</td></tr>
                   })}
                 </tbody>
               </table>
@@ -1364,12 +1388,12 @@ function PreviewAll({ session, onUpdate }: { session: Session; onUpdate: (s: Ses
                 <div style={{ fontSize: 12, textAlign: 'center' }}>FAKULTAS ILMU KESEHATAN UPN &ldquo;VETERAN&rdquo; JAKARTA</div>
                 <div style={{ fontWeight: 'bold', fontSize: 12, textAlign: 'center' }}>SEMESTER {session.semester} T.A. {session.ta}</div>
               </div>
-              <table className="template-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, marginTop: 0 }}>
+              <table className="pdf-table pdf-table--rubric" style={{ fontSize: 12, marginTop: 0 }}>
                 <thead><tr><th style={{ width: 24, border: '1px solid #000', padding: '1px 3px', textAlign: 'center' }}>NO</th><th style={{ border: '1px solid #000', padding: '1px 3px' }}>PARAMETER PENILAIAN</th><th style={{ width: 52, border: '1px solid #000', padding: '1px 3px', textAlign: 'center' }}>SKOR (1–4)</th><th style={{ width: 36, border: '1px solid #000', padding: '1px 3px', textAlign: 'center' }}>BOBOT</th><th style={{ width: 70, border: '1px solid #000', padding: '1px 3px', textAlign: 'center' }}>SKOR × BOBOT</th></tr></thead>
                 <tbody>
                   {RUBRIC_CRITERIA.slice(firstPageCriteriaCount).map((c) => {
                     const skorXBobot = scores[c.no - 1] !== null ? scores[c.no - 1]! * c.bobot : null
-                    return <tr key={c.no}><td style={{ textAlign: 'center', border: '1px solid #000', padding: '1px 3px', verticalAlign: 'top' }}>{c.no}.</td><td style={{ border: '1px solid #000', padding: '1px 3px', verticalAlign: 'top' }}><div style={{ fontWeight: 'bold', fontSize: 11 }}>{c.label}</div><div style={{ fontSize: 10, color: '#444', whiteSpace: 'pre-line' }}>{c.detail}</div></td><td style={{ textAlign: 'center', border: '1px solid #000', padding: '1px 3px', verticalAlign: 'top' }}>{scores[c.no - 1] ?? ''}</td><td style={{ textAlign: 'center', border: '1px solid #000', padding: '1px 3px', verticalAlign: 'top' }}>{c.bobot}</td><td style={{ textAlign: 'center', border: '1px solid #000', padding: '1px 3px', fontWeight: 'bold', verticalAlign: 'top' }}>{skorXBobot ?? ''}</td></tr>
+                    return <tr key={c.no}><td style={{ textAlign: 'center', border: '1px solid #000', padding: '1px 3px', verticalAlign: 'top' }}>{c.no}.</td><td style={{ border: '1px solid #000', padding: '1px 3px', verticalAlign: 'top' }}><div className="pdf-criterion-title">{c.label}</div><div className="pdf-criterion-detail">{c.detail}</div></td><td style={{ textAlign: 'center', border: '1px solid #000', padding: '1px 3px', verticalAlign: 'top' }}>{scores[c.no - 1] ?? ''}</td><td style={{ textAlign: 'center', border: '1px solid #000', padding: '1px 3px', verticalAlign: 'top' }}>{c.bobot}</td><td style={{ textAlign: 'center', border: '1px solid #000', padding: '1px 3px', fontWeight: 'bold', verticalAlign: 'top' }}>{skorXBobot ?? ''}</td></tr>
                   })}
                   <tr style={{ fontWeight: 'bold', borderTop: '2px solid #000' }}><td colSpan={2} style={{ border: '1px solid #000', padding: '1px 3px', textAlign: 'center' }}>TOTAL SKOR × BOBOT</td><td style={{ border: '1px solid #000', padding: '1px 3px' }}></td><td style={{ border: '1px solid #000', padding: '1px 3px' }}></td><td style={{ textAlign: 'center', border: '1px solid #000', padding: '1px 3px' }}>{calc.scoresByExaminer[examIdx].totalSkorXBobot}</td></tr>
                   <tr style={{ fontWeight: 'bold' }}><td colSpan={2} style={{ border: '1px solid #000', padding: '1px 3px', textAlign: 'center' }}>NILAI AKHIR [/400 × 100]</td><td style={{ border: '1px solid #000', padding: '1px 3px' }}></td><td style={{ border: '1px solid #000', padding: '1px 3px' }}></td><td style={{ textAlign: 'center', border: '1px solid #000', padding: '1px 3px' }}>{calc.scoresByExaminer[examIdx].nilaiAkhir > 0 ? calc.scoresByExaminer[examIdx].nilaiAkhir.toFixed(2) : ''}</td></tr>
@@ -1381,7 +1405,7 @@ function PreviewAll({ session, onUpdate }: { session: Session; onUpdate: (s: Ses
                 <p>Hari, Tanggal: {session.hari_tanggal}</p>
                 <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 12 }}>
                   <div style={{ textAlign: 'center', width: 190 }}>
-                    {session[`ttd_penguji${examIdx + 1}` as keyof Session] ? <img src={session[`ttd_penguji${examIdx + 1}` as keyof Session] as string} alt="TTD" style={{ maxHeight: 42, maxWidth: 110, margin: '0 auto', display: 'block', objectFit: 'contain' }} /> : <div style={{ height: 42 }}></div>}
+                    {session[`ttd_penguji${examIdx + 1}` as keyof Session] ? <img src={session[`ttd_penguji${examIdx + 1}` as keyof Session] as string} alt="TTD" className="pdf-signature-img" style={{ maxHeight: 42, maxWidth: 110, margin: '0 auto', display: 'block', objectFit: 'contain' }} /> : <div style={{ height: 42 }}></div>}
                     <p style={{ margin: '2px 0' }}>Tanda Tangan</p>
                     <div style={{ height: 6 }}></div>
                     <p style={{ borderTop: '1px solid #000', paddingTop: 2, fontWeight: 'bold', fontSize: 12 }}>{labels[examIdx]}</p>
@@ -1403,14 +1427,15 @@ function PreviewAll({ session, onUpdate }: { session: Session; onUpdate: (s: Ses
             <div style={{ fontSize: 12, textAlign: 'center' }}>FAKULTAS ILMU KESEHATAN UPN &ldquo;VETERAN&rdquo; JAKARTA</div>
             <div style={{ fontWeight: 'bold', fontSize: 12, textAlign: 'center' }}>SEMESTER {session.semester} T.A. {session.ta}</div>
           </div>
-          <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 4 }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11, lineHeight: 1.2, marginTop: 4, tableLayout: 'fixed' }}>
             <tbody>
-              <tr><td style={{ width: 130 }}>Dosen Pembimbing</td><td style={{ width: 14 }}>:</td><td>{session.pembimbing}</td><td style={{ width: 80 }}>Peminatan</td><td style={{ width: 14 }}>:</td><td>{session.peminatan}</td></tr>
-              <tr><td>Hari, Tanggal</td><td>:</td><td>{session.hari_tanggal}</td><td>Waktu</td><td>:</td><td>{session.waktu}</td><td>Tempat</td><td>:</td><td>{session.tempat}</td></tr>
-              <tr><td>Judul Skripsi</td><td>:</td><td colSpan={7} style={{ fontSize: 11 }}>{session.judul_skripsi}</td></tr>
+              <tr><td style={{ width: 120, padding: '1px 0' }}>Dosen Pembimbing</td><td style={{ width: 14, padding: '1px 0' }}>:</td><td style={{ padding: '1px 0' }}>{session.pembimbing}</td><td style={{ width: 75, padding: '1px 0' }}>Peminatan</td><td style={{ width: 14, padding: '1px 0' }}>:</td><td style={{ padding: '1px 0' }}>{session.peminatan}</td></tr>
+              <tr><td style={{ padding: '1px 0' }}>Hari, Tanggal</td><td style={{ padding: '1px 0' }}>:</td><td style={{ padding: '1px 0' }}>{session.hari_tanggal}</td><td style={{ width: 75, padding: '1px 0' }}>Waktu</td><td style={{ padding: '1px 0' }}>:</td><td style={{ padding: '1px 0' }}>{session.waktu}</td></tr>
+              <tr><td style={{ padding: '1px 0' }}>Tempat</td><td style={{ padding: '1px 0' }}>:</td><td style={{ padding: '1px 0' }} colSpan={4}>{session.tempat}</td></tr>
+              <tr><td style={{ padding: '1px 0' }}>Judul Skripsi</td><td style={{ padding: '1px 0' }}>:</td><td style={{ padding: '1px 0', fontSize: 10 }} colSpan={4}>{session.judul_skripsi}</td></tr>
             </tbody>
           </table>
-          <table className="template-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, marginTop: 6 }}>
+          <table className="pdf-table pdf-table--rekap" style={{ fontSize: 12, marginTop: 6 }}>
             <thead><tr><th style={{ width: 22, border: '1px solid #000', padding: '1px 3px', textAlign: 'center' }}>NO</th><th style={{ border: '1px solid #000', padding: '1px 3px' }}>NAMA</th><th style={{ width: 60, border: '1px solid #000', padding: '1px 3px' }}>NIM</th><th style={{ width: 52, border: '1px solid #000', padding: '1px 2px', textAlign: 'center', fontSize: 11 }}>NILAI<br/>PENGUJI I</th><th style={{ width: 52, border: '1px solid #000', padding: '1px 2px', textAlign: 'center', fontSize: 11 }}>NILAI<br/>PENGUJI II</th><th style={{ width: 52, border: '1px solid #000', padding: '1px 2px', textAlign: 'center', fontSize: 11 }}>NILAI<br/>PENGUJI III</th><th style={{ width: 60, border: '1px solid #000', padding: '1px 2px', textAlign: 'center', fontSize: 11 }}>RERATA<br/>NILAI</th></tr></thead>
             <tbody>
               <tr><td style={{ textAlign: 'center', border: '1px solid #000', padding: '1px 3px' }}>1.</td><td style={{ border: '1px solid #000', padding: '1px 3px' }}>{session.nama}</td><td style={{ border: '1px solid #000', padding: '1px 3px' }}>{session.nim}</td><td style={{ textAlign: 'center', border: '1px solid #000', padding: '1px 3px', fontSize: 11 }}>{calc.scoresByExaminer[0].nilaiAkhir > 0 ? calc.scoresByExaminer[0].nilaiAkhir.toFixed(2) : ''}</td><td style={{ textAlign: 'center', border: '1px solid #000', padding: '1px 3px', fontSize: 11 }}>{calc.scoresByExaminer[1].nilaiAkhir > 0 ? calc.scoresByExaminer[1].nilaiAkhir.toFixed(2) : ''}</td><td style={{ textAlign: 'center', border: '1px solid #000', padding: '1px 3px', fontSize: 11 }}>{calc.scoresByExaminer[2].nilaiAkhir > 0 ? calc.scoresByExaminer[2].nilaiAkhir.toFixed(2) : ''}</td><td style={{ textAlign: 'center', border: '1px solid #000', padding: '1px 3px', fontWeight: 'bold', fontSize: 11 }}>{calc.rataRata > 0 ? calc.rataRata.toFixed(2) : ''}</td></tr>
@@ -1425,7 +1450,7 @@ function PreviewAll({ session, onUpdate }: { session: Session; onUpdate: (s: Ses
               ].map((p, i) => (
                 <div key={i} style={{ textAlign: 'center', width: 150 }}>
                   <p style={{ fontSize: 12, margin: '1px 0' }}>{p.label}</p>
-                  {p.ttd ? <img src={p.ttd} alt="TTD" style={{ maxHeight: 38, maxWidth: 80, margin: '0 auto', display: 'block', objectFit: 'contain' }} /> : <div style={{ height: 38 }}></div>}
+                  {p.ttd ? <img src={p.ttd} alt="TTD" className="pdf-signature-img" style={{ maxHeight: 38, maxWidth: 80, margin: '0 auto', display: 'block', objectFit: 'contain' }} /> : <div style={{ height: 38 }}></div>}
                   <div style={{ height: 8 }}></div>
                   <p style={{ borderTop: '1px solid #000', paddingTop: 2, fontWeight: 'bold', fontSize: 12, margin: 0 }}>{p.nama || '....................'}</p>
                   <p style={{ fontSize: 10, margin: 0 }}>NIP. {p.nip || '..........................'}</p>
