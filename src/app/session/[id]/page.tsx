@@ -242,7 +242,7 @@ export default function SessionPage() {
 
   const tabs = isDosen
     ? allTabs.filter(t => {
-        if (isSuperadmin || isKoordinator) return true // superadmin & coordinator see all
+        if (isSuperadmin) return true // superadmin & coordinator see all
         if (t.key.startsWith('penilaian-')) {
           if (allowedPenilaian === null) return false // not a penguji → no penilaian
           const idx = parseInt(t.key.split('-')[1]) - 1
