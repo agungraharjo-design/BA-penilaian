@@ -228,7 +228,7 @@ export default function SessionPage() {
   const isKoordinator = isDosen && session ? matchPenguji(session.koordinator) : false
 
   let allowedPenilaian: number[] | null = null // null = no penilaian access
-  if (!isSuperadmin && isDosen && session && !isKoordinator) {
+  if (!isSuperadmin && isDosen && session) {
     const matched = [
       matchPenguji(session.penguji1),
       matchPenguji(session.penguji2),
