@@ -15,8 +15,8 @@
   .avoid-break { page-break-inside: avoid; break-inside: avoid; }
   p, h1, h2, h3, li { orphans: 3; widows: 3; }
   img { max-width: 100% !important; height: auto !important; }
-  .template-table { font-size: 10pt; }
-  .template-table th, .template-table td { padding: 2px 4px; }
+  .template-table { font-size: 11pt; }
+  .template-table th, .template-table td { padding: 3px 6px; }
 
   /* Ensure table headers repeat on every printed page */
   thead { display: table-header-group; }
@@ -173,6 +173,11 @@ body {
     min-height: 297mm;
     padding: 12mm 13mm 15mm;
     page-break-after: always;
+  }
+
+  /* Do not force a trailing blank page after the final document page */
+  .document-page:last-child {
+    page-break-after: auto;
   }
 }
 

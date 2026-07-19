@@ -41,6 +41,15 @@ const DEFAULT_SCORE: (number | null)[] = [null, null, null, null, null, null, nu
 const S2_KOORDINATOR_NAME = 'Dr. Apriningsih, S.K.M., M.K.M.';
 const S2_KOORDINATOR_NIP = '197604102021212009';
 
+// Reusable letterhead that fills the document width (no restrictive max-height)
+function Kop({ compact = false }: { compact?: boolean }) {
+  return (
+    <div className={compact ? 'letterhead letterhead--compact' : 'letterhead'}>
+      <img src="/kop-surat-resize.png" alt="Kop Surat UPN Veteran Jakarta" className="letterhead__image" />
+    </div>
+  );
+}
+
 export default function S2SessionDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -328,7 +337,7 @@ const BeritaAcaraTab = memo(function BeritaAcaraTab({
   return (
     <div className="space-y-6">
       <div className="text-center border-b-2 border-black pb-4">
-        <img src="/kop-surat-resize.png" alt="KOP" style={{ display: 'block', margin: '0 auto 0.5rem', maxWidth: '100%', maxHeight: 100, width: 'auto', height: 'auto' }} />
+        <Kop />
         <h1 className="text-xl font-bold uppercase">Laporan Seminar Proposal Tesis</h1>
         <p className="text-sm">PROGRAM STUDI KESEHATAN MASYARAKAT PROGRAM MAGISTER</p>
         <p className="text-sm">FAKULTAS ILMU KESEHATAN UPN &ldquo;VETERAN&rdquo; JAKARTA</p>
@@ -372,7 +381,7 @@ const BeritaAcaraTab = memo(function BeritaAcaraTab({
       {/* TIM PENGUJI */}
       <div>
         <h3 className="font-bold text-center mb-1">TIM PENGUJI</h3>
-        <table className="template-table text-sm">
+        <table className="template-table text-[15px] leading-snug">
           <thead><tr><th className="w-10">NO</th><th>NAMA PENGUJI</th><th className="w-28">JABATAN</th><th className="w-24">TANDA TANGAN</th>{isDosen && <th className="w-10">✕</th>}</tr></thead>
           <tbody>
             {examiners.map((p, i) => (
@@ -470,7 +479,7 @@ const PenilaianTab = memo(function PenilaianTab({
   return (
     <div className="space-y-4">
       <div className="text-center border-b-2 border-black pb-4">
-        <img src="/kop-surat-resize.png" alt="KOP" style={{ display: 'block', margin: '0 auto 0.5rem', maxWidth: '100%', maxHeight: 100, width: 'auto', height: 'auto' }} />
+        <Kop />
         <h1 className="text-xl font-bold uppercase">Formulir Penilaian Seminar Proposal Tesis</h1>
         <p className="text-sm">PROGRAM STUDI KESEHATAN MASYARAKAT PROGRAM MAGISTER</p>
         <p className="text-sm">FAKULTAS ILMU KESEHATAN UPN &ldquo;VETERAN&rdquo; JAKARTA</p>
@@ -487,7 +496,7 @@ const PenilaianTab = memo(function PenilaianTab({
       <div className="flex"><span className="w-36">Peminatan</span><span className="w-4">:</span><span className="flex-1 border-b border-gray-400">{session.specialization}</span></div>
       <div className="flex"><span className="w-36">Judul Tesis</span><span className="w-4">:</span><span className="flex-1 border-b border-gray-400">{session.thesis_title}</span></div>
 
-      <table className="template-table text-sm">
+       <table className="template-table text-[15px] leading-snug">
         <thead><tr><th className="w-8">NO</th><th>PARAMETER PENILAIAN</th><th className="w-24">SKOR (1—4)</th><th className="w-14">BOBOT</th><th className="w-24">SKOR × BOBOT</th></tr></thead>
         <tbody>
           {RUBRIC.map((c, i) => {
@@ -548,7 +557,7 @@ function RekapNilaiTab({ session, people, scores, onUpdate }: { session: S2Sessi
   return (
     <div className="space-y-4">
       <div className="text-center border-b-2 border-black pb-4">
-        <img src="/kop-surat-resize.png" alt="KOP" style={{ display: 'block', margin: '0 auto 0.5rem', maxWidth: '100%', maxHeight: 100, width: 'auto', height: 'auto' }} />
+        <Kop />
         <h1 className="text-xl font-bold uppercase">Rekapitulasi Nilai Seminar Proposal Tesis</h1>
         <p className="text-sm">PROGRAM STUDI KESEHATAN MASYARAKAT PROGRAM MAGISTER</p>
         <p className="text-sm">FAKULTAS ILMU KESEHATAN UPN &ldquo;VETERAN&rdquo; JAKARTA</p>
@@ -562,7 +571,7 @@ function RekapNilaiTab({ session, people, scores, onUpdate }: { session: S2Sessi
         </tbody>
       </table>
 
-      <table className="template-table text-sm">
+       <table className="template-table text-[15px] leading-snug">
         <thead>
           <tr>
             <th className="w-8">NO</th><th>NAMA</th><th className="w-20">NIM</th>
@@ -595,6 +604,13 @@ function RekapNilaiTab({ session, people, scores, onUpdate }: { session: S2Sessi
             <div key={p.id} className="flex items-center gap-2 text-sm">
               <span className="w-48 shrink-0">{i + 1}. {S2_ROLE_LABELS[p.role as keyof typeof S2_ROLE_LABELS]}</span>
               <span className="flex-1 border-b border-black">{p.display_name || '…………………………………..'}</span>
+              <span className="w-24 text-center">
+                {p.signature_path ? (
+                  <img src={p.signature_path} alt="TTD" className="max-h-12 max-w-24 object-contain mx-auto" />
+                ) : (
+                  <span className="text-gray-300 text-xs">(—)</span>
+                )}
+              </span>
             </div>
           ))}
         </div>
@@ -644,7 +660,7 @@ function DaftarHadirTab({ session, people, attendance, onSave, sessionId, isDose
       {/* Daftar Hadir Penguji */}
       <div>
         <div className="text-center border-b-2 border-black pb-4">
-          <img src="/kop-surat-resize.png" alt="KOP" style={{ display: 'block', margin: '0 auto 0.5rem', maxWidth: '100%', maxHeight: 100, width: 'auto', height: 'auto' }} />
+          <Kop />
           <h1 className="text-xl font-bold uppercase">Daftar Hadir Penguji Seminar Proposal Tesis</h1>
           <p className="text-sm">PROGRAM STUDI KESEHATAN MASYARAKAT PROGRAM MAGISTER</p>
           <p className="text-sm">FAKULTAS ILMU KESEHATAN UPN &ldquo;VETERAN&rdquo; JAKARTA</p>
@@ -655,7 +671,7 @@ function DaftarHadirTab({ session, people, attendance, onSave, sessionId, isDose
           <tr><td>Tanggal</td><td>:</td><td>{session.hari_tanggal || session.exam_date || ''}</td></tr>
           <tr><td>Peminatan</td><td>:</td><td>{session.specialization}</td></tr>
         </tbody></table>
-        <table className="template-table text-sm mt-4">
+        <table className="template-table text-[15px] leading-snug mt-4">
           <thead><tr><th className="w-8">NO</th><th className="w-28">NIP</th><th>NAMA PENGUJI</th><th>JABATAN</th><th className="w-24">TANDA TANGAN</th></tr></thead>
           <tbody>
             {penguji.map((p, i) => (
@@ -668,7 +684,7 @@ function DaftarHadirTab({ session, people, attendance, onSave, sessionId, isDose
       {/* Daftar Hadir Peserta */}
       <div>
         <h2 className="font-bold text-center mb-2">Daftar Hadir Peserta Seminar Proposal Tesis</h2>
-        <table className="template-table text-sm">
+        <table className="template-table text-[15px] leading-snug">
           <thead><tr><th className="w-8">NO</th><th>NAMA PESERTA</th><th className="w-24">NIM</th><th className="w-24">TANDA TANGAN</th><th className="w-16">KET</th></tr></thead>
           <tbody>
             {localPeserta.map((p, i) => (
@@ -688,7 +704,7 @@ function DaftarHadirTab({ session, people, attendance, onSave, sessionId, isDose
       {/* Daftar Hadir Audiens */}
       <div>
         <h2 className="font-bold text-center mb-2">Daftar Hadir Mahasiswa Sebagai Audiens</h2>
-        <table className="template-table text-sm">
+        <table className="template-table text-[15px] leading-snug">
           <thead><tr><th className="w-8">NO</th><th>NAMA MAHASISWA</th><th className="w-24">NIM</th><th className="w-24">TANDA TANGAN</th><th className="w-16">KET</th></tr></thead>
           <tbody>
             {localAudiens.map((a, i) => (
@@ -727,7 +743,7 @@ function S2Preview({ session, people, scores, attendance, onUpdate }: { session:
       {/* Berita Acara */}
       <div className="document-page">
         <div style={{ textAlign: 'center', borderBottom: '2px solid #000', paddingBottom: 4, marginBottom: 8 }}>
-          <img src="/kop-surat-resize.png" style={{ display: 'block', margin: '0 auto 4px', maxWidth: '100%', maxHeight: 52, width: 'auto', height: 'auto' }} />
+          <Kop compact />
           <div style={{ fontWeight: 'bold', textTransform: 'uppercase', fontSize: 14 }}>Laporan Seminar Proposal Tesis</div>
           <div style={{ fontSize: 12 }}>PROGRAM STUDI KESEHATAN MASYARAKAT PROGRAM MAGISTER</div>
           <div style={{ fontSize: 12 }}>FAKULTAS ILMU KESEHATAN UPN &ldquo;VETERAN&rdquo; JAKARTA</div>
@@ -772,7 +788,7 @@ function S2Preview({ session, people, scores, attendance, onUpdate }: { session:
         return (
           <div key={p.id} className="document-page">
             <div style={{ textAlign: 'center', borderBottom: '2px solid #000', paddingBottom: 4, marginBottom: 6 }}>
-              <img src="/kop-surat-resize.png" style={{ display: 'block', margin: '0 auto 4px', maxWidth: '100%', maxHeight: 52, width: 'auto', height: 'auto' }} />
+              <Kop compact />
               <div style={{ fontWeight: 'bold', textTransform: 'uppercase', fontSize: 14 }}>Formulir Penilaian Seminar Proposal Tesis</div>
               <div style={{ fontSize: 12 }}>PROGRAM STUDI KESEHATAN MASYARAKAT PROGRAM MAGISTER</div>
               <div style={{ fontSize: 12 }}>FAKULTAS ILMU KESEHATAN UPN &ldquo;VETERAN&rdquo; JAKARTA</div>
@@ -791,7 +807,7 @@ function S2Preview({ session, people, scores, attendance, onUpdate }: { session:
                   const sb = sc[i] !== null ? sc[i]! * c.bobot : null;
                   return (
                     <tr key={c.code}><td style={{ textAlign: 'center', border: '1px solid #000', padding: '1px 3px', verticalAlign: 'top' }}>{i + 1}.</td>
-                      <td style={{ border: '1px solid #000', padding: '1px 3px', verticalAlign: 'top' }}><div style={{ fontWeight: 'bold', fontSize: 10 }}>{c.label}</div><div style={{ fontSize: 9, whiteSpace: 'pre-line' }}>{c.details.join('\n')}</div></td>
+                      <td style={{ border: '1px solid #000', padding: '2px 4px', verticalAlign: 'top' }}><div style={{ fontWeight: 'bold', fontSize: 11 }}>{c.label}</div><div style={{ fontSize: 10, whiteSpace: 'pre-line' }}>{c.details.join('\n')}</div></td>
                       <td style={{ textAlign: 'center', border: '1px solid #000', padding: '1px 3px', verticalAlign: 'top' }}>{sc[i] ?? ''}</td>
                       <td style={{ textAlign: 'center', border: '1px solid #000', padding: '1px 3px', verticalAlign: 'top' }}>{c.bobot}</td>
                       <td style={{ textAlign: 'center', border: '1px solid #000', padding: '1px 3px', fontWeight: 'bold', verticalAlign: 'top' }}>{sb ?? ''}</td>
@@ -817,7 +833,7 @@ function S2Preview({ session, people, scores, attendance, onUpdate }: { session:
       {/* Rekapitulasi */}
       <div className="document-page">
         <div style={{ textAlign: 'center', borderBottom: '2px solid #000', paddingBottom: 4, marginBottom: 8 }}>
-          <img src="/kop-surat-resize.png" style={{ display: 'block', margin: '0 auto 4px', maxWidth: '100%', maxHeight: 52, width: 'auto', height: 'auto' }} />
+          <Kop compact />
           <div style={{ fontWeight: 'bold', textTransform: 'uppercase', fontSize: 14 }}>Rekapitulasi Nilai Seminar Proposal Tesis</div>
           <div style={{ fontSize: 12 }}>PROGRAM STUDI KESEHATAN MASYARAKAT PROGRAM MAGISTER</div>
           <div style={{ fontSize: 12 }}>FAKULTAS ILMU KESEHATAN UPN &ldquo;VETERAN&rdquo; JAKARTA</div>
