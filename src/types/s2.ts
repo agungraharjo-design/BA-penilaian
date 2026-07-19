@@ -49,6 +49,7 @@ export interface S2Session {
   tanggal_ba: string;
   koordinator: string;
   nip_koordinator: string;
+  koordinator_signature_path: string | null;
 
   decision: S2ProposalDecision;
   report_notes: string;

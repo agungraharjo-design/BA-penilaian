@@ -175,8 +175,12 @@ export default function S2SessionDetailPage() {
   }
 
   async function savePerson(personId: string, field: 'display_name' | 'nip' | 'signature_path', value: string) {
+    setPeople((prev) => prev.map((p) => (p.id === personId ? { ...p, [field]: value } : p)));
     const { error } = await supabase.from('s2_session_people').update({ [field]: value, updated_at: new Date().toISOString() }).eq('id', personId);
-    if (error) console.error(error);
+    if (error) {
+      console.error(error);
+      alert('Gagal menyimpan: ' + error.message);
+    }
   }
   async function addPerson(role: string, displayName: string, nip: string) {
     const { error } = await supabase.from('s2_session_people').insert({ session_id: sessionId, role, display_name: displayName, nip: nip || '', email: '', sequence_no: 1 });
@@ -270,7 +274,7 @@ export default function S2SessionDetailPage() {
           if (activeTab !== `penilaian-${role}`) return null;
           const person = personByRole(role);
           if (!person) return <div key={role} className="text-amber-600">Penguji untuk peran ini belum ditambahkan di Berita Acara.</div>;
-          return <PenilaianTab key={role} session={session} person={person} role={role} scores={getExaminerScores(person.id)} canEdit={canEditExaminer(role)} onSaveScore={(code, val) => saveScore(person.id, code, val)} />;
+          return <PenilaianTab key={role} session={session} person={person} role={role} scores={getExaminerScores(person.id)} canEdit={canEditExaminer(role)} onSaveScore={(code, val) => saveScore(person.id, code, val)} onSavePerson={savePerson} />;
         })}
         {activeTab === 'rekap-nilai' && (
           <RekapNilaiTab session={session} people={people} scores={scores} onUpdate={updateSessionField} />
@@ -400,7 +404,7 @@ const BeritaAcaraTab = memo(function BeritaAcaraTab({
           <input value={session.tanggal_ba} onChange={(e) => onUpdate('tanggal_ba', e.target.value)} className="border-b border-gray-400 bg-transparent w-40 text-center" placeholder="tanggal" />
         </p>
         <p className="mt-4">Koordinator Program Studi</p>
-        <S2SignatureUpload value={null} onChange={() => {}} label="Koordinator" />
+        <S2SignatureUpload value={session.koordinator_signature_path} onChange={(v) => onUpdate('koordinator_signature_path', v)} label="Koordinator" />
         <div className="h-8" />
         <input value={session.koordinator || S2_KOORDINATOR_NAME} onChange={(e) => onUpdate('koordinator', e.target.value)} className="border-b border-gray-400 bg-transparent text-center font-semibold" />
         <br />
@@ -442,9 +446,9 @@ function AddPersonInline({ onAdd, existingRoles }: { onAdd: (role: string, name:
 
 // ─── PENILAIAN (7 criteria, 4 examiners) ─────────────────────
 const PenilaianTab = memo(function PenilaianTab({
-  session, person, role, scores, canEdit, onSaveScore,
+  session, person, role, scores, canEdit, onSaveScore, onSavePerson,
 }: {
-  session: S2Session; person: S2SessionPerson; role: string; scores: (number | null)[]; canEdit: boolean; onSaveScore: (code: string, value: number | null) => void;
+  session: S2Session; person: S2SessionPerson; role: string; scores: (number | null)[]; canEdit: boolean; onSaveScore: (code: string, value: number | null) => void; onSavePerson: (id: string, f: 'display_name' | 'nip' | 'signature_path', v: string) => void;
 }) {
   const label = S2_ROLE_LABELS[role as keyof typeof S2_ROLE_LABELS];
   const [local, setLocal] = useState(scores);
@@ -515,7 +519,7 @@ const PenilaianTab = memo(function PenilaianTab({
       <div className="mt-6 avoid-break text-right">
         <p>Jakarta, {session.tanggal_ba || session.exam_date || '______________'}</p>
         <p className="mt-8">{label}</p>
-        <S2SignatureUpload value={person.signature_path} onChange={() => {}} label={label} />
+        <S2SignatureUpload value={person.signature_path} onChange={(v) => onSavePerson(person.id, 'signature_path', v || '')} label={label} />
         <div className="h-8" />
         <p className="border-t border-black pt-1 font-semibold">{person.display_name}</p>
         <p className="text-xs">NIP. {person.nip}</p>
