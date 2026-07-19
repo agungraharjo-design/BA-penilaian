@@ -89,6 +89,17 @@ export default function Home() {
         </p>
 
         {isDosen && (
+          <div className="flex justify-center mb-4">
+            <a
+              href="/s2/sessions"
+              className="bg-green-900 text-white px-5 py-2 rounded-lg hover:bg-green-800 font-sans text-sm font-medium shadow"
+            >
+              🎓 Seminar Proposal Tesis (S2 Kesmas) →
+            </a>
+          </div>
+        )}
+
+        {isDosen && (
           <div className="border-t pt-6">
             <h2 className="text-lg font-semibold mb-4">Buat Sidang Baru</h2>
             <div className="flex gap-3 items-end">
