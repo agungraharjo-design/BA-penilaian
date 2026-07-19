@@ -50,6 +50,75 @@ function Kop({ compact = false }: { compact?: boolean }) {
   );
 }
 
+// Document shell: wraps a whole document in a single table whose <thead>
+// repeats the kop + title + divider on every printed page. This is the only
+// reliable way to repeat the letterhead across page breaks (CSS thead repeat).
+function DocumentShell({
+  title,
+  semester,
+  ta,
+  children,
+}: {
+  title: string;
+  semester: string;
+  ta: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <table className="document-shell w-full" style={{ borderCollapse: 'collapse' }}>
+      <thead>
+        <tr>
+          <td style={{ border: 'none', padding: 0 }}>
+            <div className="border-b-2 border-black pb-2">
+              <Kop />
+            </div>
+            <div className="text-center pt-2">
+              <h1 className="text-xl font-bold uppercase leading-tight">{title}</h1>
+              <p className="text-sm">PROGRAM STUDI KESEHATAN MASYARAKAT PROGRAM MAGISTER</p>
+              <p className="text-sm">FAKULTAS ILMU KESEHATAN UPN &ldquo;VETERAN&rdquo; JAKARTA</p>
+              <p className="text-sm font-semibold">SEMESTER {semester} T.A. {ta}</p>
+            </div>
+            <div className="border-b-2 border-black mt-2" />
+          </td>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td style={{ border: 'none', padding: 0, verticalAlign: 'top' }}>{children}</td>
+        </tr>
+      </tbody>
+    </table>
+  );
+}
+
+function PrintButton() {
+  return (
+    <button
+      onClick={() => window.print()}
+      className="no-print mb-3 px-4 py-2 rounded bg-green-900 text-white hover:bg-green-800 font-sans text-sm font-medium"
+    >
+      🖨 Print / Save PDF
+    </button>
+  );
+}
+
+// Section title used inside Daftar Hadir (multiple sub-documents per tab).
+// Thick divider sits right under the kop, title below it.
+function SubHeader({ title }: { title: string }) {
+  return (
+    <div className="text-center">
+      <div className="border-b-2 border-black pb-2">
+        <Kop />
+      </div>
+      <h2 className="text-lg font-bold uppercase pt-2">{title}</h2>
+      <p className="text-sm">PROGRAM STUDI KESEHATAN MASYARAKAT PROGRAM MAGISTER</p>
+      <p className="text-sm">FAKULTAS ILMU KESEHATAN UPN &ldquo;VETERAN&rdquo; JAKARTA</p>
+      <div className="border-b-2 border-black mt-2" />
+    </div>
+  );
+}
+
+
 export default function S2SessionDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -335,15 +404,9 @@ const BeritaAcaraTab = memo(function BeritaAcaraTab({
   ];
 
   return (
-    <div className="space-y-6">
-      <div className="text-center border-b-2 border-black pb-4">
-        <Kop />
-        <h1 className="text-xl font-bold uppercase">Laporan Seminar Proposal Tesis</h1>
-        <p className="text-sm">PROGRAM STUDI KESEHATAN MASYARAKAT PROGRAM MAGISTER</p>
-        <p className="text-sm">FAKULTAS ILMU KESEHATAN UPN &ldquo;VETERAN&rdquo; JAKARTA</p>
-        <p className="text-sm font-semibold">SEMESTER {isDosen ? <input value={session.semester} onChange={(e) => onUpdate('semester', e.target.value)} className="bg-transparent border-b border-gray-400 w-20 text-center font-bold" /> : <span className="font-bold">{session.semester}</span>} T.A. {isDosen ? <input value={session.ta} onChange={(e) => onUpdate('ta', e.target.value)} className="bg-transparent border-b border-gray-400 w-28 text-center font-bold" /> : <span className="font-bold">{session.ta}</span>}</p>
-      </div>
-
+    <DocumentShell title="Laporan Seminar Proposal Tesis" semester={session.semester} ta={session.ta}>
+      <div className="space-y-4">
+      <PrintButton />
       <p>
         Pada hari ini{' '}
         <input value={session.hari_tanggal} onChange={(e) => onUpdate('hari_tanggal', e.target.value)} className="border-b border-gray-400 bg-transparent px-1 font-semibold w-64" placeholder="..., tanggal ... bulan ... tahun 2026" />
@@ -419,7 +482,8 @@ const BeritaAcaraTab = memo(function BeritaAcaraTab({
         <br />
         <input value={session.nip_koordinator || S2_KOORDINATOR_NIP} onChange={(e) => onUpdate('nip_koordinator', e.target.value)} className="border-b border-gray-400 bg-transparent text-center text-sm" />
       </div>
-    </div>
+      </div>
+    </DocumentShell>
   );
 });
 
@@ -477,14 +541,9 @@ const PenilaianTab = memo(function PenilaianTab({
   const grade = total > 0 ? calcGrade(nilai) : '';
 
   return (
-    <div className="space-y-4">
-      <div className="text-center border-b-2 border-black pb-4">
-        <Kop />
-        <h1 className="text-xl font-bold uppercase">Formulir Penilaian Seminar Proposal Tesis</h1>
-        <p className="text-sm">PROGRAM STUDI KESEHATAN MASYARAKAT PROGRAM MAGISTER</p>
-        <p className="text-sm">FAKULTAS ILMU KESEHATAN UPN &ldquo;VETERAN&rdquo; JAKARTA</p>
-      </div>
-
+    <DocumentShell title="Formulir Penilaian Seminar Proposal Tesis" semester={session.semester} ta={session.ta}>
+      <div className="space-y-4">
+      <PrintButton />
       <div className="grid grid-cols-2 gap-x-8 gap-y-1 text-sm">
         <div className="flex"><span className="w-36">Nama Peserta</span><span className="w-4">:</span><span className="flex-1 border-b border-gray-400">{session.student_name}</span></div>
         <div className="flex"><span className="w-36">NIM</span><span className="w-4">:</span><span className="flex-1 border-b border-gray-400">{session.student_nim}</span></div>
@@ -533,7 +592,8 @@ const PenilaianTab = memo(function PenilaianTab({
         <p className="border-t border-black pt-1 font-semibold">{person.display_name}</p>
         <p className="text-xs">NIP. {person.nip}</p>
       </div>
-    </div>
+      </div>
+    </DocumentShell>
   );
 });
 
@@ -555,14 +615,9 @@ function RekapNilaiTab({ session, people, scores, onUpdate }: { session: S2Sessi
   const ip = valid.length ? calcIP(jumlah / valid.length) : null;
 
   return (
-    <div className="space-y-4">
-      <div className="text-center border-b-2 border-black pb-4">
-        <Kop />
-        <h1 className="text-xl font-bold uppercase">Rekapitulasi Nilai Seminar Proposal Tesis</h1>
-        <p className="text-sm">PROGRAM STUDI KESEHATAN MASYARAKAT PROGRAM MAGISTER</p>
-        <p className="text-sm">FAKULTAS ILMU KESEHATAN UPN &ldquo;VETERAN&rdquo; JAKARTA</p>
-        <p className="text-sm font-semibold">SEMESTER {isStatic(session.semester)} T.A. {isStatic(session.ta)}</p>
-      </div>
+    <DocumentShell title="Rekapitulasi Nilai Seminar Proposal Tesis" semester={session.semester} ta={session.ta}>
+      <div className="space-y-4">
+      <PrintButton />
 
       <table className="w-full text-sm">
         <tbody>
@@ -615,7 +670,8 @@ function RekapNilaiTab({ session, people, scores, onUpdate }: { session: S2Sessi
           ))}
         </div>
       </div>
-    </div>
+      </div>
+    </DocumentShell>
   );
 }
 
@@ -659,12 +715,8 @@ function DaftarHadirTab({ session, people, attendance, onSave, sessionId, isDose
 
       {/* Daftar Hadir Penguji */}
       <div>
-        <div className="text-center border-b-2 border-black pb-4">
-          <Kop />
-          <h1 className="text-xl font-bold uppercase">Daftar Hadir Penguji Seminar Proposal Tesis</h1>
-          <p className="text-sm">PROGRAM STUDI KESEHATAN MASYARAKAT PROGRAM MAGISTER</p>
-          <p className="text-sm">FAKULTAS ILMU KESEHATAN UPN &ldquo;VETERAN&rdquo; JAKARTA</p>
-        </div>
+        <PrintButton />
+        <SubHeader title="Daftar Hadir Penguji Seminar Proposal Tesis" />
         <table className="w-full text-sm"><tbody>
           <tr><td className="w-32">Nama Mahasiswa</td><td className="w-4">:</td><td>{session.student_name}</td></tr>
           <tr><td>NIM</td><td>:</td><td>{session.student_nim}</td></tr>

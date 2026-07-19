@@ -146,6 +146,30 @@ body {
   margin-top: 6px;
 }
 
+/* Document shell: single table whose <thead> repeats the letterhead on
+   every printed page (reliable cross-page header repetition) */
+.document-shell {
+  border: none;
+}
+
+.document-shell > thead > tr > td {
+  border: none;
+  padding: 0;
+}
+
+.document-shell > thead {
+  break-inside: avoid;
+}
+
+@media print {
+  .document-shell {
+    width: 100% !important;
+  }
+  .document-shell > thead > tr > td {
+    border: none !important;
+  }
+}
+
 /* Document page wrapper for A4 */
 .document-page {
   width: 210mm;
