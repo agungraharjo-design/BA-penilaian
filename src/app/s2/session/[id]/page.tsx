@@ -292,7 +292,7 @@ export default function S2SessionDetailPage() {
 
       <div className="bg-white rounded-lg shadow-md p-6 print:shadow-none print:p-0">
         {activeTab === 'naskah' && (
-          <NaskahTab session={session} onUpdate={updateSessionField} isDosen={isDosen} people={people} onSavePerson={savePerson} />
+          <NaskahTab session={session} onUpdate={updateSessionField} isDosen={isDosen} people={people} onSavePerson={savePerson} onAddPerson={(role, name, nip) => addPerson(session.id, role, name, nip)} onRemovePerson={removePerson} />
         )}
         {activeTab === 'laporan' && (
           <LaporanTab session={session} onUpdate={updateSessionField} people={people} />
@@ -344,6 +344,28 @@ async function savePerson(personId: string, field: 'display_name' | 'nip' | 'sig
   if (error) console.error(error);
 }
 
+async function addPerson(sessionId: string, role: string, displayName: string, nip: string) {
+  const { error } = await supabase
+    .from('s2_session_people')
+    .insert({
+      session_id: sessionId,
+      role,
+      display_name: displayName,
+      nip: nip || '',
+      email: '',
+      sequence_no: 1,
+    });
+  if (error) { console.error(error); alert('Gagal menambah: ' + error.message); }
+}
+
+async function removePerson(personId: string) {
+  const { error } = await supabase
+    .from('s2_session_people')
+    .delete()
+    .eq('id', personId);
+  if (error) { console.error(error); alert('Gagal menghapus: ' + error.message); }
+}
+
 // ─── NASKAH TAB ───────────────────────────────────────────────
 function NaskahTab({
   session,
@@ -351,12 +373,16 @@ function NaskahTab({
   isDosen,
   people,
   onSavePerson,
+  onAddPerson,
+  onRemovePerson,
 }: {
   session: S2Session;
   onUpdate: (f: keyof S2Session, v: any) => void;
   isDosen: boolean;
   people: S2SessionPerson[];
   onSavePerson: (id: string, f: 'display_name' | 'nip' | 'signature_path', v: string) => void;
+  onAddPerson: (role: string, name: string, nip: string) => void;
+  onRemovePerson: (id: string) => void;
 }) {
   const field = (label: string, field: keyof S2Session, placeholder = '') => (
     <div className="flex">
@@ -405,7 +431,7 @@ function NaskahTab({
         <p className="text-sm font-semibold mb-1">Susunan Tim Penguji & Pembimbing</p>
         <table className="template-table text-sm">
           <thead>
-            <tr><th className="w-10">NO</th><th className="w-28">JABATAN</th><th>NAMA</th><th className="w-24">NIP</th><th className="w-24">TANDA TANGAN</th></tr>
+            <tr><th className="w-10">NO</th><th className="w-28">JABATAN</th><th>NAMA</th><th className="w-24">NIP</th><th className="w-24">TANDA TANGAN</th>{isDosen && <th className="w-10">✕</th>}</tr>
           </thead>
           <tbody>
             {[
@@ -436,10 +462,73 @@ function NaskahTab({
                     row.p.signature_path ? <img src={row.p.signature_path} alt="TTD" className="max-h-10 max-w-20 object-contain mx-auto" /> : ''
                   )}
                 </td>
+                {isDosen && (
+                  <td className="text-center">
+                    <button onClick={() => onRemovePerson(row.p.id)} className="text-red-500 hover:text-red-700 text-xs" title="Hapus">✕</button>
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>
         </table>
+
+        {isDosen && <AddPersonForm onAdd={onAddPerson} existingRoles={people.map((p) => p.role)} />}
+      </div>
+    </div>
+  );
+}
+
+// ─── ADD PERSON FORM ──────────────────────────────────────────
+const ALL_ROLES: { role: string; label: string }[] = [
+  { role: 'ketua_penguji', label: 'Ketua Penguji' },
+  { role: 'anggota_penguji_1', label: 'Anggota Penguji 1' },
+  { role: 'anggota_penguji_2', label: 'Anggota Penguji 2' },
+  { role: 'anggota_penguji_3', label: 'Anggota Penguji 3' },
+  { role: 'pembimbing_1', label: 'Pembimbing 1' },
+  { role: 'pembimbing_2', label: 'Pembimbing 2' },
+];
+
+function AddPersonForm({ onAdd, existingRoles }: { onAdd: (role: string, name: string, nip: string) => void; existingRoles: string[] }) {
+  const [role, setRole] = useState('ketua_penguji');
+  const [name, setName] = useState('');
+  const [nip, setNip] = useState('');
+
+  const availableRoles = ALL_ROLES.filter((r) => !existingRoles.includes(r.role));
+  const effectiveRole = availableRoles.find((r) => r.role === role) ? role : availableRoles[0]?.role || '';
+
+  const handleAdd = () => {
+    if (!name.trim()) { alert('Masukkan nama dosen'); return; }
+    if (!effectiveRole) { alert('Semua peran sudah terisi'); return; }
+    onAdd(effectiveRole, name.trim(), nip.trim());
+    setName('');
+    setNip('');
+  };
+
+  if (availableRoles.length === 0) {
+    return <p className="text-xs text-gray-500 mt-2 italic">Semua peran penguji & pembimbing sudah ditambahkan.</p>;
+  }
+
+  return (
+    <div className="mt-3 p-3 border rounded-lg bg-gray-50 space-y-2">
+      <p className="text-sm font-semibold">+ Tambah Penguji / Pembimbing</p>
+      <div className="flex flex-wrap gap-2 items-end">
+        <div>
+          <label className="block text-xs mb-1">Jabatan</label>
+          <select value={effectiveRole} onChange={(e) => setRole(e.target.value)} className="border border-gray-300 rounded px-2 py-1 font-serif text-sm">
+            {availableRoles.map((r) => (
+              <option key={r.role} value={r.role}>{r.label}</option>
+            ))}
+          </select>
+        </div>
+        <div className="flex-1 min-w-[160px]">
+          <label className="block text-xs mb-1">Nama Dosen</label>
+          <input value={name} onChange={(e) => setName(e.target.value)} className="w-full border border-gray-300 rounded px-2 py-1 font-serif text-sm" placeholder="Nama lengkap" />
+        </div>
+        <div className="w-32">
+          <label className="block text-xs mb-1">NIP</label>
+          <input value={nip} onChange={(e) => setNip(e.target.value)} className="w-full border border-gray-300 rounded px-2 py-1 font-serif text-sm" placeholder="NIP" />
+        </div>
+        <button onClick={handleAdd} className="bg-green-900 text-white px-4 py-2 rounded hover:bg-green-800 font-sans text-sm font-medium">Tambah</button>
       </div>
     </div>
   );
