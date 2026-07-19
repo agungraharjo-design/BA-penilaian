@@ -44,6 +44,12 @@ export interface S2Session {
   end_time: string | null;
   venue: string;
 
+  hari_tanggal: string;
+  ta: string;
+  tanggal_ba: string;
+  koordinator: string;
+  nip_koordinator: string;
+
   decision: S2ProposalDecision;
   report_notes: string;
   script_presentation_minutes: number | null;
