@@ -63,7 +63,172 @@ body {
   min-height: 60px;
 }
 
-/* Scrollbar styling */
+/* ============================================================
+   LETTERHEAD COMPONENT STYLES
+   ============================================================ */
+
+.letterhead {
+  width: 100%;
+  margin: 0 0 8px;
+  overflow: visible;
+}
+
+.letterhead__image {
+  display: block;
+  width: 100%;
+  max-width: none;
+  height: auto;
+  max-height: none;
+  margin: 0;
+  object-fit: contain;
+  object-position: center;
+}
+
+.letterhead--compact {
+  margin-bottom: 4px;
+}
+
+/* Print: ensure letterhead fills page width */
+@media print {
+  .letterhead,
+  .letterhead__image {
+    width: 100% !important;
+    max-width: none !important;
+    height: auto !important;
+    max-height: none !important;
+  }
+}
+
+/* Simple letterhead for backward compatibility */
+.letterhead-simple {
+  width: 100%;
+  margin: 0 0 0.5rem;
+}
+
+.letterhead-simple__image {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-width: none;
+  max-height: none;
+  object-fit: contain;
+}
+
+/* Document header with letterhead + title block */
+.document-header {
+  width: 100%;
+  border-bottom: 2px solid #000;
+  padding-bottom: 6px;
+  margin-bottom: 10px;
+  text-align: center;
+}
+
+.document-header__titles {
+  margin-top: 8px;
+}
+
+.document-header__titles h1 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  text-transform: uppercase;
+  line-height: 1.2;
+}
+
+.document-header__titles p {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.2;
+}
+
+.document-header__border {
+  border-bottom: 2px solid #000;
+  margin-top: 6px;
+}
+
+/* Document page wrapper for A4 */
+.document-page {
+  width: 210mm;
+  min-height: 297mm;
+  box-sizing: border-box;
+  padding: 12mm 13mm 15mm;
+  background: #fff;
+  color: #000;
+  font-family: "Times New Roman", Times, serif;
+}
+
+@page {
+  size: A4 portrait;
+  margin: 0;
+}
+
+@media print {
+  body {
+    margin: 0;
+    background: #fff;
+  }
+
+  .document-page {
+    width: 210mm;
+    min-height: 297mm;
+    padding: 12mm 13mm 15mm;
+    page-break-after: always;
+  }
+}
+
+/* Signature upload component */
+.signature-upload {
+  @apply flex flex-col items-center gap-1;
+}
+
+.signature-upload img {
+  @apply max-h-14 max-w-28 object-contain;
+}
+
+.signature-upload input[type="file"] {
+  @apply hidden;
+}
+
+.signature-upload button {
+  @apply text-[10px] text-blue-700 underline;
+}
+
+.signature-upload button:last-child {
+  @apply text-red-600;
+}
+
+/* Sync indicator */
 .sync-indicator {
   @apply fixed bottom-4 right-4 z-50 flex items-center gap-2 px-3 py-2 rounded-full text-xs font-medium shadow-lg;
+}
+
+/* Template table styles */
+.template-table {
+  @apply border-collapse w-full font-serif;
+}
+
+.template-table th,
+.template-table td {
+  @apply border border-black p-[3px_6px] align-top;
+}
+
+.template-table th {
+  @apply bg-gray-100 text-center font-bold;
+}
+
+/* Signature line */
+.signature-line {
+  @apply flex justify-between mt-8;
+}
+
+.signature-space {
+  @apply min-h-[60px];
+}
+
+/* Print styles for signature */
+@media print {
+  .signature-upload img {
+    max-height: 42px !important;
+    max-width: 84px !important;
+  }
 }
