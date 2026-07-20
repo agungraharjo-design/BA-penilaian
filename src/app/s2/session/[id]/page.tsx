@@ -714,11 +714,35 @@ function DaftarHadirTab({ session, people, attendance, onSave, sessionId, isDose
 }
 
 // ─── PREVIEW & PRINT ─────────────────────────────────────────
-function S2Preview({ session, people, scores, attendance, onUpdate }: { session: S2Session; people: S2SessionPerson[]; scores: S2Score[]; attendance: S2Attendance[]; onUpdate: (f: keyof S2Session, v: any) => void }) {
+function S2Preview({
+  session,
+  people,
+  scores,
+  attendance,
+  onUpdate,
+  previewHeaderDividerAfterKop = true,
+  enablePreviewPenilaianSplit = true,
+  initialPenilaianSubTab = 'rubric',
+}: {
+  session: S2Session;
+  people: S2SessionPerson[];
+  scores: S2Score[];
+  attendance: S2Attendance[];
+  onUpdate: (f: keyof S2Session, v: any) => void;
+  previewHeaderDividerAfterKop?: boolean;
+  enablePreviewPenilaianSplit?: boolean;
+  initialPenilaianSubTab?: 'rubric' | 'signature';
+}) {
   const examiners = people.filter((p) => S2_EXAMINER_ROLES.includes(p.role));
+  const [penilaianPreviewSubTab, setPenilaianPreviewSubTab] = useState<'rubric' | 'signature'>(initialPenilaianSubTab);
+  const isPreviewContext = true;
+
   const getExaminerScores = (pid: string) => {
     const sc: (number | null)[] = [null, null, null, null, null, null, null];
-    scores.filter((s) => s.examiner_person_id === pid).forEach((s) => { const idx = RUBRIC.findIndex((c) => c.code === s.criterion_code); if (idx >= 0) sc[idx] = s.score; });
+    scores.filter((s) => s.examiner_person_id === pid).forEach((s) => {
+      const idx = RUBRIC.findIndex((c) => c.code === s.criterion_code);
+      if (idx >= 0) sc[idx] = s.score;
+    });
     return sc;
   };
   const handlePrint = () => window.print();
@@ -726,16 +750,106 @@ function S2Preview({ session, people, scores, attendance, onUpdate }: { session:
   let first = true;
   const pageCls = () => (first ? ((first = false), '') : 'page-break');
 
+  // Preview-only header so divider placement can change without affecting DocHeader elsewhere.
+  const renderPreviewDivider = () => (
+    <div aria-hidden="true" className="w-full border-b-2 border-black my-2" />
+  );
+
+  const renderPreviewDocHeader = (title: string) => (
+    <div className="text-center pb-4" data-preview-doc-header="true">
+      <img
+        src="/kop-surat-resize.png"
+        alt="KOP UPN Veteran Jakarta"
+        style={{
+          display: 'block',
+          margin: '0 auto 0.5rem',
+          maxWidth: '100%',
+          maxHeight: '100px',
+          width: 'auto',
+          height: 'auto',
+        }}
+      />
+
+      {previewHeaderDividerAfterKop && renderPreviewDivider()}
+
+      <div className="space-y-0.5" data-preview-header-text-block="true">
+        {!previewHeaderDividerAfterKop && renderPreviewDivider()}
+        <h1 className="text-xl font-bold uppercase">{title}</h1>
+        <p className="text-sm">PROGRAM STUDI KESEHATAN MASYARAKAT PROGRAM MAGISTER</p>
+        <p className="text-sm">FAKULTAS ILMU KESEHATAN UPN &ldquo;VETERAN&rdquo; JAKARTA</p>
+        <p className="text-sm font-semibold">SEMESTER {session.semester} T.A. {session.ta}</p>
+      </div>
+    </div>
+  );
+
+  // Repeated header table on the split penilaian signature page.
+  const renderPenilaianHeaderTable = (person: S2SessionPerson) => (
+    <table className="w-full mt-2 text-sm" data-preview-penilaian-header-table="true">
+      <tbody>
+        <tr><td className="w-32">Nama Peserta</td><td className="w-4">:</td><td>{session.student_name}</td><td className="w-24">NIM</td><td className="w-4">:</td><td>{session.student_nim}</td></tr>
+        <tr><td>Judul Tesis</td><td>:</td><td colSpan={4}>{session.thesis_title}</td></tr>
+        <tr><td>Jabatan</td><td>:</td><td colSpan={4}>{S2_ROLE_LABELS[person.role as keyof typeof S2_ROLE_LABELS]}</td></tr>
+      </tbody>
+    </table>
+  );
+
+  const previewSubTabClass = (panel: 'rubric' | 'signature') => {
+    if (!enablePreviewPenilaianSplit || !isPreviewContext) return '';
+    return penilaianPreviewSubTab === panel ? '' : 'hidden print:block';
+  };
+
+  // Signature block: TTD image sits ABOVE the penguji name (aligned to the name, not centered).
+  const renderSignatureBlock = (p: S2SessionPerson) => (
+    <div className="mt-10 avoid-break">
+      <p>Jakarta, {session.tanggal_ba || '______________'}</p>
+      <p className="mt-4">{S2_ROLE_LABELS[p.role as keyof typeof S2_ROLE_LABELS]}</p>
+      <div className="mt-1">
+        {p.signature_path ? (
+          <img src={p.signature_path} alt="TTD" className="max-h-16 max-w-32 object-contain" />
+        ) : (
+          <div className="h-16 border-b border-black" />
+        )}
+      </div>
+      <p className="font-bold border-t border-black pt-1 inline-block min-w-[200px]">{p.display_name}</p>
+      <p className="text-sm">NIP. {p.nip}</p>
+    </div>
+  );
+
   return (
-    <div>
+    <div data-s2-preview-root="true">
       <div className="no-print flex gap-3 mb-4">
         <button onClick={handlePrint} className="bg-green-900 text-white px-6 py-2 rounded hover:bg-green-800 font-sans text-sm font-medium">🖨 Preview Print / Save PDF</button>
       </div>
 
+      {isPreviewContext && enablePreviewPenilaianSplit && examiners.length > 0 && (
+        <div
+          className="no-print mb-4 flex flex-wrap items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 p-2"
+          data-preview-penilaian-subtabs="true"
+        >
+          <span className="text-xs font-sans font-semibold uppercase tracking-wide text-gray-500">
+            Form Penilaian Penguji Preview
+          </span>
+          <button
+            type="button"
+            onClick={() => setPenilaianPreviewSubTab('rubric')}
+            className={`px-3 py-1.5 rounded text-sm font-sans ${penilaianPreviewSubTab === 'rubric' ? 'bg-green-900 text-white' : 'bg-white text-gray-700 border border-gray-300'}`}
+          >
+            Halaman Rubrik
+          </button>
+          <button
+            type="button"
+            onClick={() => setPenilaianPreviewSubTab('signature')}
+            className={`px-3 py-1.5 rounded text-sm font-sans ${penilaianPreviewSubTab === 'signature' ? 'bg-green-900 text-white' : 'bg-white text-gray-700 border border-gray-300'}`}
+          >
+            Halaman TTD Penguji
+          </button>
+        </div>
+      )}
+
       <div className="print-area bg-white p-8 md:p-12 print:p-0 space-y-10 print:space-y-0" style={{ fontFamily: "'Times New Roman', Georgia, serif" }}>
         {/* ===== LAPORAN SEMINAR PROPOSAL TESIS (BA) ===== */}
         <div className={pageCls()}>
-          <DocHeader title="Laporan Seminar Proposal Tesis" semester={session.semester} ta={session.ta} />
+          {renderPreviewDocHeader('Laporan Seminar Proposal Tesis')}
 
           <p className="text-justify">
             Pada hari ini {session.hari_tanggal || '______________'}, telah dilaksanakan Seminar Proposal Tesis bagi mahasiswa:
@@ -791,47 +905,79 @@ function S2Preview({ session, people, scores, attendance, onUpdate }: { session:
           const total = calcTotalSkorXBobot(sc, RUBRIC.map((c) => c.bobot));
           const nilai = total > 0 ? calcNilaiAkhir(total) : 0;
           const grade = total > 0 ? calcGrade(nilai) : '';
+
+          if (!enablePreviewPenilaianSplit) {
+            return (
+              <div key={p.id} className={pageCls()}>
+                {renderPreviewDocHeader('Formulir Penilaian Seminar Proposal Tesis')}
+                {renderPenilaianHeaderTable(p)}
+
+                <table className="template-table text-sm mt-3">
+                  <thead>
+                    <tr><th className="w-8">NO</th><th>PARAMETER PENILAIAN</th><th className="w-20">SKOR (1—4)</th><th className="w-14">BOBOT</th><th className="w-24">SKOR × BOBOT</th></tr>
+                  </thead>
+                  <tbody>
+                    {RUBRIC.map((c, i) => {
+                      const sb = sc[i] !== null ? sc[i]! * c.bobot : null;
+                      return (
+                        <tr key={c.code}>
+                          <td className="text-center align-top">{i + 1}.</td>
+                          <td className="align-top"><div className="font-semibold">{c.label}</div><div className="text-[11px] text-gray-700">{c.details.join(' ')}</div></td>
+                          <td className="text-center align-top">{sc[i] ?? ''}</td>
+                          <td className="text-center align-top">{c.bobot}</td>
+                          <td className="text-center align-top font-semibold">{sb !== null ? sb : ''}</td>
+                        </tr>
+                      );
+                    })}
+                    <tr className="font-bold"><td colSpan={4} className="text-center">TOTAL SKOR × BOBOT</td><td className="text-center">{total}</td></tr>
+                    <tr className="font-bold"><td colSpan={4} className="text-center">NILAI AKHIR [(Total Skor × Bobot)/400 × 100]</td><td className="text-center">{total > 0 ? nilai.toFixed(2) : ''}</td></tr>
+                    <tr className="font-bold"><td colSpan={4} className="text-center">HURUF MUTU</td><td className="text-center">{grade}</td></tr>
+                  </tbody>
+                </table>
+
+                {renderSignatureBlock(p)}
+              </div>
+            );
+          }
+
           return (
-            <div key={p.id} className={pageCls()}>
-              <DocHeader title="Formulir Penilaian Seminar Proposal Tesis" semester={session.semester} ta={session.ta} />
+            <div key={p.id} className="contents">
+              <div className={`${pageCls()} ${previewSubTabClass('rubric')}`} data-preview-page="penilaian-rubric">
+                {renderPreviewDocHeader('Formulir Penilaian Seminar Proposal Tesis')}
+                {renderPenilaianHeaderTable(p)}
 
-              <table className="w-full mt-2 text-sm">
-                <tbody>
-                  <tr><td className="w-32">Nama Peserta</td><td className="w-4">:</td><td>{session.student_name}</td><td className="w-24">NIM</td><td className="w-4">:</td><td>{session.student_nim}</td></tr>
-                  <tr><td>Judul Tesis</td><td>:</td><td colSpan={3}>{session.thesis_title}</td></tr>
-                  <tr><td>Jabatan</td><td>:</td><td colSpan={3}>{S2_ROLE_LABELS[p.role as keyof typeof S2_ROLE_LABELS]}</td></tr>
-                </tbody>
-              </table>
+                <table className="template-table text-sm mt-3">
+                  <thead>
+                    <tr><th className="w-8">NO</th><th>PARAMETER PENILAIAN</th><th className="w-20">SKOR (1—4)</th><th className="w-14">BOBOT</th><th className="w-24">SKOR × BOBOT</th></tr>
+                  </thead>
+                  <tbody>
+                    {RUBRIC.map((c, i) => {
+                      const sb = sc[i] !== null ? sc[i]! * c.bobot : null;
+                      return (
+                        <tr key={c.code}>
+                          <td className="text-center align-top">{i + 1}.</td>
+                          <td className="align-top"><div className="font-semibold">{c.label}</div><div className="text-[11px] text-gray-700">{c.details.join(' ')}</div></td>
+                          <td className="text-center align-top">{sc[i] ?? ''}</td>
+                          <td className="text-center align-top">{c.bobot}</td>
+                          <td className="text-center align-top font-semibold">{sb !== null ? sb : ''}</td>
+                        </tr>
+                      );
+                    })}
+                    <tr className="font-bold"><td colSpan={4} className="text-center">TOTAL SKOR × BOBOT</td><td className="text-center">{total}</td></tr>
+                    <tr className="font-bold"><td colSpan={4} className="text-center">NILAI AKHIR [(Total Skor × Bobot)/400 × 100]</td><td className="text-center">{total > 0 ? nilai.toFixed(2) : ''}</td></tr>
+                    <tr className="font-bold"><td colSpan={4} className="text-center">HURUF MUTU</td><td className="text-center">{grade}</td></tr>
+                  </tbody>
+                </table>
+              </div>
 
-              <table className="template-table text-sm mt-3">
-                <thead>
-                  <tr><th className="w-8">NO</th><th>PARAMETER PENILAIAN</th><th className="w-20">SKOR (1—4)</th><th className="w-14">BOBOT</th><th className="w-24">SKOR × BOBOT</th></tr>
-                </thead>
-                <tbody>
-                  {RUBRIC.map((c, i) => {
-                    const sb = sc[i] !== null ? sc[i]! * c.bobot : null;
-                    return (
-                      <tr key={c.code}>
-                        <td className="text-center align-top">{i + 1}.</td>
-                        <td className="align-top"><div className="font-semibold">{c.label}</div><div className="text-[11px] text-gray-700">{c.details.join(' ')}</div></td>
-                        <td className="text-center align-top">{sc[i] ?? ''}</td>
-                        <td className="text-center align-top">{c.bobot}</td>
-                        <td className="text-center align-top font-semibold">{sb !== null ? sb : ''}</td>
-                      </tr>
-                    );
-                  })}
-                  <tr className="font-bold"><td colSpan={4} className="text-center">TOTAL SKOR × BOBOT</td><td className="text-center">{total}</td></tr>
-                  <tr className="font-bold"><td colSpan={4} className="text-center">NILAI AKHIR [(Total Skor × Bobot)/400 × 100]</td><td className="text-center">{total > 0 ? nilai.toFixed(2) : ''}</td></tr>
-                  <tr className="font-bold"><td colSpan={4} className="text-center">HURUF MUTU</td><td className="text-center">{grade}</td></tr>
-                </tbody>
-              </table>
+              <div className={`${pageCls()} ${previewSubTabClass('signature')}`} data-preview-page="penilaian-signature">
+                {renderPreviewDocHeader('Formulir Penilaian Seminar Proposal Tesis')}
+                {renderPenilaianHeaderTable(p)}
 
-              <div className="text-right mt-10 avoid-break">
-                <p>Jakarta, {session.tanggal_ba || '______________'}</p>
-                <p className="mt-4">{S2_ROLE_LABELS[p.role as keyof typeof S2_ROLE_LABELS]}</p>
-                {p.signature_path ? <img src={p.signature_path} alt="TTD" className="max-h-16 max-w-32 ml-auto my-2 object-contain" /> : <div className="h-16"></div>}
-                <p className="font-bold">{p.display_name}</p>
-                <p className="text-sm">NIP. {p.nip}</p>
+                <div className="min-h-[320px] flex flex-col">
+                  <div className="flex-1" />
+                  {renderSignatureBlock(p)}
+                </div>
               </div>
             </div>
           );
@@ -839,7 +985,7 @@ function S2Preview({ session, people, scores, attendance, onUpdate }: { session:
 
         {/* ===== REKAPITULASI ===== */}
         <div className={pageCls()}>
-          <DocHeader title="Rekapitulasi Nilai Seminar Proposal Tesis" semester={session.semester} ta={session.ta} />
+          {renderPreviewDocHeader('Rekapitulasi Nilai Seminar Proposal Tesis')}
 
           <table className="template-table text-sm mt-2">
             <thead>
