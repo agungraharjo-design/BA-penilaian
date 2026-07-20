@@ -18,6 +18,7 @@ import {
   S2_ROLE_LABELS,
 } from '@/types/s2';
 import { S2_PROPOSAL_RUBRIC_V1 } from '@/lib/s2/rubric-proposal';
+import { DOSEN_WHITELIST } from '@/lib/dosen';
 import {
   calcTotalSkorXBobot,
   calcNilaiAkhir,
@@ -171,8 +172,10 @@ export default function S2SessionDetailPage() {
   function canEditExaminer(role: string): boolean {
     if (isSuperadmin) return true;
     if (!isDosen) return false;
-    if (myExaminerRole === role) return true;
-    return false;
+    // S1-parity: any dosen can view/edit examiner forms (permissive).
+    // When user_id is linked, scope to the dosen's own assigned role.
+    if (myExaminerRole) return myExaminerRole === role;
+    return true;
   }
 
   async function saveScore(examinerPersonId: string, criterionCode: string, score: number | null) {
@@ -203,7 +206,29 @@ export default function S2SessionDetailPage() {
     }
   }
   async function addPerson(role: string, displayName: string, nip: string) {
-    const { error } = await supabase.from('s2_session_people').insert({ session_id: sessionId, role, display_name: displayName, nip: nip || '', email: '', sequence_no: 1 });
+    let userId: string | null = null;
+    // Try to link the person to a profiles row by email (derived from the
+    // dosen whitelist) so per-examiner scoping works when user_id is set.
+    const wl = DOSEN_WHITELIST.find(
+      (d) => d.nama.toLowerCase().trim() === displayName.toLowerCase().trim()
+    );
+    if (wl) {
+      const { data: prof } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('email', wl.email)
+        .maybeSingle();
+      if (prof) userId = prof.id;
+    }
+    const { error } = await supabase.from('s2_session_people').insert({
+      session_id: sessionId,
+      role,
+      display_name: displayName,
+      nip: nip || '',
+      email: wl ? wl.email : '',
+      user_id: userId,
+      sequence_no: 1,
+    });
     if (error) { console.error(error); alert('Gagal menambah: ' + error.message); }
     else { const { data } = await supabase.from('s2_session_people').select('*').eq('session_id', sessionId).order('sequence_no'); if (data) setPeople(data as S2SessionPerson[]); }
   }
@@ -250,7 +275,12 @@ export default function S2SessionDetailPage() {
   const tabs = allTabs.filter((t) => {
     if (t.key.startsWith('penilaian-')) {
       const role = t.key.replace('penilaian-', '');
-      return canEditExaminer(role);
+      // Show all examiner Penilaian tabs to any dosen/superadmin (S1 parity).
+      // When user_id is linked, only the dosen's own assigned role is shown.
+      if (isSuperadmin) return true;
+      if (!isDosen) return false;
+      if (myExaminerRole) return myExaminerRole === role;
+      return true;
     }
     return true;
   });
