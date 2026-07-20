@@ -41,79 +41,21 @@ const DEFAULT_SCORE: (number | null)[] = [null, null, null, null, null, null, nu
 const S2_KOORDINATOR_NAME = 'Dr. Apriningsih, S.K.M., M.K.M.';
 const S2_KOORDINATOR_NIP = '197604102021212009';
 
-// Reusable letterhead that fills the document width (no restrictive max-height)
-function Kop({ compact = false }: { compact?: boolean }) {
+// Document header — mirrors the S1 session page structure exactly:
+// kop image (same sizing as S1) inside a centered block with a bottom rule,
+// followed by the title, program, faculty and period line.
+function DocHeader({ title, semester, ta }: { title: string; semester: string; ta: string }) {
   return (
-    <div className={compact ? 'letterhead letterhead--compact' : 'letterhead'}>
-      <img src="/kop-surat-resize.png" alt="Kop Surat UPN Veteran Jakarta" className="letterhead__image" />
-    </div>
-  );
-}
-
-// Document shell: wraps a whole document in a single table whose <thead>
-// repeats the kop + title + divider on every printed page. This is the only
-// reliable way to repeat the letterhead across page breaks (CSS thead repeat).
-function DocumentShell({
-  title,
-  semester,
-  ta,
-  children,
-}: {
-  title: string;
-  semester: string;
-  ta: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <table className="document-shell w-full" style={{ borderCollapse: 'collapse' }}>
-      <thead>
-        <tr>
-          <td style={{ border: 'none', padding: 0 }}>
-            <div className="border-b-2 border-black pb-2">
-              <Kop />
-            </div>
-            <div className="text-center pt-2">
-              <h1 className="text-xl font-bold uppercase leading-tight">{title}</h1>
-              <p className="text-sm">PROGRAM STUDI KESEHATAN MASYARAKAT PROGRAM MAGISTER</p>
-              <p className="text-sm">FAKULTAS ILMU KESEHATAN UPN &ldquo;VETERAN&rdquo; JAKARTA</p>
-              <p className="text-sm font-semibold">SEMESTER {semester} T.A. {ta}</p>
-            </div>
-            <div className="border-b-2 border-black mt-2" />
-          </td>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td style={{ border: 'none', padding: 0, verticalAlign: 'top' }}>{children}</td>
-        </tr>
-      </tbody>
-    </table>
-  );
-}
-
-function PrintButton() {
-  return (
-    <button
-      onClick={() => window.print()}
-      className="no-print mb-3 px-4 py-2 rounded bg-green-900 text-white hover:bg-green-800 font-sans text-sm font-medium"
-    >
-      🖨 Print / Save PDF
-    </button>
-  );
-}
-
-// Section title used inside Daftar Hadir (multiple sub-documents per tab).
-// Thick divider sits right under the kop, title below it.
-function SubHeader({ title }: { title: string }) {
-  return (
-    <div className="text-center">
-      <div className="border-b-2 border-black pb-2">
-        <Kop />
-      </div>
-      <h2 className="text-lg font-bold uppercase pt-2">{title}</h2>
+    <div className="text-center border-b-2 border-black pb-4">
+      <img
+        src="/kop-surat-resize.png"
+        alt="KOP UPN Veteran Jakarta"
+        style={{ display: 'block', margin: '0 auto 0.5rem', maxWidth: '100%', maxHeight: '100px', width: 'auto', height: 'auto' }}
+      />
+      <h1 className="text-xl font-bold uppercase">{title}</h1>
       <p className="text-sm">PROGRAM STUDI KESEHATAN MASYARAKAT PROGRAM MAGISTER</p>
       <p className="text-sm">FAKULTAS ILMU KESEHATAN UPN &ldquo;VETERAN&rdquo; JAKARTA</p>
-      <div className="border-b-2 border-black mt-2" />
+      <p className="text-sm font-semibold">SEMESTER {semester} T.A. {ta}</p>
     </div>
   );
 }
@@ -404,9 +346,9 @@ const BeritaAcaraTab = memo(function BeritaAcaraTab({
   ];
 
   return (
-    <DocumentShell title="Laporan Seminar Proposal Tesis" semester={session.semester} ta={session.ta}>
-      <div className="space-y-4">
-      <PrintButton />
+    <div className="space-y-4">
+      <DocHeader title="Laporan Seminar Proposal Tesis" semester={session.semester} ta={session.ta} />
+
       <p>
         Pada hari ini{' '}
         <input value={session.hari_tanggal} onChange={(e) => onUpdate('hari_tanggal', e.target.value)} className="border-b border-gray-400 bg-transparent px-1 font-semibold w-64" placeholder="..., tanggal ... bulan ... tahun 2026" />
@@ -482,8 +424,7 @@ const BeritaAcaraTab = memo(function BeritaAcaraTab({
         <br />
         <input value={session.nip_koordinator || S2_KOORDINATOR_NIP} onChange={(e) => onUpdate('nip_koordinator', e.target.value)} className="border-b border-gray-400 bg-transparent text-center text-sm" />
       </div>
-      </div>
-    </DocumentShell>
+    </div>
   );
 });
 
@@ -541,9 +482,9 @@ const PenilaianTab = memo(function PenilaianTab({
   const grade = total > 0 ? calcGrade(nilai) : '';
 
   return (
-    <DocumentShell title="Formulir Penilaian Seminar Proposal Tesis" semester={session.semester} ta={session.ta}>
-      <div className="space-y-4">
-      <PrintButton />
+    <div className="space-y-4">
+      <DocHeader title="Formulir Penilaian Seminar Proposal Tesis" semester={session.semester} ta={session.ta} />
+
       <div className="grid grid-cols-2 gap-x-8 gap-y-1 text-sm">
         <div className="flex"><span className="w-36">Nama Peserta</span><span className="w-4">:</span><span className="flex-1 border-b border-gray-400">{session.student_name}</span></div>
         <div className="flex"><span className="w-36">NIM</span><span className="w-4">:</span><span className="flex-1 border-b border-gray-400">{session.student_nim}</span></div>
@@ -592,8 +533,7 @@ const PenilaianTab = memo(function PenilaianTab({
         <p className="border-t border-black pt-1 font-semibold">{person.display_name}</p>
         <p className="text-xs">NIP. {person.nip}</p>
       </div>
-      </div>
-    </DocumentShell>
+    </div>
   );
 });
 
@@ -615,9 +555,8 @@ function RekapNilaiTab({ session, people, scores, onUpdate }: { session: S2Sessi
   const ip = valid.length ? calcIP(jumlah / valid.length) : null;
 
   return (
-    <DocumentShell title="Rekapitulasi Nilai Seminar Proposal Tesis" semester={session.semester} ta={session.ta}>
-      <div className="space-y-4">
-      <PrintButton />
+    <div className="space-y-4">
+      <DocHeader title="Rekapitulasi Nilai Seminar Proposal Tesis" semester={session.semester} ta={session.ta} />
 
       <table className="w-full text-sm">
         <tbody>
@@ -670,8 +609,7 @@ function RekapNilaiTab({ session, people, scores, onUpdate }: { session: S2Sessi
           ))}
         </div>
       </div>
-      </div>
-    </DocumentShell>
+    </div>
   );
 }
 
@@ -715,8 +653,7 @@ function DaftarHadirTab({ session, people, attendance, onSave, sessionId, isDose
 
       {/* Daftar Hadir Penguji */}
       <div>
-        <PrintButton />
-        <SubHeader title="Daftar Hadir Penguji Seminar Proposal Tesis" />
+        <DocHeader title="Daftar Hadir Penguji Seminar Proposal Tesis" semester={session.semester} ta={session.ta} />
         <table className="w-full text-sm"><tbody>
           <tr><td className="w-32">Nama Mahasiswa</td><td className="w-4">:</td><td>{session.student_name}</td></tr>
           <tr><td>NIM</td><td>:</td><td>{session.student_nim}</td></tr>
@@ -786,138 +723,164 @@ function S2Preview({ session, people, scores, attendance, onUpdate }: { session:
   };
   const handlePrint = () => window.print();
 
+  let first = true;
+  const pageCls = () => (first ? ((first = false), '') : 'page-break');
+
   return (
-    <div className="space-y-6">
+    <div>
       <div className="no-print flex gap-3 mb-4">
-        <button onClick={handlePrint} className="bg-green-900 text-white px-6 py-2 rounded hover:bg-green-800 font-sans text-sm font-medium">🖨 Print / Save PDF</button>
+        <button onClick={handlePrint} className="bg-green-900 text-white px-6 py-2 rounded hover:bg-green-800 font-sans text-sm font-medium">🖨 Preview Print / Save PDF</button>
       </div>
 
-      {/* Berita Acara */}
-      <div className="document-page">
-        <div style={{ textAlign: 'center', borderBottom: '2px solid #000', paddingBottom: 4, marginBottom: 8 }}>
-          <Kop compact />
-          <div style={{ fontWeight: 'bold', textTransform: 'uppercase', fontSize: 14 }}>Laporan Seminar Proposal Tesis</div>
-          <div style={{ fontSize: 12 }}>PROGRAM STUDI KESEHATAN MASYARAKAT PROGRAM MAGISTER</div>
-          <div style={{ fontSize: 12 }}>FAKULTAS ILMU KESEHATAN UPN &ldquo;VETERAN&rdquo; JAKARTA</div>
-          <div style={{ fontWeight: 'bold', fontSize: 12 }}>SEMESTER {session.semester} T.A. {session.ta}</div>
-        </div>
-        <div style={{ textAlign: 'justify' }}>Pada hari ini {session.hari_tanggal || '______________'}, telah dilaksanakan Seminar Proposal Tesis bagi mahasiswa:</div>
-        <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 4 }}>
-          <tbody>
-            <tr><td style={{ width: 110 }}>Nama</td><td style={{ width: 14 }}>:</td><td>{session.student_name}</td></tr>
-            <tr><td>NIM</td><td>:</td><td>{session.student_nim}</td></tr>
-            <tr><td>Waktu Sidang</td><td>:</td><td>{session.start_time || ''}</td></tr>
-            <tr><td>Peminatan</td><td>:</td><td>{session.specialization}</td></tr>
-          </tbody>
-        </table>
-        <div style={{ marginTop: 6 }}><div style={{ fontWeight: 'bold' }}>Dengan Judul Penelitian sebagai berikut :</div><div style={{ whiteSpace: 'pre-wrap' }}>{session.thesis_title}</div></div>
-        <div style={{ marginTop: 6 }}><span style={{ marginLeft: 8 }}>{session.decision === 'lulus_dengan_perbaikan' ? '✓' : '○'} Proposal tesis dilanjutkan dengan perbaikan</span><br /><span style={{ marginLeft: 8 }}>{session.decision === 'tidak_lulus_mengulang' ? '✓' : '○'} Proposal tesis tidak diluluskan / Mengulang sidang</span></div>
-        <div style={{ fontStyle: 'italic', fontSize: 11, textAlign: 'justify', marginTop: 6 }}>Demikian laporan seminar proposal tesis ini dibuat sebagai laporan selama seminar berlangsung untuk diketahui dan dipergunakan sebagaimana mestinya.</div>
-        <div style={{ fontWeight: 'bold', textAlign: 'center', marginTop: 6 }}>TIM PENGUJI</div>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, marginTop: 2 }}>
-          <thead><tr><th style={{ width: 32, border: '1px solid #000', padding: 2 }}>NO</th><th style={{ border: '1px solid #000', padding: 2 }}>NAMA PENGUJI</th><th style={{ border: '1px solid #000', padding: 2 }}>JABATAN</th><th style={{ width: 80, border: '1px solid #000', padding: 2 }}>TANDA TANGAN</th></tr></thead>
-          <tbody>
-            {examiners.map((p, i) => (
-              <tr key={p.id}><td style={{ textAlign: 'center', border: '1px solid #000', padding: 2 }}>{i + 1}.</td><td style={{ border: '1px solid #000', padding: 2 }}>{p.display_name}</td><td style={{ border: '1px solid #000', padding: 2 }}>{S2_ROLE_LABELS[p.role as keyof typeof S2_ROLE_LABELS]}</td><td style={{ textAlign: 'center', border: '1px solid #000', padding: 2, verticalAlign: 'middle' }}>{p.signature_path ? <img src={p.signature_path} alt="TTD" style={{ maxHeight: 30, maxWidth: 60, margin: '0 auto', objectFit: 'contain' }} /> : ''}</td></tr>
-            ))}
-          </tbody>
-        </table>
-        <div style={{ textAlign: 'right', marginTop: 15 }}>
-          <p>Jakarta, {session.tanggal_ba || '______________'}</p>
-          <p style={{ marginTop: 8 }}>Koordinator Program Studi</p>
-          <div style={{ height: 38 }}></div>
-          <p style={{ fontWeight: 'bold' }}>{session.koordinator || S2_KOORDINATOR_NAME}</p>
-          <p style={{ fontSize: 11 }}>NIP. {session.nip_koordinator || S2_KOORDINATOR_NIP}</p>
-        </div>
-      </div>
+      <div className="print-area bg-white p-8 md:p-12 print:p-0 space-y-10 print:space-y-0" style={{ fontFamily: "'Times New Roman', Georgia, serif" }}>
+        {/* ===== LAPORAN SEMINAR PROPOSAL TESIS (BA) ===== */}
+        <div className={pageCls()}>
+          <DocHeader title="Laporan Seminar Proposal Tesis" semester={session.semester} ta={session.ta} />
 
-      {/* Penilaian per examiner */}
-      {examiners.map((p) => {
-        const sc = getExaminerScores(p.id);
-        const total = calcTotalSkorXBobot(sc, RUBRIC.map((c) => c.bobot));
-        const nilai = total > 0 ? calcNilaiAkhir(total) : 0;
-        const grade = total > 0 ? calcGrade(nilai) : '';
-        return (
-          <div key={p.id} className="document-page">
-            <div style={{ textAlign: 'center', borderBottom: '2px solid #000', paddingBottom: 4, marginBottom: 6 }}>
-              <Kop compact />
-              <div style={{ fontWeight: 'bold', textTransform: 'uppercase', fontSize: 14 }}>Formulir Penilaian Seminar Proposal Tesis</div>
-              <div style={{ fontSize: 12 }}>PROGRAM STUDI KESEHATAN MASYARAKAT PROGRAM MAGISTER</div>
-              <div style={{ fontSize: 12 }}>FAKULTAS ILMU KESEHATAN UPN &ldquo;VETERAN&rdquo; JAKARTA</div>
-            </div>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, marginTop: 4 }}>
-              <tbody>
-                <tr><td style={{ width: 110 }}>Nama Peserta</td><td style={{ width: 14 }}>:</td><td>{session.student_name}</td><td style={{ width: 80 }}>NIM</td><td style={{ width: 14 }}>:</td><td>{session.student_nim}</td></tr>
-                <tr><td>Judul Tesis</td><td>:</td><td colSpan={3}>{session.thesis_title}</td></tr>
-                <tr><td>Jabatan</td><td>:</td><td colSpan={3}>{S2_ROLE_LABELS[p.role as keyof typeof S2_ROLE_LABELS]}</td></tr>
-              </tbody>
-            </table>
-            <table className="pdf-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, marginTop: 4 }}>
-              <thead><tr><th style={{ width: 24, border: '1px solid #000', padding: '1px 3px', textAlign: 'center' }}>NO</th><th style={{ border: '1px solid #000', padding: '1px 3px' }}>PARAMETER PENILAIAN</th><th style={{ width: 52, border: '1px solid #000', padding: '1px 3px', textAlign: 'center' }}>SKOR (1–4)</th><th style={{ width: 36, border: '1px solid #000', padding: '1px 3px', textAlign: 'center' }}>BOBOT</th><th style={{ width: 70, border: '1px solid #000', padding: '1px 3px', textAlign: 'center' }}>SKOR × BOBOT</th></tr></thead>
-              <tbody>
-                {RUBRIC.map((c, i) => {
-                  const sb = sc[i] !== null ? sc[i]! * c.bobot : null;
-                  return (
-                    <tr key={c.code}><td style={{ textAlign: 'center', border: '1px solid #000', padding: '1px 3px', verticalAlign: 'top' }}>{i + 1}.</td>
-                      <td style={{ border: '1px solid #000', padding: '2px 4px', verticalAlign: 'top' }}><div style={{ fontWeight: 'bold', fontSize: 11 }}>{c.label}</div><div style={{ fontSize: 10, whiteSpace: 'pre-line' }}>{c.details.join('\n')}</div></td>
-                      <td style={{ textAlign: 'center', border: '1px solid #000', padding: '1px 3px', verticalAlign: 'top' }}>{sc[i] ?? ''}</td>
-                      <td style={{ textAlign: 'center', border: '1px solid #000', padding: '1px 3px', verticalAlign: 'top' }}>{c.bobot}</td>
-                      <td style={{ textAlign: 'center', border: '1px solid #000', padding: '1px 3px', fontWeight: 'bold', verticalAlign: 'top' }}>{sb ?? ''}</td>
-                    </tr>
-                  );
-                })}
-                <tr style={{ fontWeight: 'bold' }}><td colSpan={2} style={{ border: '1px solid #000', padding: '1px 3px', textAlign: 'center' }}>TOTAL SKOR × BOBOT</td><td style={{ border: '1px solid #000', padding: '1px 3px' }}></td><td style={{ border: '1px solid #000', padding: '1px 3px' }}></td><td style={{ textAlign: 'center', border: '1px solid #000', padding: '1px 3px' }}>{total}</td></tr>
-                <tr style={{ fontWeight: 'bold' }}><td colSpan={2} style={{ border: '1px solid #000', padding: '1px 3px', textAlign: 'center' }}>NILAI AKHIR [/400 × 100]</td><td style={{ border: '1px solid #000', padding: '1px 3px' }}></td><td style={{ border: '1px solid #000', padding: '1px 3px' }}></td><td style={{ textAlign: 'center', border: '1px solid #000', padding: '1px 3px' }}>{total > 0 ? nilai.toFixed(2) : ''}</td></tr>
-                <tr style={{ fontWeight: 'bold' }}><td colSpan={2} style={{ border: '1px solid #000', padding: '1px 3px', textAlign: 'center' }}>HURUF MUTU</td><td style={{ border: '1px solid #000', padding: '1px 3px' }}></td><td style={{ border: '1px solid #000', padding: '1px 3px' }}></td><td style={{ textAlign: 'center', border: '1px solid #000', padding: '1px 3px' }}>{grade}</td></tr>
-              </tbody>
-            </table>
-            <div style={{ textAlign: 'right', marginTop: 15 }}>
-              <p>Jakarta, {session.tanggal_ba || '______________'}</p>
-              <p style={{ marginTop: 8 }}>{S2_ROLE_LABELS[p.role as keyof typeof S2_ROLE_LABELS]}</p>
-              {p.signature_path ? <img src={p.signature_path} alt="TTD" style={{ maxHeight: 38, maxWidth: 80, marginLeft: 'auto', marginTop: 4, display: 'block', objectFit: 'contain' }} /> : <div style={{ height: 38 }}></div>}
-              <p style={{ fontWeight: 'bold' }}>{p.display_name}</p>
-              <p style={{ fontSize: 11 }}>NIP. {p.nip}</p>
-            </div>
+          <p className="text-justify">
+            Pada hari ini {session.hari_tanggal || '______________'}, telah dilaksanakan Seminar Proposal Tesis bagi mahasiswa:
+          </p>
+
+          <table className="w-full">
+            <tbody>
+              <tr><td className="w-32">Nama</td><td className="w-4">:</td><td>{session.student_name || '______________'}</td></tr>
+              <tr><td>NIM</td><td>:</td><td>{session.student_nim || '______________'}</td></tr>
+              <tr><td>Waktu Sidang</td><td>:</td><td>{session.start_time || '______________'}</td></tr>
+              <tr><td>Peminatan</td><td>:</td><td>{session.specialization || '______________'}</td></tr>
+            </tbody>
+          </table>
+
+          <div className="mt-3">
+            <p className="font-bold">Dengan Judul Penelitian sebagai berikut :</p>
+            <p className="whitespace-pre-wrap">{session.thesis_title || '______________'}</p>
           </div>
-        );
-      })}
 
-      {/* Rekapitulasi */}
-      <div className="document-page">
-        <div style={{ textAlign: 'center', borderBottom: '2px solid #000', paddingBottom: 4, marginBottom: 8 }}>
-          <Kop compact />
-          <div style={{ fontWeight: 'bold', textTransform: 'uppercase', fontSize: 14 }}>Rekapitulasi Nilai Seminar Proposal Tesis</div>
-          <div style={{ fontSize: 12 }}>PROGRAM STUDI KESEHATAN MASYARAKAT PROGRAM MAGISTER</div>
-          <div style={{ fontSize: 12 }}>FAKULTAS ILMU KESEHATAN UPN &ldquo;VETERAN&rdquo; JAKARTA</div>
+          <p className="mt-3">
+            <span className="ml-4">{session.decision === 'lulus_dengan_perbaikan' ? '✓' : '○'} Proposal tesis dilanjutkan dengan perbaikan</span><br />
+            <span className="ml-4">{session.decision === 'tidak_lulus_mengulang' ? '✓' : '○'} Proposal tesis tidak diluluskan / Mengulang sidang</span>
+          </p>
+
+          <p className="italic text-sm text-justify mt-3">
+            Demikian laporan seminar proposal tesis ini dibuat sebagai laporan selama seminar berlangsung untuk diketahui dan dipergunakan sebagaimana mestinya.
+          </p>
+
+          <div className="mt-5">
+            <h3 className="font-bold text-center">TIM PENGUJI</h3>
+            <table className="template-table mt-1">
+              <thead><tr><th className="w-12">NO</th><th>NAMA PENGUJI</th><th>JABATAN</th><th className="w-24">TANDA TANGAN</th></tr></thead>
+              <tbody>
+                {examiners.concat(people.filter((p) => p.role === 'pembimbing_1' || p.role === 'pembimbing_2')).map((p, i) => (
+                  <tr key={p.id}><td className="text-center">{i + 1}.</td><td>{p.display_name}</td><td>{S2_ROLE_LABELS[p.role as keyof typeof S2_ROLE_LABELS]}</td><td className="text-center align-middle">{p.signature_path ? <img src={p.signature_path} alt="TTD" className="max-h-12 max-w-24 mx-auto object-contain" /> : ''}</td></tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="text-right mt-10 avoid-break">
+            <p>Jakarta, {session.tanggal_ba || '______________'}</p>
+            <p className="mt-4">Koordinator Program Studi</p>
+            {session.koordinator_signature_path ? <img src={session.koordinator_signature_path} alt="TTD Koordinator" className="max-h-16 max-w-32 ml-auto my-2 object-contain" /> : <div className="h-16"></div>}
+            <p className="font-bold">{session.koordinator || S2_KOORDINATOR_NAME}</p>
+            <p className="text-sm">NIP. {session.nip_koordinator || S2_KOORDINATOR_NIP}</p>
+          </div>
         </div>
-        <table className="pdf-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
-          <thead><tr><th style={{ width: 32, border: '1px solid #000', padding: 2 }}>NO</th><th style={{ border: '1px solid #000', padding: 2 }}>NAMA</th><th style={{ width: 60, border: '1px solid #000', padding: 2 }}>NIM</th><th style={{ width: 40, border: '1px solid #000', padding: 2, textAlign: 'center' }}>I</th><th style={{ width: 40, border: '1px solid #000', padding: 2, textAlign: 'center' }}>II</th><th style={{ width: 40, border: '1px solid #000', padding: 2, textAlign: 'center' }}>III</th><th style={{ width: 40, border: '1px solid #000', padding: 2, textAlign: 'center' }}>IV</th><th style={{ width: 56, border: '1px solid #000', padding: 2, textAlign: 'center' }}>JUMLAH</th><th style={{ width: 40, border: '1px solid #000', padding: 2, textAlign: 'center' }}>IP</th></tr></thead>
-          <tbody>
-            <tr>
-              <td style={{ textAlign: 'center', border: '1px solid #000', padding: 2 }}>1.</td>
-              <td style={{ border: '1px solid #000', padding: 2 }}>{session.student_name}</td>
-              <td style={{ border: '1px solid #000', padding: 2 }}>{session.student_nim}</td>
-              {examiners.map((p) => {
-                const sc = getExaminerScores(p.id);
-                const t = calcTotalSkorXBobot(sc, RUBRIC.map((c) => c.bobot));
-                const n = t > 0 ? calcNilaiAkhir(t) : null;
-                return <td key={p.id} style={{ textAlign: 'center', border: '1px solid #000', padding: 2 }}>{n !== null ? n.toFixed(2) : ''}</td>;
-              })}
-              {Array.from({ length: Math.max(0, 4 - examiners.length) }).map((_, i) => <td key={`e${i}`} style={{ border: '1px solid #000', padding: 2 }}></td>)}
-              <td style={{ textAlign: 'center', border: '1px solid #000', padding: 2 }}>
-                {(() => { const vals = examiners.map((p) => { const sc = getExaminerScores(p.id); const t = calcTotalSkorXBobot(sc, RUBRIC.map((c) => c.bobot)); return t > 0 ? calcNilaiAkhir(t) : null; }).filter((n) => n !== null) as number[]; return vals.length ? vals.reduce((a, b) => a + b, 0).toFixed(2) : ''; })()}
-              </td>
-              <td style={{ textAlign: 'center', border: '1px solid #000', padding: 2 }}>
-                {(() => { const vals = examiners.map((p) => { const sc = getExaminerScores(p.id); const t = calcTotalSkorXBobot(sc, RUBRIC.map((c) => c.bobot)); return t > 0 ? calcNilaiAkhir(t) : null; }).filter((n) => n !== null) as number[]; if (!vals.length) return ''; const ip = calcIP(vals.reduce((a, b) => a + b, 0) / vals.length); return ip !== null ? ip.toFixed(2) : ''; })()}
-              </td>
-            </tr>
-          </tbody>
-        </table>
-        <p style={{ marginTop: 8 }}>Jakarta, {session.tanggal_ba || '______________'}</p>
-        <p style={{ marginTop: 8, fontWeight: 'bold' }}>Tanda Tangan</p>
-        {examiners.map((p, i) => (
-          <p key={p.id} style={{ marginTop: 6 }}>{i + 1}. {S2_ROLE_LABELS[p.role as keyof typeof S2_ROLE_LABELS]} {p.display_name || '…………………………………..'}</p>
-        ))}
+
+        {/* ===== PENILAIAN PER PENGUJI ===== */}
+        {examiners.map((p) => {
+          const sc = getExaminerScores(p.id);
+          const total = calcTotalSkorXBobot(sc, RUBRIC.map((c) => c.bobot));
+          const nilai = total > 0 ? calcNilaiAkhir(total) : 0;
+          const grade = total > 0 ? calcGrade(nilai) : '';
+          return (
+            <div key={p.id} className={pageCls()}>
+              <DocHeader title="Formulir Penilaian Seminar Proposal Tesis" semester={session.semester} ta={session.ta} />
+
+              <table className="w-full mt-2 text-sm">
+                <tbody>
+                  <tr><td className="w-32">Nama Peserta</td><td className="w-4">:</td><td>{session.student_name}</td><td className="w-24">NIM</td><td className="w-4">:</td><td>{session.student_nim}</td></tr>
+                  <tr><td>Judul Tesis</td><td>:</td><td colSpan={3}>{session.thesis_title}</td></tr>
+                  <tr><td>Jabatan</td><td>:</td><td colSpan={3}>{S2_ROLE_LABELS[p.role as keyof typeof S2_ROLE_LABELS]}</td></tr>
+                </tbody>
+              </table>
+
+              <table className="template-table text-sm mt-3">
+                <thead>
+                  <tr><th className="w-8">NO</th><th>PARAMETER PENILAIAN</th><th className="w-20">SKOR (1—4)</th><th className="w-14">BOBOT</th><th className="w-24">SKOR × BOBOT</th></tr>
+                </thead>
+                <tbody>
+                  {RUBRIC.map((c, i) => {
+                    const sb = sc[i] !== null ? sc[i]! * c.bobot : null;
+                    return (
+                      <tr key={c.code}>
+                        <td className="text-center align-top">{i + 1}.</td>
+                        <td className="align-top"><div className="font-semibold">{c.label}</div><div className="text-[11px] text-gray-700">{c.details.join(' ')}</div></td>
+                        <td className="text-center align-top">{sc[i] ?? ''}</td>
+                        <td className="text-center align-top">{c.bobot}</td>
+                        <td className="text-center align-top font-semibold">{sb !== null ? sb : ''}</td>
+                      </tr>
+                    );
+                  })}
+                  <tr className="font-bold"><td colSpan={4} className="text-center">TOTAL SKOR × BOBOT</td><td className="text-center">{total}</td></tr>
+                  <tr className="font-bold"><td colSpan={4} className="text-center">NILAI AKHIR [(Total Skor × Bobot)/400 × 100]</td><td className="text-center">{total > 0 ? nilai.toFixed(2) : ''}</td></tr>
+                  <tr className="font-bold"><td colSpan={4} className="text-center">HURUF MUTU</td><td className="text-center">{grade}</td></tr>
+                </tbody>
+              </table>
+
+              <div className="text-right mt-10 avoid-break">
+                <p>Jakarta, {session.tanggal_ba || '______________'}</p>
+                <p className="mt-4">{S2_ROLE_LABELS[p.role as keyof typeof S2_ROLE_LABELS]}</p>
+                {p.signature_path ? <img src={p.signature_path} alt="TTD" className="max-h-16 max-w-32 ml-auto my-2 object-contain" /> : <div className="h-16"></div>}
+                <p className="font-bold">{p.display_name}</p>
+                <p className="text-sm">NIP. {p.nip}</p>
+              </div>
+            </div>
+          );
+        })}
+
+        {/* ===== REKAPITULASI ===== */}
+        <div className={pageCls()}>
+          <DocHeader title="Rekapitulasi Nilai Seminar Proposal Tesis" semester={session.semester} ta={session.ta} />
+
+          <table className="template-table text-sm mt-2">
+            <thead>
+              <tr>
+                <th className="w-8">NO</th><th>NAMA</th><th className="w-20">NIM</th>
+                <th className="w-14">I</th><th className="w-14">II</th><th className="w-14">III</th><th className="w-14">IV</th>
+                <th className="w-16">JUMLAH</th><th className="w-14">IP</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td className="text-center">1.</td>
+                <td>{session.student_name}</td>
+                <td>{session.student_nim}</td>
+                {examiners.map((p) => {
+                  const sc = getExaminerScores(p.id);
+                  const t = calcTotalSkorXBobot(sc, RUBRIC.map((c) => c.bobot));
+                  const n = t > 0 ? calcNilaiAkhir(t) : null;
+                  return <td key={p.id} className="text-center font-semibold">{n !== null ? n.toFixed(2) : ''}</td>;
+                })}
+                {Array.from({ length: Math.max(0, 4 - examiners.length) }).map((_, i) => <td key={`e${i}`} className="text-center"></td>)}
+                <td className="text-center font-bold">
+                  {(() => { const vals = examiners.map((p) => { const sc = getExaminerScores(p.id); const t = calcTotalSkorXBobot(sc, RUBRIC.map((c) => c.bobot)); return t > 0 ? calcNilaiAkhir(t) : null; }).filter((n) => n !== null) as number[]; return vals.length ? vals.reduce((a, b) => a + b, 0).toFixed(2) : ''; })()}
+                </td>
+                <td className="text-center font-bold">
+                  {(() => { const vals = examiners.map((p) => { const sc = getExaminerScores(p.id); const t = calcTotalSkorXBobot(sc, RUBRIC.map((c) => c.bobot)); return t > 0 ? calcNilaiAkhir(t) : null; }).filter((n) => n !== null) as number[]; if (!vals.length) return ''; const ip = calcIP(vals.reduce((a, b) => a + b, 0) / vals.length); return ip !== null ? ip.toFixed(2) : ''; })()}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+
+          <p className="mt-3">Jakarta, {session.tanggal_ba || '______________'}</p>
+          <p className="mt-2 font-semibold">Tanda Tangan</p>
+          {examiners.map((p, i) => (
+            <div key={p.id} className="flex items-center gap-2 mt-1">
+              <span className="w-48 shrink-0">{i + 1}. {S2_ROLE_LABELS[p.role as keyof typeof S2_ROLE_LABELS]}</span>
+              <span className="flex-1 border-b border-black">{p.display_name || '…………………………………..'}</span>
+              <span className="w-24 text-center">{p.signature_path ? <img src={p.signature_path} alt="TTD" className="max-h-10 max-w-24 object-contain mx-auto" /> : <span className="text-gray-300 text-xs">(—)</span>}</span>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
