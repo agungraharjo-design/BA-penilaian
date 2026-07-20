@@ -734,250 +734,450 @@ function S2Preview({
   initialPenilaianSubTab?: 'rubric' | 'signature';
 }) {
   const examiners = people.filter((p) => S2_EXAMINER_ROLES.includes(p.role));
-  const [penilaianPreviewSubTab, setPenilaianPreviewSubTab] = useState<'rubric' | 'signature'>(initialPenilaianSubTab);
-  const isPreviewContext = true;
+  const [penilaianPreviewSubTab, setPenilaianPreviewSubTab] =
+    useState<'rubric' | 'signature'>(initialPenilaianSubTab);
 
   const getExaminerScores = (pid: string) => {
     const sc: (number | null)[] = [null, null, null, null, null, null, null];
-    scores.filter((s) => s.examiner_person_id === pid).forEach((s) => {
-      const idx = RUBRIC.findIndex((c) => c.code === s.criterion_code);
-      if (idx >= 0) sc[idx] = s.score;
-    });
+
+    scores
+      .filter((s) => s.examiner_person_id === pid)
+      .forEach((s) => {
+        const idx = RUBRIC.findIndex((c) => c.code === s.criterion_code);
+        if (idx >= 0) sc[idx] = s.score;
+      });
+
     return sc;
   };
+
   const handlePrint = () => window.print();
 
-  let first = true;
-  const pageCls = () => (first ? ((first = false), '') : 'page-break');
+  let firstPage = true;
+  const pageCls = () => {
+    const className = firstPage ? '' : 'page-break print:break-before-page';
+    firstPage = false;
+    return className;
+  };
 
-  // Preview-only header so divider placement can change without affecting DocHeader elsewhere.
   const renderPreviewDivider = () => (
-    <div aria-hidden="true" className="w-full border-b-2 border-black my-2" />
+    <div aria-hidden="true" className="my-2 w-full border-b-2 border-black" />
   );
 
   const renderPreviewDocHeader = (title: string) => (
-    <div className="text-center pb-4" data-preview-doc-header="true">
+    <div className="pb-3 text-center" data-preview-doc-header="true">
       <img
         src="/kop-surat-resize.png"
         alt="KOP UPN Veteran Jakarta"
-        style={{
-          display: 'block',
-          margin: '0 auto 0.5rem',
-          maxWidth: '100%',
-          maxHeight: '100px',
-          width: 'auto',
-          height: 'auto',
-        }}
+        className="mx-auto mb-2 block h-auto max-h-[88px] w-auto max-w-full"
       />
 
       {previewHeaderDividerAfterKop && renderPreviewDivider()}
 
-      <div className="space-y-0.5" data-preview-header-text-block="true">
+      <div className="space-y-0" data-preview-header-text-block="true">
         {!previewHeaderDividerAfterKop && renderPreviewDivider()}
-        <h1 className="text-xl font-bold uppercase">{title}</h1>
-        <p className="text-sm">PROGRAM STUDI KESEHATAN MASYARAKAT PROGRAM MAGISTER</p>
-        <p className="text-sm">FAKULTAS ILMU KESEHATAN UPN &ldquo;VETERAN&rdquo; JAKARTA</p>
-        <p className="text-sm font-semibold">SEMESTER {session.semester} T.A. {session.ta}</p>
+        <h1 className="text-[16px] font-bold uppercase leading-tight">{title}</h1>
+        <p className="text-[11px] leading-tight">
+          PROGRAM STUDI KESEHATAN MASYARAKAT PROGRAM MAGISTER
+        </p>
+        <p className="text-[11px] leading-tight">
+          FAKULTAS ILMU KESEHATAN UPN &ldquo;VETERAN&rdquo; JAKARTA
+        </p>
+        <p className="text-[11px] font-semibold leading-tight">
+          SEMESTER {session.semester} T.A. {session.ta}
+        </p>
       </div>
     </div>
   );
 
-  // Repeated header table on the split penilaian signature page.
   const renderPenilaianHeaderTable = (person: S2SessionPerson) => (
-    <table className="w-full mt-2 text-sm" data-preview-penilaian-header-table="true">
+    <table
+      className="mt-1 w-full table-fixed text-[11px] leading-tight"
+      data-preview-penilaian-header-table="true"
+    >
       <tbody>
-        <tr><td className="w-32">Nama Peserta</td><td className="w-4">:</td><td>{session.student_name}</td><td className="w-24">NIM</td><td className="w-4">:</td><td>{session.student_nim}</td></tr>
-        <tr><td>Judul Tesis</td><td>:</td><td colSpan={4}>{session.thesis_title}</td></tr>
-        <tr><td>Jabatan</td><td>:</td><td colSpan={4}>{S2_ROLE_LABELS[person.role as keyof typeof S2_ROLE_LABELS]}</td></tr>
+        <tr>
+          <td className="w-[17%] align-top">Nama Peserta</td>
+          <td className="w-[3%] align-top">:</td>
+          <td className="w-[45%] align-top">{session.student_name}</td>
+          <td className="w-[10%] align-top">NIM</td>
+          <td className="w-[3%] align-top">:</td>
+          <td className="w-[22%] align-top">{session.student_nim}</td>
+        </tr>
+        <tr>
+          <td className="align-top">Judul Tesis</td>
+          <td className="align-top">:</td>
+          <td colSpan={4} className="align-top">
+            {session.thesis_title}
+          </td>
+        </tr>
+        <tr>
+          <td className="align-top">Jabatan Penguji</td>
+          <td className="align-top">:</td>
+          <td colSpan={4} className="align-top">
+            {S2_ROLE_LABELS[person.role as keyof typeof S2_ROLE_LABELS]}
+          </td>
+        </tr>
       </tbody>
     </table>
   );
 
   const previewSubTabClass = (panel: 'rubric' | 'signature') => {
-    if (!enablePreviewPenilaianSplit || !isPreviewContext) return '';
+    if (!enablePreviewPenilaianSplit) return '';
     return penilaianPreviewSubTab === panel ? '' : 'hidden print:block';
   };
 
-  // Signature block: TTD image sits ABOVE the penguji name (aligned to the name, not centered).
-  const renderSignatureBlock = (p: S2SessionPerson) => (
-    <div className="mt-10 avoid-break">
+  const normalizeDetails = (details: string[]) =>
+    details
+      .flatMap((detail) => detail.split(/\r?\n/))
+      .map((detail) => detail.trim())
+      .filter(Boolean);
+
+  const renderIndicatorList = (details: string[]) => {
+    const items = normalizeDetails(details);
+
+    if (items.length === 0) return null;
+
+    return (
+      <ul className="mt-0.5 list-disc space-y-0 pl-4 text-[9.5px] leading-[1.15] text-gray-700">
+        {items.map((item, index) => (
+          <li key={`${index}-${item}`} className="pl-0.5">
+            {item}
+          </li>
+        ))}
+      </ul>
+    );
+  };
+
+  const renderAssessmentTable = ({
+    criteria,
+    startIndex,
+    examinerScores,
+    showSummary = false,
+    total,
+    nilai,
+    grade,
+  }: {
+    criteria: typeof RUBRIC;
+    startIndex: number;
+    examinerScores: (number | null)[];
+    showSummary?: boolean;
+    total: number;
+    nilai: number;
+    grade: string;
+  }) => (
+    <table className="template-table mt-2 w-full table-fixed text-[10.5px] leading-tight">
+      <thead className="table-header-group">
+        <tr>
+          <th className="w-[5%]">NO</th>
+          <th className="w-[56%]">PARAMETER PENILAIAN</th>
+          <th className="w-[12%]">SKOR<br />(1-4)</th>
+          <th className="w-[9%]">BOBOT</th>
+          <th className="w-[18%]">SKOR × BOBOT</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        {criteria.map((criterion, localIndex) => {
+          const rubricIndex = startIndex + localIndex;
+          const score = examinerScores[rubricIndex];
+          const scoreTimesWeight = score !== null ? score * criterion.bobot : null;
+
+          return (
+            <tr key={criterion.code} className="break-inside-avoid">
+              <td className="px-1 py-1 text-center align-top">{rubricIndex + 1}.</td>
+              <td className="px-1.5 py-1 align-top">
+                <div className="font-semibold leading-tight">{criterion.label}</div>
+                {renderIndicatorList(criterion.details)}
+              </td>
+              <td className="px-1 py-1 text-center align-top">{score ?? ''}</td>
+              <td className="px-1 py-1 text-center align-top">{criterion.bobot}</td>
+              <td className="px-1 py-1 text-center align-top font-semibold">
+                {scoreTimesWeight !== null ? scoreTimesWeight : ''}
+              </td>
+            </tr>
+          );
+        })}
+      </tbody>
+
+      {showSummary && (
+        <tfoot className="break-inside-avoid font-bold">
+          <tr>
+            <td colSpan={4} className="px-1 py-1 text-center">
+              TOTAL SKOR × BOBOT
+            </td>
+            <td className="px-1 py-1 text-center">{total}</td>
+          </tr>
+          <tr>
+            <td colSpan={4} className="px-1 py-1 text-center">
+              NILAI AKHIR [(Total Skor × Bobot)/400 × 100]
+            </td>
+            <td className="px-1 py-1 text-center">{total > 0 ? nilai.toFixed(2) : ''}</td>
+          </tr>
+          <tr>
+            <td colSpan={4} className="px-1 py-1 text-center">
+              HURUF MUTU
+            </td>
+            <td className="px-1 py-1 text-center">{grade}</td>
+          </tr>
+        </tfoot>
+      )}
+    </table>
+  );
+
+  const renderSignatureBlock = (person: S2SessionPerson) => (
+    <div className="ml-auto mt-5 w-[280px] break-inside-avoid text-left">
       <p>Jakarta, {session.tanggal_ba || '______________'}</p>
-      <p className="mt-4">{S2_ROLE_LABELS[p.role as keyof typeof S2_ROLE_LABELS]}</p>
-      <div className="mt-1">
-        {p.signature_path ? (
-          <img src={p.signature_path} alt="TTD" className="max-h-16 max-w-32 object-contain" />
-        ) : (
-          <div className="h-16 border-b border-black" />
-        )}
+      <p className="mt-2">
+        {S2_ROLE_LABELS[person.role as keyof typeof S2_ROLE_LABELS]}
+      </p>
+
+      <div className="flex h-14 items-end">
+        {person.signature_path ? (
+          <img
+            src={person.signature_path}
+            alt="TTD"
+            className="max-h-14 max-w-32 object-contain"
+          />
+        ) : null}
       </div>
-      <p className="font-bold border-t border-black pt-1 inline-block min-w-[200px]">{p.display_name}</p>
-      <p className="text-sm">NIP. {p.nip}</p>
+
+      <p className="inline-block min-w-[220px] border-b border-black pb-0.5 font-bold">
+        {person.display_name}
+      </p>
+      <p className="text-[10px]">NIP. {person.nip}</p>
     </div>
   );
 
   return (
     <div data-s2-preview-root="true">
-      <div className="no-print flex gap-3 mb-4">
-        <button onClick={handlePrint} className="bg-green-900 text-white px-6 py-2 rounded hover:bg-green-800 font-sans text-sm font-medium">🖨 Preview Print / Save PDF</button>
+      <div className="no-print mb-4 flex gap-3">
+        <button
+          onClick={handlePrint}
+          className="rounded bg-green-900 px-6 py-2 font-sans text-sm font-medium text-white hover:bg-green-800"
+        >
+          🖨 Preview Print / Save PDF
+        </button>
       </div>
 
-      {isPreviewContext && enablePreviewPenilaianSplit && examiners.length > 0 && (
+      {enablePreviewPenilaianSplit && examiners.length > 0 && (
         <div
           className="no-print mb-4 flex flex-wrap items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 p-2"
           data-preview-penilaian-subtabs="true"
         >
-          <span className="text-xs font-sans font-semibold uppercase tracking-wide text-gray-500">
+          <span className="font-sans text-xs font-semibold uppercase tracking-wide text-gray-500">
             Form Penilaian Penguji Preview
           </span>
           <button
             type="button"
             onClick={() => setPenilaianPreviewSubTab('rubric')}
-            className={`px-3 py-1.5 rounded text-sm font-sans ${penilaianPreviewSubTab === 'rubric' ? 'bg-green-900 text-white' : 'bg-white text-gray-700 border border-gray-300'}`}
+            className={`rounded px-3 py-1.5 font-sans text-sm ${
+              penilaianPreviewSubTab === 'rubric'
+                ? 'bg-green-900 text-white'
+                : 'border border-gray-300 bg-white text-gray-700'
+            }`}
           >
-            Halaman Rubrik
+            Halaman 1: Komponen 1-3
           </button>
           <button
             type="button"
             onClick={() => setPenilaianPreviewSubTab('signature')}
-            className={`px-3 py-1.5 rounded text-sm font-sans ${penilaianPreviewSubTab === 'signature' ? 'bg-green-900 text-white' : 'bg-white text-gray-700 border border-gray-300'}`}
+            className={`rounded px-3 py-1.5 font-sans text-sm ${
+              penilaianPreviewSubTab === 'signature'
+                ? 'bg-green-900 text-white'
+                : 'border border-gray-300 bg-white text-gray-700'
+            }`}
           >
-            Halaman TTD Penguji
+            Halaman 2: Komponen 4-7 dan TTD
           </button>
         </div>
       )}
 
-      <div className="print-area bg-white p-8 md:p-12 print:p-0 space-y-10 print:space-y-0" style={{ fontFamily: "'Times New Roman', Georgia, serif" }}>
-        {/* ===== LAPORAN SEMINAR PROPOSAL TESIS (BA) ===== */}
+      <div
+        className="print-area space-y-10 bg-white p-8 md:p-12 print:space-y-0 print:p-0"
+        style={{ fontFamily: "'Times New Roman', Georgia, serif" }}
+      >
+        {/* ===== LAPORAN SEMINAR PROPOSAL TESIS ===== */}
         <div className={pageCls()}>
           {renderPreviewDocHeader('Laporan Seminar Proposal Tesis')}
 
           <p className="text-justify">
-            Pada hari ini {session.hari_tanggal || '______________'}, telah dilaksanakan Seminar Proposal Tesis bagi mahasiswa:
+            Pada hari ini {session.hari_tanggal || '______________'}, telah dilaksanakan
+            Seminar Proposal Tesis bagi mahasiswa:
           </p>
 
           <table className="w-full">
             <tbody>
-              <tr><td className="w-32">Nama</td><td className="w-4">:</td><td>{session.student_name || '______________'}</td></tr>
-              <tr><td>NIM</td><td>:</td><td>{session.student_nim || '______________'}</td></tr>
-              <tr><td>Waktu Sidang</td><td>:</td><td>{session.start_time || '______________'}</td></tr>
-              <tr><td>Peminatan</td><td>:</td><td>{session.specialization || '______________'}</td></tr>
+              <tr>
+                <td className="w-32">Nama</td>
+                <td className="w-4">:</td>
+                <td>{session.student_name || '______________'}</td>
+              </tr>
+              <tr>
+                <td>NIM</td>
+                <td>:</td>
+                <td>{session.student_nim || '______________'}</td>
+              </tr>
+              <tr>
+                <td>Waktu Sidang</td>
+                <td>:</td>
+                <td>{session.start_time || '______________'}</td>
+              </tr>
+              <tr>
+                <td>Peminatan</td>
+                <td>:</td>
+                <td>{session.specialization || '______________'}</td>
+              </tr>
             </tbody>
           </table>
 
           <div className="mt-3">
             <p className="font-bold">Dengan Judul Penelitian sebagai berikut :</p>
-            <p className="whitespace-pre-wrap">{session.thesis_title || '______________'}</p>
+            <p className="whitespace-pre-wrap">
+              {session.thesis_title || '______________'}
+            </p>
           </div>
 
           <p className="mt-3">
-            <span className="ml-4">{session.decision === 'lulus_dengan_perbaikan' ? '✓' : '○'} Proposal tesis dilanjutkan dengan perbaikan</span><br />
-            <span className="ml-4">{session.decision === 'tidak_lulus_mengulang' ? '✓' : '○'} Proposal tesis tidak diluluskan / Mengulang sidang</span>
+            <span className="ml-4">
+              {session.decision === 'lulus_dengan_perbaikan' ? '✓' : '○'} Proposal tesis
+              dilanjutkan dengan perbaikan
+            </span>
+            <br />
+            <span className="ml-4">
+              {session.decision === 'tidak_lulus_mengulang' ? '✓' : '○'} Proposal tesis
+              tidak diluluskan / Mengulang sidang
+            </span>
           </p>
 
-          <p className="italic text-sm text-justify mt-3">
-            Demikian laporan seminar proposal tesis ini dibuat sebagai laporan selama seminar berlangsung untuk diketahui dan dipergunakan sebagaimana mestinya.
+          <p className="mt-3 text-justify text-sm italic">
+            Demikian laporan seminar proposal tesis ini dibuat sebagai laporan selama seminar
+            berlangsung untuk diketahui dan dipergunakan sebagaimana mestinya.
           </p>
 
           <div className="mt-5">
-            <h3 className="font-bold text-center">TIM PENGUJI</h3>
+            <h3 className="text-center font-bold">TIM PENGUJI</h3>
             <table className="template-table mt-1">
-              <thead><tr><th className="w-12">NO</th><th>NAMA PENGUJI</th><th>JABATAN</th><th className="w-24">TANDA TANGAN</th></tr></thead>
+              <thead>
+                <tr>
+                  <th className="w-12">NO</th>
+                  <th>NAMA PENGUJI</th>
+                  <th>JABATAN</th>
+                  <th className="w-24">TANDA TANGAN</th>
+                </tr>
+              </thead>
               <tbody>
-                {examiners.concat(people.filter((p) => p.role === 'pembimbing_1' || p.role === 'pembimbing_2')).map((p, i) => (
-                  <tr key={p.id}><td className="text-center">{i + 1}.</td><td>{p.display_name}</td><td>{S2_ROLE_LABELS[p.role as keyof typeof S2_ROLE_LABELS]}</td><td className="text-center align-middle">{p.signature_path ? <img src={p.signature_path} alt="TTD" className="max-h-12 max-w-24 mx-auto object-contain" /> : ''}</td></tr>
-                ))}
+                {examiners
+                  .concat(
+                    people.filter(
+                      (p) => p.role === 'pembimbing_1' || p.role === 'pembimbing_2'
+                    )
+                  )
+                  .map((p, i) => (
+                    <tr key={p.id}>
+                      <td className="text-center">{i + 1}.</td>
+                      <td>{p.display_name}</td>
+                      <td>{S2_ROLE_LABELS[p.role as keyof typeof S2_ROLE_LABELS]}</td>
+                      <td className="text-center align-middle">
+                        {p.signature_path ? (
+                          <img
+                            src={p.signature_path}
+                            alt="TTD"
+                            className="mx-auto max-h-12 max-w-24 object-contain"
+                          />
+                        ) : (
+                          ''
+                        )}
+                      </td>
+                    </tr>
+                  ))}
               </tbody>
             </table>
           </div>
 
-          <div className="text-right mt-10 avoid-break">
+          <div className="mt-10 break-inside-avoid text-right">
             <p>Jakarta, {session.tanggal_ba || '______________'}</p>
             <p className="mt-4">Koordinator Program Studi</p>
-            {session.koordinator_signature_path ? <img src={session.koordinator_signature_path} alt="TTD Koordinator" className="max-h-16 max-w-32 ml-auto my-2 object-contain" /> : <div className="h-16"></div>}
+            {session.koordinator_signature_path ? (
+              <img
+                src={session.koordinator_signature_path}
+                alt="TTD Koordinator"
+                className="my-2 ml-auto max-h-16 max-w-32 object-contain"
+              />
+            ) : (
+              <div className="h-16" />
+            )}
             <p className="font-bold">{session.koordinator || S2_KOORDINATOR_NAME}</p>
-            <p className="text-sm">NIP. {session.nip_koordinator || S2_KOORDINATOR_NIP}</p>
+            <p className="text-sm">
+              NIP. {session.nip_koordinator || S2_KOORDINATOR_NIP}
+            </p>
           </div>
         </div>
 
         {/* ===== PENILAIAN PER PENGUJI ===== */}
-        {examiners.map((p) => {
-          const sc = getExaminerScores(p.id);
-          const total = calcTotalSkorXBobot(sc, RUBRIC.map((c) => c.bobot));
+        {examiners.map((person) => {
+          const examinerScores = getExaminerScores(person.id);
+          const total = calcTotalSkorXBobot(
+            examinerScores,
+            RUBRIC.map((criterion) => criterion.bobot)
+          );
           const nilai = total > 0 ? calcNilaiAkhir(total) : 0;
           const grade = total > 0 ? calcGrade(nilai) : '';
 
           if (!enablePreviewPenilaianSplit) {
             return (
-              <div key={p.id} className={pageCls()}>
+              <div key={person.id} className={pageCls()}>
                 {renderPreviewDocHeader('Formulir Penilaian Seminar Proposal Tesis')}
-                {renderPenilaianHeaderTable(p)}
-
-                <table className="template-table text-sm mt-3">
-                  <thead>
-                    <tr><th className="w-8">NO</th><th>PARAMETER PENILAIAN</th><th className="w-20">SKOR (1—4)</th><th className="w-14">BOBOT</th><th className="w-24">SKOR × BOBOT</th></tr>
-                  </thead>
-                  <tbody>
-                    {RUBRIC.map((c, i) => {
-                      const sb = sc[i] !== null ? sc[i]! * c.bobot : null;
-                      return (
-                        <tr key={c.code}>
-                          <td className="text-center align-top">{i + 1}.</td>
-                          <td className="align-top"><div className="font-semibold">{c.label}</div><div className="text-[11px] text-gray-700">{c.details.join(' ')}</div></td>
-                          <td className="text-center align-top">{sc[i] ?? ''}</td>
-                          <td className="text-center align-top">{c.bobot}</td>
-                          <td className="text-center align-top font-semibold">{sb !== null ? sb : ''}</td>
-                        </tr>
-                      );
-                    })}
-                    <tr className="font-bold"><td colSpan={4} className="text-center">TOTAL SKOR × BOBOT</td><td className="text-center">{total}</td></tr>
-                    <tr className="font-bold"><td colSpan={4} className="text-center">NILAI AKHIR [(Total Skor × Bobot)/400 × 100]</td><td className="text-center">{total > 0 ? nilai.toFixed(2) : ''}</td></tr>
-                    <tr className="font-bold"><td colSpan={4} className="text-center">HURUF MUTU</td><td className="text-center">{grade}</td></tr>
-                  </tbody>
-                </table>
-
-                {renderSignatureBlock(p)}
+                {renderPenilaianHeaderTable(person)}
+                {renderAssessmentTable({
+                  criteria: RUBRIC,
+                  startIndex: 0,
+                  examinerScores,
+                  showSummary: true,
+                  total,
+                  nilai,
+                  grade,
+                })}
+                {renderSignatureBlock(person)}
               </div>
             );
           }
 
           return (
-            <div key={p.id} className="contents">
-              <div className={`${pageCls()} ${previewSubTabClass('rubric')}`} data-preview-page="penilaian-rubric">
+            <div key={person.id} className="contents">
+              {/* PAGE 1: COMPONENTS 1-3 */}
+              <div
+                className={`${pageCls()} ${previewSubTabClass('rubric')}`}
+                data-preview-page="penilaian-page-1"
+              >
                 {renderPreviewDocHeader('Formulir Penilaian Seminar Proposal Tesis')}
-                {renderPenilaianHeaderTable(p)}
-
-                <table className="template-table text-sm mt-3">
-                  <thead>
-                    <tr><th className="w-8">NO</th><th>PARAMETER PENILAIAN</th><th className="w-20">SKOR (1—4)</th><th className="w-14">BOBOT</th><th className="w-24">SKOR × BOBOT</th></tr>
-                  </thead>
-                  <tbody>
-                    {RUBRIC.map((c, i) => {
-                      const sb = sc[i] !== null ? sc[i]! * c.bobot : null;
-                      return (
-                        <tr key={c.code}>
-                          <td className="text-center align-top">{i + 1}.</td>
-                          <td className="align-top"><div className="font-semibold">{c.label}</div><div className="text-[11px] text-gray-700">{c.details.join(' ')}</div></td>
-                          <td className="text-center align-top">{sc[i] ?? ''}</td>
-                          <td className="text-center align-top">{c.bobot}</td>
-                          <td className="text-center align-top font-semibold">{sb !== null ? sb : ''}</td>
-                        </tr>
-                      );
-                    })}
-                    <tr className="font-bold"><td colSpan={4} className="text-center">TOTAL SKOR × BOBOT</td><td className="text-center">{total}</td></tr>
-                    <tr className="font-bold"><td colSpan={4} className="text-center">NILAI AKHIR [(Total Skor × Bobot)/400 × 100]</td><td className="text-center">{total > 0 ? nilai.toFixed(2) : ''}</td></tr>
-                    <tr className="font-bold"><td colSpan={4} className="text-center">HURUF MUTU</td><td className="text-center">{grade}</td></tr>
-                  </tbody>
-                </table>
+                {renderPenilaianHeaderTable(person)}
+                {renderAssessmentTable({
+                  criteria: RUBRIC.slice(0, 3),
+                  startIndex: 0,
+                  examinerScores,
+                  total,
+                  nilai,
+                  grade,
+                })}
               </div>
 
-              <div className={`${pageCls()} ${previewSubTabClass('signature')}`} data-preview-page="penilaian-signature">
+              {/* PAGE 2: COMPONENTS 4-7, SUMMARY, SIGNATURE */}
+              <div
+                className={`${pageCls()} ${previewSubTabClass('signature')}`}
+                data-preview-page="penilaian-page-2"
+              >
                 {renderPreviewDocHeader('Formulir Penilaian Seminar Proposal Tesis')}
-                {renderPenilaianHeaderTable(p)}
-
-                <div className="min-h-[320px] flex flex-col">
-                  <div className="flex-1" />
-                  {renderSignatureBlock(p)}
-                </div>
+                {renderPenilaianHeaderTable(person)}
+                {renderAssessmentTable({
+                  criteria: RUBRIC.slice(3, 7),
+                  startIndex: 3,
+                  examinerScores,
+                  showSummary: true,
+                  total,
+                  nilai,
+                  grade,
+                })}
+                {renderSignatureBlock(person)}
               </div>
             </div>
           );
@@ -987,12 +1187,18 @@ function S2Preview({
         <div className={pageCls()}>
           {renderPreviewDocHeader('Rekapitulasi Nilai Seminar Proposal Tesis')}
 
-          <table className="template-table text-sm mt-2">
+          <table className="template-table mt-2 text-sm">
             <thead>
               <tr>
-                <th className="w-8">NO</th><th>NAMA</th><th className="w-20">NIM</th>
-                <th className="w-14">I</th><th className="w-14">II</th><th className="w-14">III</th><th className="w-14">IV</th>
-                <th className="w-16">JUMLAH</th><th className="w-14">IP</th>
+                <th className="w-8">NO</th>
+                <th>NAMA</th>
+                <th className="w-20">NIM</th>
+                <th className="w-14">I</th>
+                <th className="w-14">II</th>
+                <th className="w-14">III</th>
+                <th className="w-14">IV</th>
+                <th className="w-16">JUMLAH</th>
+                <th className="w-14">IP</th>
               </tr>
             </thead>
             <tbody>
@@ -1000,18 +1206,62 @@ function S2Preview({
                 <td className="text-center">1.</td>
                 <td>{session.student_name}</td>
                 <td>{session.student_nim}</td>
-                {examiners.map((p) => {
-                  const sc = getExaminerScores(p.id);
-                  const t = calcTotalSkorXBobot(sc, RUBRIC.map((c) => c.bobot));
-                  const n = t > 0 ? calcNilaiAkhir(t) : null;
-                  return <td key={p.id} className="text-center font-semibold">{n !== null ? n.toFixed(2) : ''}</td>;
+                {examiners.map((person) => {
+                  const examinerScores = getExaminerScores(person.id);
+                  const total = calcTotalSkorXBobot(
+                    examinerScores,
+                    RUBRIC.map((criterion) => criterion.bobot)
+                  );
+                  const finalScore = total > 0 ? calcNilaiAkhir(total) : null;
+
+                  return (
+                    <td key={person.id} className="text-center font-semibold">
+                      {finalScore !== null ? finalScore.toFixed(2) : ''}
+                    </td>
+                  );
                 })}
-                {Array.from({ length: Math.max(0, 4 - examiners.length) }).map((_, i) => <td key={`e${i}`} className="text-center"></td>)}
+                {Array.from({ length: Math.max(0, 4 - examiners.length) }).map((_, i) => (
+                  <td key={`empty-${i}`} className="text-center" />
+                ))}
                 <td className="text-center font-bold">
-                  {(() => { const vals = examiners.map((p) => { const sc = getExaminerScores(p.id); const t = calcTotalSkorXBobot(sc, RUBRIC.map((c) => c.bobot)); return t > 0 ? calcNilaiAkhir(t) : null; }).filter((n) => n !== null) as number[]; return vals.length ? vals.reduce((a, b) => a + b, 0).toFixed(2) : ''; })()}
+                  {(() => {
+                    const values = examiners
+                      .map((person) => {
+                        const examinerScores = getExaminerScores(person.id);
+                        const total = calcTotalSkorXBobot(
+                          examinerScores,
+                          RUBRIC.map((criterion) => criterion.bobot)
+                        );
+                        return total > 0 ? calcNilaiAkhir(total) : null;
+                      })
+                      .filter((value) => value !== null) as number[];
+
+                    return values.length
+                      ? values.reduce((sum, value) => sum + value, 0).toFixed(2)
+                      : '';
+                  })()}
                 </td>
                 <td className="text-center font-bold">
-                  {(() => { const vals = examiners.map((p) => { const sc = getExaminerScores(p.id); const t = calcTotalSkorXBobot(sc, RUBRIC.map((c) => c.bobot)); return t > 0 ? calcNilaiAkhir(t) : null; }).filter((n) => n !== null) as number[]; if (!vals.length) return ''; const ip = calcIP(vals.reduce((a, b) => a + b, 0) / vals.length); return ip !== null ? ip.toFixed(2) : ''; })()}
+                  {(() => {
+                    const values = examiners
+                      .map((person) => {
+                        const examinerScores = getExaminerScores(person.id);
+                        const total = calcTotalSkorXBobot(
+                          examinerScores,
+                          RUBRIC.map((criterion) => criterion.bobot)
+                        );
+                        return total > 0 ? calcNilaiAkhir(total) : null;
+                      })
+                      .filter((value) => value !== null) as number[];
+
+                    if (!values.length) return '';
+
+                    const ip = calcIP(
+                      values.reduce((sum, value) => sum + value, 0) / values.length
+                    );
+
+                    return ip !== null ? ip.toFixed(2) : '';
+                  })()}
                 </td>
               </tr>
             </tbody>
@@ -1019,11 +1269,25 @@ function S2Preview({
 
           <p className="mt-3">Jakarta, {session.tanggal_ba || '______________'}</p>
           <p className="mt-2 font-semibold">Tanda Tangan</p>
-          {examiners.map((p, i) => (
-            <div key={p.id} className="flex items-center gap-2 mt-1">
-              <span className="w-48 shrink-0">{i + 1}. {S2_ROLE_LABELS[p.role as keyof typeof S2_ROLE_LABELS]}</span>
-              <span className="flex-1 border-b border-black">{p.display_name || '…………………………………..'}</span>
-              <span className="w-24 text-center">{p.signature_path ? <img src={p.signature_path} alt="TTD" className="max-h-10 max-w-24 object-contain mx-auto" /> : <span className="text-gray-300 text-xs">(—)</span>}</span>
+          {examiners.map((person, i) => (
+            <div key={person.id} className="mt-1 flex items-center gap-2">
+              <span className="w-48 shrink-0">
+                {i + 1}. {S2_ROLE_LABELS[person.role as keyof typeof S2_ROLE_LABELS]}
+              </span>
+              <span className="flex-1 border-b border-black">
+                {person.display_name || '…………………………………..'}
+              </span>
+              <span className="w-24 text-center">
+                {person.signature_path ? (
+                  <img
+                    src={person.signature_path}
+                    alt="TTD"
+                    className="mx-auto max-h-10 max-w-24 object-contain"
+                  />
+                ) : (
+                  <span className="text-xs text-gray-300">(—)</span>
+                )}
+              </span>
             </div>
           ))}
         </div>

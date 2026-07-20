@@ -13,6 +13,7 @@
   .print-only-inline { display: inline !important; }
   .page-break { page-break-before: always; break-before: page; padding-top: 8mm; }
   .avoid-break { page-break-inside: avoid; break-inside: avoid; }
+  .break-before-page { page-break-before: always; break-before: page; }
   p, h1, h2, h3, li { orphans: 3; widows: 3; }
   img { max-width: 100% !important; height: auto !important; }
   .template-table { font-size: 11pt; }
