@@ -730,9 +730,11 @@ function S2Preview({
   previewHeaderDividerAfterKop?: boolean;
 }) {
   const examiners = people.filter((p) => S2_EXAMINER_ROLES.includes(p.role));
-
-  const page1Rubric = RUBRIC.slice(0, 5);
-  const page2Rubric = RUBRIC.slice(5, 7);
+  const penguji = examiners.concat(
+    people.filter((p) => p.role === 'pembimbing_1' || p.role === 'pembimbing_2')
+  );
+  const peserta = attendance.filter((a) => a.attendance_type === 'peserta');
+  const audiens = attendance.filter((a) => a.attendance_type === 'audiens');
 
   const getExaminerScores = (pid: string) => {
     const sc: (number | null)[] = [null, null, null, null, null, null, null];
@@ -827,64 +829,59 @@ function S2Preview({
     );
   };
 
-  const renderRubricHeaderOnly = () => (
-    <table className="template-table table-fixed text-[10pt] mt-2">
-      <thead className="table-header-group">
-        <tr>
-          <th className="w-8">NO</th>
-          <th>PARAMETER PENILAIAN</th>
-          <th className="w-16">SKOR<br />(1-4)</th>
-          <th className="w-14">BOBOT</th>
-          <th className="w-20">SKOR × BOBOT</th>
-        </tr>
-      </thead>
-    </table>
-  );
-
   const renderAssessmentTable = ({
-    criteria,
-    startIndex,
     examinerScores,
-    showSummary = false,
     total,
     nilai,
     grade,
   }: {
-    criteria: typeof RUBRIC;
-    startIndex: number;
     examinerScores: (number | null)[];
-    showSummary?: boolean;
     total: number;
     nilai: number;
     grade: string;
   }) => (
-    <table className="template-table table-fixed text-[10pt] mt-2">
-      <thead className="table-header-group">
+    <table className="template-table s2-assessment-table mt-2">
+      <colgroup>
+        <col style={{ width: '5%' }} />
+        <col style={{ width: '67%' }} />
+        <col style={{ width: '8%' }} />
+        <col style={{ width: '8%' }} />
+        <col style={{ width: '12%' }} />
+      </colgroup>
+
+      <thead>
         <tr>
-          <th className="w-8">NO</th>
+          <th>NO</th>
           <th>PARAMETER PENILAIAN</th>
-          <th className="w-16">SKOR<br />(1-4)</th>
-          <th className="w-14">BOBOT</th>
-          <th className="w-20">SKOR × BOBOT</th>
+          <th>
+            SKOR
+            <br />
+            (1-4)
+          </th>
+          <th>BOBOT</th>
+          <th>
+            SKOR ×
+            <br />
+            BOBOT
+          </th>
         </tr>
       </thead>
 
       <tbody>
-        {criteria.map((criterion, localIndex) => {
-          const rubricIndex = startIndex + localIndex;
+        {RUBRIC.map((criterion, rubricIndex) => {
           const score = examinerScores[rubricIndex];
           const scoreTimesWeight = score !== null ? score * criterion.bobot : null;
 
           return (
-            <tr key={criterion.code} className="break-inside-avoid">
-              <td className="px-1 py-1 text-center align-top">{rubricIndex + 1}.</td>
-              <td className="px-1.5 py-1 align-top">
+            <tr key={criterion.code} className="s2-rubric-row">
+              <td className="text-center align-top">{rubricIndex + 1}.</td>
+              <td className="align-top">
                 <div className="font-semibold leading-tight">{criterion.label}</div>
                 {renderIndicatorList(criterion.details)}
               </td>
-              <td className="px-1 py-1 text-center align-top">{score ?? ''}</td>
-              <td className="px-1 py-1 text-center align-top">{criterion.bobot}</td>
-              <td className="px-1 py-1 text-center align-top font-semibold">
+              <td className="text-center align-top">{score ?? ''}</td>
+              <td className="text-center align-top">{criterion.bobot}</td>
+              <td className="text-center align-top font-semibold">
                 {scoreTimesWeight !== null ? scoreTimesWeight : ''}
               </td>
             </tr>
@@ -892,44 +889,42 @@ function S2Preview({
         })}
       </tbody>
 
-      {showSummary && (
-        <tfoot className="break-inside-avoid font-bold">
-          <tr>
-            <td colSpan={4} className="px-1 py-1 text-center">
-              TOTAL SKOR × BOBOT
-            </td>
-            <td className="px-1 py-1 text-center">{total}</td>
-          </tr>
-          <tr>
-            <td colSpan={4} className="px-1 py-1 text-center">
-              NILAI AKHIR [(Total Skor × Bobot)/400 × 100]
-            </td>
-            <td className="px-1 py-1 text-center">{total > 0 ? nilai.toFixed(2) : ''}</td>
-          </tr>
-          <tr>
-            <td colSpan={4} className="px-1 py-1 text-center">
-              HURUF MUTU
-            </td>
-            <td className="px-1 py-1 text-center">{grade}</td>
-          </tr>
-        </tfoot>
-      )}
+      <tbody className="s2-summary-group font-bold">
+        <tr>
+          <td colSpan={4} className="text-center">
+            TOTAL SKOR × BOBOT
+          </td>
+          <td className="text-center">{total}</td>
+        </tr>
+        <tr>
+          <td colSpan={4} className="text-center">
+            NILAI AKHIR [(Total Skor × Bobot)/400 × 100]
+          </td>
+          <td className="text-center">{total > 0 ? nilai.toFixed(2) : ''}</td>
+        </tr>
+        <tr>
+          <td colSpan={4} className="text-center">
+            HURUF MUTU
+          </td>
+          <td className="text-center">{grade}</td>
+        </tr>
+      </tbody>
     </table>
   );
 
   const renderSignatureBlock = (person: S2SessionPerson) => (
-    <div className="ml-auto mt-5 w-[280px] signature-block text-left">
+    <div className="ml-auto mt-4 w-[240px] signature-block text-left">
       <p>Jakarta, {session.tanggal_ba || '______________'}</p>
       <p className="mt-2">
         {S2_ROLE_LABELS[person.role as keyof typeof S2_ROLE_LABELS]}
       </p>
 
-      <div className="flex h-14 items-end">
+      <div className="flex h-12 items-end">
         {person.signature_path ? (
           <img
             src={person.signature_path}
             alt="TTD"
-            className="max-h-14 max-w-32 object-contain"
+            className="max-h-12 max-w-32 object-contain"
           />
         ) : null}
       </div>
@@ -952,12 +947,163 @@ function S2Preview({
         </button>
       </div>
 
+      <style jsx global>{`
+        @media print {
+          @page {
+            size: A4 portrait;
+            margin: 12mm 14mm 14mm 14mm;
+          }
+
+          html,
+          body {
+            margin: 0 !important;
+            padding: 0 !important;
+            background: white !important;
+          }
+
+          body * {
+            visibility: hidden;
+          }
+
+          [data-s2-preview-root='true'],
+          [data-s2-preview-root='true'] * {
+            visibility: visible;
+          }
+
+          [data-s2-preview-root='true'] {
+            position: absolute !important;
+            inset: 0 !important;
+            width: 100% !important;
+            max-width: none !important;
+            margin: 0 !important;
+            padding: 0 !important;
+          }
+
+          [data-s2-preview-root='true'] .print-area {
+            width: 100% !important;
+            max-width: none !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            overflow: visible !important;
+          }
+
+          [data-s2-preview-root='true'] .s2-report-page {
+            break-after: page !important;
+            page-break-after: always !important;
+          }
+
+          [data-s2-preview-root='true'] .s2-examiner-form {
+            break-after: page !important;
+            page-break-after: always !important;
+
+            width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+          }
+
+          [data-s2-preview-root='true'] .s2-rekap-page {
+            break-before: page !important;
+            page-break-before: always !important;
+          }
+
+          [data-s2-preview-root='true'] .s2-daftar-hadir-page {
+            break-before: page !important;
+            page-break-before: always !important;
+          }
+
+          [data-s2-preview-root='true'] .s2-form-intro,
+          [data-s2-preview-root='true']
+            [data-preview-doc-header='true'],
+          [data-s2-preview-root='true']
+            [data-preview-penilaian-header-table='true'] {
+            break-inside: avoid !important;
+            page-break-inside: avoid !important;
+          }
+
+          [data-s2-preview-root='true'] .s2-assessment-table {
+            width: 100% !important;
+            max-width: 100% !important;
+            table-layout: fixed !important;
+            border-collapse: collapse !important;
+            box-sizing: border-box !important;
+
+            break-inside: auto !important;
+            page-break-inside: auto !important;
+
+            font-size: 9.4pt !important;
+            line-height: 1.08 !important;
+          }
+
+          [data-s2-preview-root='true']
+            .s2-assessment-table
+            thead {
+            display: table-header-group !important;
+          }
+
+          [data-s2-preview-root='true']
+            .s2-assessment-table
+            tbody {
+            break-inside: auto !important;
+            page-break-inside: auto !important;
+          }
+
+          [data-s2-preview-root='true']
+            .s2-assessment-table
+            tr {
+            break-inside: avoid !important;
+            page-break-inside: avoid !important;
+          }
+
+          [data-s2-preview-root='true']
+            .s2-assessment-table
+            th,
+          [data-s2-preview-root='true']
+            .s2-assessment-table
+            td {
+            box-sizing: border-box !important;
+            padding: 1mm 1.2mm !important;
+            overflow-wrap: anywhere;
+            word-break: normal;
+          }
+
+          [data-s2-preview-root='true'] .rubric-detail {
+            margin: 0.5mm 0 0 4mm !important;
+            padding: 0 !important;
+          }
+
+          [data-s2-preview-root='true'] .rubric-detail li {
+            margin: 0 !important;
+            padding: 0 !important;
+          }
+
+          [data-s2-preview-root='true'] .s2-summary-group {
+            break-inside: avoid !important;
+            page-break-inside: avoid !important;
+          }
+
+          [data-s2-preview-root='true'] .signature-block {
+            width: 74mm !important;
+            max-width: 74mm !important;
+            margin-left: auto !important;
+            margin-right: 0 !important;
+
+            break-inside: avoid !important;
+            page-break-inside: avoid !important;
+          }
+
+          [data-s2-preview-root='true'] img {
+            print-color-adjust: exact;
+            -webkit-print-color-adjust: exact;
+          }
+        }
+      `}</style>
+
       <div
         className="print-area space-y-10 bg-white p-8 md:p-12 print:space-y-0 print:p-0"
         style={{ fontFamily: "'Times New Roman', Georgia, serif" }}
       >
         {/* ===== LAPORAN SEMINAR PROPOSAL TESIS ===== */}
-        <div className="print-page">
+        <section className="s2-report-page">
           {renderPreviewDocHeader('Laporan Seminar Proposal Tesis')}
 
           <p className="text-justify">
@@ -1071,9 +1217,9 @@ function S2Preview({
               NIP. {session.nip_koordinator || S2_KOORDINATOR_NIP}
             </p>
           </div>
-        </div>
+        </section>
 
-        {/* ===== PENILAIAN PER PENGUJI ===== */}
+        {/* ===== PENILAIAN PER PENGUJI (one continuous table per examiner) ===== */}
         {examiners.map((person) => {
           const examinerScores = getExaminerScores(person.id);
           const total = calcTotalSkorXBobot(
@@ -1084,41 +1230,26 @@ function S2Preview({
           const grade = total > 0 ? calcGrade(nilai) : '';
 
           return (
-            <div key={person.id}>
-              {/* PAGE 1: COMPONENTS 1-5 (full form header) */}
-              <div className="print-break-before">
+            <section key={person.id} className="s2-examiner-form">
+              <div className="s2-form-intro">
                 {renderPreviewDocHeader('Formulir Penilaian Seminar Proposal Tesis')}
                 {renderPenilaianHeaderTable(person)}
-                {renderAssessmentTable({
-                  criteria: page1Rubric,
-                  startIndex: 0,
-                  examinerScores,
-                  total,
-                  nilai,
-                  grade,
-                })}
               </div>
 
-              {/* PAGE 2: COMPONENTS 6-7, SUMMARY, SIGNATURE — continuation: repeat only rubric header */}
-              <div className="print-break-before">
-                {renderRubricHeaderOnly()}
-                {renderAssessmentTable({
-                  criteria: page2Rubric,
-                  startIndex: 5,
-                  examinerScores,
-                  showSummary: true,
-                  total,
-                  nilai,
-                  grade,
-                })}
-                {renderSignatureBlock(person)}
-              </div>
-            </div>
+              {renderAssessmentTable({
+                examinerScores,
+                total,
+                nilai,
+                grade,
+              })}
+
+              {renderSignatureBlock(person)}
+            </section>
           );
         })}
 
         {/* ===== REKAPITULASI ===== */}
-        <div className="print-page">
+        <section className="s2-rekap-page">
           {renderPreviewDocHeader('Rekapitulasi Nilai Seminar Proposal Tesis')}
 
           <table className="template-table mt-2 text-sm">
@@ -1224,7 +1355,154 @@ function S2Preview({
               </span>
             </div>
           ))}
-        </div>
+        </section>
+
+        {/* ===== DAFTAR HADIR ===== */}
+        <section className="s2-daftar-hadir-page">
+          {renderPreviewDocHeader('Daftar Hadir Seminar Proposal Tesis')}
+
+          <table className="w-full text-sm">
+            <tbody>
+              <tr>
+                <td className="w-32">Nama Mahasiswa</td>
+                <td className="w-4">:</td>
+                <td>{session.student_name}</td>
+              </tr>
+              <tr>
+                <td>NIM</td>
+                <td>:</td>
+                <td>{session.student_nim}</td>
+              </tr>
+              <tr>
+                <td>Tanggal</td>
+                <td>:</td>
+                <td>{session.hari_tanggal || session.exam_date || ''}</td>
+              </tr>
+              <tr>
+                <td>Peminatan</td>
+                <td>:</td>
+                <td>{session.specialization}</td>
+              </tr>
+            </tbody>
+          </table>
+
+          {/* Daftar Hadir Penguji */}
+          <h2 className="mt-4 font-bold text-center">DAFTAR HADIR PENGUJI</h2>
+          <table className="template-table mt-1 text-[11px]">
+            <thead>
+              <tr>
+                <th className="w-8">NO</th>
+                <th className="w-28">NIP</th>
+                <th>NAMA PENGUJI</th>
+                <th>JABATAN</th>
+                <th className="w-24">TANDA TANGAN</th>
+              </tr>
+            </thead>
+            <tbody>
+              {penguji.map((p, i) => (
+                <tr key={p.id}>
+                  <td className="text-center">{i + 1}.</td>
+                  <td>{p.nip}</td>
+                  <td>{p.display_name}</td>
+                  <td>{S2_ROLE_LABELS[p.role as keyof typeof S2_ROLE_LABELS]}</td>
+                  <td className="text-center align-middle">
+                    {p.signature_path ? (
+                      <img
+                        src={p.signature_path}
+                        alt="TTD"
+                        className="mx-auto max-h-10 max-w-20 object-contain"
+                      />
+                    ) : (
+                      <span className="text-gray-300">—</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          {/* Daftar Hadir Peserta */}
+          <h2 className="mt-4 font-bold text-center">DAFTAR HADIR PESERTA</h2>
+          <table className="template-table mt-1 text-[11px]">
+            <thead>
+              <tr>
+                <th className="w-8">NO</th>
+                <th>NAMA PESERTA</th>
+                <th className="w-24">NIM</th>
+                <th className="w-24">TANDA TANGAN</th>
+                <th className="w-16">KET</th>
+              </tr>
+            </thead>
+            <tbody>
+              {peserta.length === 0 && (
+                <tr>
+                  <td className="text-center">1.</td>
+                  <td colSpan={4}>____________________________</td>
+                </tr>
+              )}
+              {peserta.map((p, i) => (
+                <tr key={p.id}>
+                  <td className="text-center">{i + 1}.</td>
+                  <td>{p.name}</td>
+                  <td>{p.nim}</td>
+                  <td className="text-center align-middle">
+                    {p.signature_path ? (
+                      <img
+                        src={p.signature_path}
+                        alt="TTD"
+                        className="mx-auto max-h-10 max-w-20 object-contain"
+                      />
+                    ) : (
+                      <span className="text-gray-300">—</span>
+                    )}
+                  </td>
+                  <td className="text-center">{p.notes}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          {/* Daftar Hadir Audiens */}
+          <h2 className="mt-4 font-bold text-center">DAFTAR HADIR MAHASISWA SEBAGAI AUDIENS</h2>
+          <table className="template-table mt-1 text-[11px]">
+            <thead>
+              <tr>
+                <th className="w-8">NO</th>
+                <th>NAMA MAHASISWA</th>
+                <th className="w-24">NIM</th>
+                <th className="w-24">TANDA TANGAN</th>
+                <th className="w-16">KET</th>
+              </tr>
+            </thead>
+            <tbody>
+              {audiens.length === 0 && (
+                <tr>
+                  <td className="text-center">1.</td>
+                  <td colSpan={4}>____________________________</td>
+                </tr>
+              )}
+              {audiens.map((a, i) => (
+                <tr key={a.id}>
+                  <td className="text-center">{i + 1}.</td>
+                  <td>{a.name}</td>
+                  <td>{a.nim}</td>
+                  <td className="text-center align-middle">
+                    {a.signature_path ? (
+                      <img
+                        src={a.signature_path}
+                        alt="TTD"
+                        className="mx-auto max-h-10 max-w-20 object-contain"
+                      />
+                    ) : (
+                      <span className="text-gray-300">—</span>
+                    )}
+                  </td>
+                  <td className="text-center">{a.notes}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
       </div>
     </div>
   );
