@@ -45,7 +45,15 @@ const S2_KOORDINATOR_NIP = '197604102021212009';
 // Document header — mirrors the S1 session page structure exactly:
 // kop image (same sizing as S1) inside a centered block with a bottom rule,
 // followed by the title, program, faculty and period line.
-function DocHeader({ title, semester, ta }: { title: string; semester: string; ta: string }) {
+function DocHeader({
+  title, semester, academicYear, isDosen, onUpdate,
+}: {
+  title: string;
+  semester: string;
+  academicYear: string;
+  isDosen?: boolean;
+  onUpdate?: (f: keyof S2Session, v: any) => void;
+}) {
   return (
     <div className="text-center border-b-2 border-black pb-4">
       <img
@@ -56,7 +64,24 @@ function DocHeader({ title, semester, ta }: { title: string; semester: string; t
       <h1 className="text-xl font-bold uppercase">{title}</h1>
       <p className="text-sm">PROGRAM STUDI KESEHATAN MASYARAKAT PROGRAM MAGISTER</p>
       <p className="text-sm">FAKULTAS ILMU KESEHATAN UPN &ldquo;VETERAN&rdquo; JAKARTA</p>
-      <p className="text-sm font-semibold">SEMESTER {semester} T.A. {ta}</p>
+      {isDosen && onUpdate ? (
+        <p className="text-sm font-semibold">SEMESTER{' '}
+          <input
+            value={semester}
+            onChange={(e) => onUpdate('semester', e.target.value)}
+            className="border-b border-gray-400 bg-transparent text-center w-24 font-semibold"
+          />{' '}
+          T.A.{' '}
+          <input
+            value={academicYear}
+            onChange={(e) => onUpdate('academic_year', e.target.value)}
+            className="border-b border-gray-400 bg-transparent text-center w-28 font-semibold"
+            placeholder="2025/2026"
+          />
+        </p>
+      ) : (
+        <p className="text-sm font-semibold">SEMESTER {semester} T.A. {academicYear}</p>
+      )}
     </div>
   );
 }
@@ -75,11 +100,47 @@ export default function S2SessionDetailPage() {
 
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<Tab>(isDosen ? 'berita-acara' : 'daftar-hadir');
-  const [saving, setSaving] = useState(false);
   const [syncStatus, setSyncStatus] = useState<'live' | 'saving' | 'offline'>('live');
 
   const sessionRef = useRef<S2Session | null>(null);
   const lastSavedSession = useRef<S2Session | null>(null);
+  const autoSaveTimer = useRef<NodeJS.Timeout | null>(null);
+  const savingRef = useRef(false);
+  const dirtyFields = useRef<Set<string>>(new Set());
+
+  const saveNow = useCallback(async () => {
+    if (savingRef.current) return;
+    const current = sessionRef.current;
+    if (!current) return;
+    const toSave: Partial<S2Session> = { updated_at: new Date().toISOString() };
+    let hasChanges = false;
+    for (const f of Array.from(dirtyFields.current)) {
+      (toSave as any)[f] = (current as any)[f];
+      hasChanges = true;
+    }
+    if (!hasChanges) return;
+
+    savingRef.current = true;
+    setSyncStatus('saving');
+    try {
+      const { error } = await supabase.from('s2_sessions').update(toSave).eq('id', sessionId);
+      if (!error) {
+        for (const f of Array.from(dirtyFields.current)) {
+          lastSavedSession.current = { ...(lastSavedSession.current || {}), [f]: (current as any)[f] } as S2Session;
+        }
+        dirtyFields.current.clear();
+        setSyncStatus('live');
+      } else {
+        // Stay in "saving" — will retry on next keystroke; don't flip to offline
+        // on a transient error so the UI doesn't flash "Offline" while typing.
+        console.error(error);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      savingRef.current = false;
+    }
+  }, [sessionId]);
 
   useEffect(() => {
     if (!sessionId) return;
@@ -90,15 +151,32 @@ export default function S2SessionDetailPage() {
         'postgres_changes',
         { event: '*', schema: 'public', table: 's2_sessions', filter: `id=eq.${sessionId}` },
         (payload: any) => {
-          if (payload.new) {
-            lastSavedSession.current = payload.new as S2Session;
-            setSession((prev) => ({ ...(prev || {}), ...payload.new }));
-          }
+          if (!payload.new) return;
+          const incoming = payload.new as S2Session;
+          // Merge external changes, but never overwrite a field the local
+          // user has just edited (our own realtime echo or another editor).
+          lastSavedSession.current = incoming;
+          sessionRef.current = { ...(sessionRef.current || {}), ...incoming };
+          startTransition(() => {
+            setSession((prev) => {
+              if (!prev) return prev;
+              const merged = { ...prev };
+              for (const k of Array.from(Object.keys(incoming)) as (keyof S2Session)[]) {
+                if (dirtyFields.current.has(k as string)) continue;
+                (merged as any)[k] = (incoming as any)[k];
+              }
+              return merged;
+            });
+          });
         }
       )
       .subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, [sessionId]);
+    return () => {
+      if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
+      if (dirtyFields.current.size > 0) { void saveNow(); }
+      supabase.removeChannel(channel);
+    };
+  }, [sessionId, saveNow]);
 
   async function loadAll() {
     setLoading(true);
@@ -127,29 +205,16 @@ export default function S2SessionDetailPage() {
     setLoading(false);
   }
 
-  const persistSession = useCallback(
-    async (updates: Partial<S2Session>) => {
-      setSyncStatus('saving');
-      const merged = { ...(sessionRef.current || {}), ...updates, updated_at: new Date().toISOString() };
-      sessionRef.current = merged as S2Session;
-      startTransition(() => setSession(merged as S2Session));
-      const { error } = await supabase.from('s2_sessions').update(updates).eq('id', sessionId);
-      if (!error) {
-        lastSavedSession.current = { ...lastSavedSession.current, ...updates } as S2Session;
-        setSyncStatus('live');
-      } else {
-        setSyncStatus('offline');
-        console.error(error);
-      }
-    },
-    [sessionId]
-  );
-
   const updateSessionField = useCallback(
     (field: keyof S2Session, value: any) => {
-      persistSession({ [field]: value } as Partial<S2Session>);
+      dirtyFields.current.add(field as string);
+      const merged = { ...(sessionRef.current || {}), [field]: value, updated_at: new Date().toISOString() } as S2Session;
+      sessionRef.current = merged;
+      startTransition(() => setSession(merged));
+      if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
+      autoSaveTimer.current = setTimeout(() => { void saveNow(); }, 800);
     },
-    [persistSession]
+    [saveNow]
   );
 
   // People (penguji) helpers — match logged-in user to their assignment
@@ -349,13 +414,13 @@ export default function S2SessionDetailPage() {
           if (activeTab !== `penilaian-${role}`) return null;
           const person = personByRole(role);
           if (!person) return <div key={role} className="text-amber-600">Penguji untuk peran ini belum ditambahkan di Berita Acara.</div>;
-          return <PenilaianTab key={role} session={session} person={person} role={role} scores={getExaminerScores(person.id)} canEdit={canEditExaminer(role)} onSaveScore={(code, val) => saveScore(person.id, code, val)} onSavePerson={savePerson} />;
+          return <PenilaianTab key={role} session={session} person={person} role={role} scores={getExaminerScores(person.id)} canEdit={canEditExaminer(role)} onSaveScore={(code, val) => saveScore(person.id, code, val)} onSavePerson={savePerson} isDosen={isDosen} onUpdate={updateSessionField} />;
         })}
         {activeTab === 'rekap-nilai' && (
-          <RekapNilaiTab session={session} people={people} scores={scores} onUpdate={updateSessionField} />
+          <RekapNilaiTab session={session} people={people} scores={scores} onUpdate={updateSessionField} isDosen={isDosen} />
         )}
         {activeTab === 'daftar-hadir' && (
-          <DaftarHadirTab session={session} people={people} attendance={attendance} onSave={(entries, type) => saveAttendance(entries, type)} sessionId={sessionId} isDosen={isDosen} />
+          <DaftarHadirTab session={session} people={people} attendance={attendance} onSave={(entries, type) => saveAttendance(entries, type)} sessionId={sessionId} isDosen={isDosen} onUpdate={updateSessionField} />
         )}
         {activeTab === 'preview' && (
           <S2Preview session={session} people={people} scores={scores} attendance={attendance} onUpdate={updateSessionField} />
@@ -402,7 +467,7 @@ const BeritaAcaraTab = memo(function BeritaAcaraTab({
 
   return (
     <div className="space-y-4">
-      <DocHeader title="Laporan Seminar Proposal Tesis" semester={session.semester} ta={session.ta} />
+      <DocHeader title="Laporan Seminar Proposal Tesis" semester={session.semester} academicYear={session.academic_year} isDosen={isDosen} onUpdate={onUpdate} />
 
       <p>
         Pada hari ini{' '}
@@ -515,9 +580,9 @@ function AddPersonInline({ onAdd, existingRoles }: { onAdd: (role: string, name:
 
 // ─── PENILAIAN (7 criteria, 4 examiners) ─────────────────────
 const PenilaianTab = memo(function PenilaianTab({
-  session, person, role, scores, canEdit, onSaveScore, onSavePerson,
+  session, person, role, scores, canEdit, onSaveScore, onSavePerson, isDosen, onUpdate,
 }: {
-  session: S2Session; person: S2SessionPerson; role: string; scores: (number | null)[]; canEdit: boolean; onSaveScore: (code: string, value: number | null) => void; onSavePerson: (id: string, f: 'display_name' | 'nip' | 'signature_path', v: string) => void;
+  session: S2Session; person: S2SessionPerson; role: string; scores: (number | null)[]; canEdit: boolean; onSaveScore: (code: string, value: number | null) => void; onSavePerson: (id: string, f: 'display_name' | 'nip' | 'signature_path', v: string) => void; isDosen: boolean; onUpdate: (f: keyof S2Session, v: any) => void;
 }) {
   const label = S2_ROLE_LABELS[role as keyof typeof S2_ROLE_LABELS];
   const [local, setLocal] = useState(scores);
@@ -538,7 +603,7 @@ const PenilaianTab = memo(function PenilaianTab({
 
   return (
     <div className="space-y-4">
-      <DocHeader title="Formulir Penilaian Seminar Proposal Tesis" semester={session.semester} ta={session.ta} />
+      <DocHeader title="Formulir Penilaian Seminar Proposal Tesis" semester={session.semester} academicYear={session.academic_year} isDosen={isDosen} onUpdate={onUpdate} />
 
       <div className="grid grid-cols-2 gap-x-8 gap-y-1 text-sm">
         <div className="flex"><span className="w-36">Nama Peserta</span><span className="w-4">:</span><span className="flex-1 border-b border-gray-400">{session.student_name}</span></div>
@@ -583,7 +648,9 @@ const PenilaianTab = memo(function PenilaianTab({
       <div className="mt-6 avoid-break text-right">
         <p>Jakarta, {session.tanggal_ba || session.exam_date || '______________'}</p>
         <p className="mt-8">{label}</p>
-        <S2SignatureUpload value={person.signature_path} onChange={(v) => onSavePerson(person.id, 'signature_path', v || '')} label={label} />
+        <div className="flex justify-end">
+          <S2SignatureUpload value={person.signature_path} onChange={(v) => onSavePerson(person.id, 'signature_path', v || '')} label={label} />
+        </div>
         <div className="h-8" />
         <p className="border-t border-black pt-1 font-semibold">{person.display_name}</p>
         <p className="text-xs">NIP. {person.nip}</p>
@@ -593,7 +660,7 @@ const PenilaianTab = memo(function PenilaianTab({
 });
 
 // ─── REKAPITULASI (S2 template) ──────────────────────────────
-function RekapNilaiTab({ session, people, scores, onUpdate }: { session: S2Session; people: S2SessionPerson[]; scores: S2Score[]; onUpdate: (f: keyof S2Session, v: any) => void }) {
+function RekapNilaiTab({ session, people, scores, onUpdate, isDosen }: { session: S2Session; people: S2SessionPerson[]; scores: S2Score[]; onUpdate: (f: keyof S2Session, v: any) => void; isDosen: boolean }) {
   const examiners = people.filter((p) => S2_EXAMINER_ROLES.includes(p.role));
   const nilaiPerExaminer = examiners.map((p) => {
     const sc: (number | null)[] = [null, null, null, null, null, null, null];
@@ -611,7 +678,7 @@ function RekapNilaiTab({ session, people, scores, onUpdate }: { session: S2Sessi
 
   return (
     <div className="space-y-4">
-      <DocHeader title="Rekapitulasi Nilai Seminar Proposal Tesis" semester={session.semester} ta={session.ta} />
+      <DocHeader title="Rekapitulasi Nilai Seminar Proposal Tesis" semester={session.semester} academicYear={session.academic_year} isDosen={isDosen} onUpdate={onUpdate} />
 
       <table className="w-full text-sm">
         <tbody>
@@ -671,9 +738,9 @@ function RekapNilaiTab({ session, people, scores, onUpdate }: { session: S2Sessi
 function isStatic(v: any) { return v || ''; }
 
 // ─── DAFTAR HADIR (single tab: penguji + peserta + audiens) ──
-function DaftarHadirTab({ session, people, attendance, onSave, sessionId, isDosen }: {
+function DaftarHadirTab({ session, people, attendance, onSave, sessionId, isDosen, onUpdate }: {
   session: S2Session; people: S2SessionPerson[]; attendance: S2Attendance[];
-  onSave: (entries: S2Attendance[], type: 'peserta' | 'audiens') => void; sessionId: string; isDosen: boolean;
+  onSave: (entries: S2Attendance[], type: 'peserta' | 'audiens') => void; sessionId: string; isDosen: boolean; onUpdate: (f: keyof S2Session, v: any) => void;
 }) {
   const penguji = people.filter((p) => S2_EXAMINER_ROLES.includes(p.role) || p.role === 'pembimbing_1' || p.role === 'pembimbing_2');
   const peserta = attendance.filter((a) => a.attendance_type === 'peserta');
@@ -708,7 +775,7 @@ function DaftarHadirTab({ session, people, attendance, onSave, sessionId, isDose
 
       {/* Daftar Hadir Penguji */}
       <div>
-        <DocHeader title="Daftar Hadir Penguji Seminar Proposal Tesis" semester={session.semester} ta={session.ta} />
+        <DocHeader title="Daftar Hadir Penguji Seminar Proposal Tesis" semester={session.semester} academicYear={session.academic_year} isDosen={isDosen} onUpdate={onUpdate} />
         <table className="w-full text-sm"><tbody>
           <tr><td className="w-32">Nama Mahasiswa</td><td className="w-4">:</td><td>{session.student_name}</td></tr>
           <tr><td>NIM</td><td>:</td><td>{session.student_nim}</td></tr>
@@ -833,7 +900,7 @@ function S2Preview({
           FAKULTAS ILMU KESEHATAN UPN &ldquo;VETERAN&rdquo; JAKARTA
         </p>
         <p className="text-[11px] font-semibold leading-tight">
-          SEMESTER {session.semester} T.A. {session.ta}
+          SEMESTER {session.semester} T.A. {session.academic_year}
         </p>
       </div>
     </div>

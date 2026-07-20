@@ -45,7 +45,6 @@ export interface S2Session {
   venue: string;
 
   hari_tanggal: string;
-  ta: string;
   tanggal_ba: string;
   koordinator: string;
   nip_koordinator: string;
