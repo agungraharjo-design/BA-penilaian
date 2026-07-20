@@ -18,7 +18,7 @@ import {
   S2_ROLE_LABELS,
 } from '@/types/s2';
 import { S2_PROPOSAL_RUBRIC_V1 } from '@/lib/s2/rubric-proposal';
-import { DOSEN_WHITELIST } from '@/lib/dosen';
+import { DOSEN_WHITELIST, isDosenEmail } from '@/lib/dosen';
 import {
   calcTotalSkorXBobot,
   calcNilaiAkhir,
@@ -152,11 +152,40 @@ export default function S2SessionDetailPage() {
     [persistSession]
   );
 
-  // People (penguji) helpers
-  const myPerson = people.find((p) => p.user_id === profile?.id) || null;
-  const myExaminerRole: string | null =
-    myPerson && S2_EXAMINER_ROLES.includes(myPerson.role) ? myPerson.role : null;
-  const isAssigned = !!myPerson;
+  // People (penguji) helpers — match logged-in user to their assignment
+  // by NAME (mirrors S1 logic), not by user_id.
+  const whitelistMatch = profile?.email ? isDosenEmail(profile.email) : null;
+  const canonicalName = whitelistMatch?.nama || '';
+  const dbFullName = profile?.full_name || '';
+  const emailPrefix = profile?.email?.split('@')[0] || '';
+  const allUserNames = [canonicalName, dbFullName, emailPrefix].filter(Boolean);
+
+  const normalize = (s: string) =>
+    s.toLowerCase().replace(/[,.\-]/g, '').replace(/\s+/g, ' ').trim();
+
+  const matchName = (target: string): boolean => {
+    if (allUserNames.length === 0 || !target) return false;
+    const b = normalize(target);
+    for (const name of allUserNames) {
+      const a = normalize(name);
+      if (a === b) return true;
+      if (a.includes(b) || b.includes(a)) return true;
+      const wordsA = a.split(' ').filter((w) => w.length > 2);
+      const wordsB = b.split(' ').filter((w) => w.length > 2);
+      if (wordsA.length >= 2 && wordsB.length >= 2 && wordsA[0] === wordsB[0] && wordsA[1] === wordsB[1]) return true;
+    }
+    return false;
+  };
+
+  // Roles this user is allowed to view/edit (null = none)
+  const allowedExaminerRoles: string[] | null = (() => {
+    if (isSuperadmin) return [...S2_EXAMINER_ROLES];
+    if (!isDosen) return null;
+    const matched = people
+      .filter((p) => S2_EXAMINER_ROLES.includes(p.role) && matchName(p.display_name))
+      .map((p) => p.role);
+    return matched.length ? matched : null;
+  })();
 
   function getExaminerScores(personId: string): (number | null)[] {
     const out: (number | null)[] = [null, null, null, null, null, null, null];
@@ -172,10 +201,8 @@ export default function S2SessionDetailPage() {
   function canEditExaminer(role: string): boolean {
     if (isSuperadmin) return true;
     if (!isDosen) return false;
-    // S1-parity: any dosen can view/edit examiner forms (permissive).
-    // When user_id is linked, scope to the dosen's own assigned role.
-    if (myExaminerRole) return myExaminerRole === role;
-    return true;
+    if (allowedExaminerRoles === null) return false;
+    return allowedExaminerRoles.includes(role);
   }
 
   async function saveScore(examinerPersonId: string, criterionCode: string, score: number | null) {
@@ -275,12 +302,10 @@ export default function S2SessionDetailPage() {
   const tabs = allTabs.filter((t) => {
     if (t.key.startsWith('penilaian-')) {
       const role = t.key.replace('penilaian-', '');
-      // Show all examiner Penilaian tabs to any dosen/superadmin (S1 parity).
-      // When user_id is linked, only the dosen's own assigned role is shown.
       if (isSuperadmin) return true;
       if (!isDosen) return false;
-      if (myExaminerRole) return myExaminerRole === role;
-      return true;
+      if (allowedExaminerRoles === null) return false;
+      return allowedExaminerRoles.includes(role);
     }
     return true;
   });
