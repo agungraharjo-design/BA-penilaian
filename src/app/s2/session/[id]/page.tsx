@@ -753,18 +753,21 @@ function S2Preview({
     <div aria-hidden="true" className="my-2 w-full border-b-2 border-black" />
   );
 
-  const renderPreviewDocHeader = (title: string) => (
+  const renderPreviewDocHeader = (title: string, showKop = true) => (
     <div className="pb-3 text-center" data-preview-doc-header="true">
-      <img
-        src="/kop-surat-resize.png"
-        alt="KOP UPN Veteran Jakarta"
-        className="mx-auto mb-2 block h-auto max-h-[88px] w-auto max-w-full"
-      />
+      {showKop && (
+        <img
+          src="/kop-surat-resize.png"
+          alt="KOP UPN Veteran Jakarta"
+          className="mx-auto mb-2 block h-auto max-h-[88px] w-auto max-w-full"
+        />
+      )}
 
-      {previewHeaderDividerAfterKop && renderPreviewDivider()}
+      {showKop && previewHeaderDividerAfterKop && renderPreviewDivider()}
 
       <div className="space-y-0" data-preview-header-text-block="true">
-        {!previewHeaderDividerAfterKop && renderPreviewDivider()}
+        {!showKop && <div aria-hidden="true" className="my-2 w-full border-b-2 border-black" />}
+        {showKop && !previewHeaderDividerAfterKop && renderPreviewDivider()}
         <h1 className="text-[16px] font-bold uppercase leading-tight">{title}</h1>
         <p className="text-[11px] leading-tight">
           PROGRAM STUDI KESEHATAN MASYARAKAT PROGRAM MAGISTER
@@ -1084,7 +1087,7 @@ function S2Preview({
 
               {/* PAGE 2: COMPONENTS 6-7, SUMMARY, SIGNATURE */}
               <div className="print-break-before">
-                {renderPreviewDocHeader('Formulir Penilaian Seminar Proposal Tesis')}
+                {renderPreviewDocHeader('Formulir Penilaian Seminar Proposal Tesis', false)}
                 {renderPenilaianHeaderTable(person)}
                 {renderAssessmentTable({
                   criteria: page2Rubric,
