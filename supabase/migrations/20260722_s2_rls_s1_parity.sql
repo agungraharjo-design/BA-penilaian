@@ -85,8 +85,12 @@ create policy "Public can update S2 attendance"
   using ( true )
   with check ( true );
 
-create policy "Dosen can manage S2 attendance"
-  on public.s2_attendance for insert, delete
+create policy "Dosen can insert S2 attendance"
+  on public.s2_attendance for insert
   to authenticated
-  using ( true )
   with check ( true );
+
+create policy "Dosen can delete S2 attendance"
+  on public.s2_attendance for delete
+  to authenticated
+  using ( true );
