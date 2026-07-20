@@ -827,6 +827,20 @@ function S2Preview({
     );
   };
 
+  const renderRubricHeaderOnly = () => (
+    <table className="template-table table-fixed text-[10pt] mt-2">
+      <thead className="table-header-group">
+        <tr>
+          <th className="w-8">NO</th>
+          <th>PARAMETER PENILAIAN</th>
+          <th className="w-16">SKOR<br />(1-4)</th>
+          <th className="w-14">BOBOT</th>
+          <th className="w-20">SKOR × BOBOT</th>
+        </tr>
+      </thead>
+    </table>
+  );
+
   const renderAssessmentTable = ({
     criteria,
     startIndex,
@@ -1071,8 +1085,8 @@ function S2Preview({
 
           return (
             <div key={person.id}>
-              {/* PAGE 1: COMPONENTS 1-5 */}
-              <div className="print-page">
+              {/* PAGE 1: COMPONENTS 1-5 (full form header) */}
+              <div className="print-break-before">
                 {renderPreviewDocHeader('Formulir Penilaian Seminar Proposal Tesis')}
                 {renderPenilaianHeaderTable(person)}
                 {renderAssessmentTable({
@@ -1085,10 +1099,9 @@ function S2Preview({
                 })}
               </div>
 
-              {/* PAGE 2: COMPONENTS 6-7, SUMMARY, SIGNATURE */}
+              {/* PAGE 2: COMPONENTS 6-7, SUMMARY, SIGNATURE — continuation: repeat only rubric header */}
               <div className="print-break-before">
-                {renderPreviewDocHeader('Formulir Penilaian Seminar Proposal Tesis', false)}
-                {renderPenilaianHeaderTable(person)}
+                {renderRubricHeaderOnly()}
                 {renderAssessmentTable({
                   criteria: page2Rubric,
                   startIndex: 5,
