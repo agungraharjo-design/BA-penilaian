@@ -721,8 +721,6 @@ function S2Preview({
   attendance,
   onUpdate,
   previewHeaderDividerAfterKop = true,
-  enablePreviewPenilaianSplit = true,
-  initialPenilaianSubTab = 'rubric',
 }: {
   session: S2Session;
   people: S2SessionPerson[];
@@ -730,12 +728,11 @@ function S2Preview({
   attendance: S2Attendance[];
   onUpdate: (f: keyof S2Session, v: any) => void;
   previewHeaderDividerAfterKop?: boolean;
-  enablePreviewPenilaianSplit?: boolean;
-  initialPenilaianSubTab?: 'rubric' | 'signature';
 }) {
   const examiners = people.filter((p) => S2_EXAMINER_ROLES.includes(p.role));
-  const [penilaianPreviewSubTab, setPenilaianPreviewSubTab] =
-    useState<'rubric' | 'signature'>(initialPenilaianSubTab);
+
+  const page1Rubric = RUBRIC.slice(0, 5);
+  const page2Rubric = RUBRIC.slice(5, 7);
 
   const getExaminerScores = (pid: string) => {
     const sc: (number | null)[] = [null, null, null, null, null, null, null];
@@ -751,13 +748,6 @@ function S2Preview({
   };
 
   const handlePrint = () => window.print();
-
-  let firstPage = true;
-  const pageCls = () => {
-    const className = firstPage ? '' : 'page-break print:break-before-page';
-    firstPage = false;
-    return className;
-  };
 
   const renderPreviewDivider = () => (
     <div aria-hidden="true" className="my-2 w-full border-b-2 border-black" />
@@ -821,28 +811,14 @@ function S2Preview({
     </table>
   );
 
-  const previewSubTabClass = (panel: 'rubric' | 'signature') => {
-    if (!enablePreviewPenilaianSplit) return '';
-    return penilaianPreviewSubTab === panel ? '' : 'hidden print:block';
-  };
-
-  const normalizeDetails = (details: string[]) =>
-    details
-      .flatMap((detail) => detail.split(/\r?\n/))
-      .map((detail) => detail.trim())
-      .filter(Boolean);
-
   const renderIndicatorList = (details: string[]) => {
-    const items = normalizeDetails(details);
-
+    const items = details.map((d) => d.trim()).filter(Boolean);
     if (items.length === 0) return null;
 
     return (
-      <ul className="mt-0.5 list-disc space-y-0 pl-4 text-[9.5px] leading-[1.15] text-gray-700">
+      <ul className="rubric-detail list-disc ml-4">
         {items.map((item, index) => (
-          <li key={`${index}-${item}`} className="pl-0.5">
-            {item}
-          </li>
+          <li key={index}>{item}</li>
         ))}
       </ul>
     );
@@ -865,14 +841,14 @@ function S2Preview({
     nilai: number;
     grade: string;
   }) => (
-    <table className="template-table mt-2 w-full table-fixed text-[10.5px] leading-tight">
+    <table className="template-table table-fixed text-[10pt] mt-2">
       <thead className="table-header-group">
         <tr>
-          <th className="w-[5%]">NO</th>
-          <th className="w-[56%]">PARAMETER PENILAIAN</th>
-          <th className="w-[12%]">SKOR<br />(1-4)</th>
-          <th className="w-[9%]">BOBOT</th>
-          <th className="w-[18%]">SKOR × BOBOT</th>
+          <th className="w-8">NO</th>
+          <th>PARAMETER PENILAIAN</th>
+          <th className="w-16">SKOR<br />(1-4)</th>
+          <th className="w-14">BOBOT</th>
+          <th className="w-20">SKOR × BOBOT</th>
         </tr>
       </thead>
 
@@ -925,7 +901,7 @@ function S2Preview({
   );
 
   const renderSignatureBlock = (person: S2SessionPerson) => (
-    <div className="ml-auto mt-5 w-[280px] break-inside-avoid text-left">
+    <div className="ml-auto mt-5 w-[280px] signature-block text-left">
       <p>Jakarta, {session.tanggal_ba || '______________'}</p>
       <p className="mt-2">
         {S2_ROLE_LABELS[person.role as keyof typeof S2_ROLE_LABELS]}
@@ -959,45 +935,12 @@ function S2Preview({
         </button>
       </div>
 
-      {enablePreviewPenilaianSplit && examiners.length > 0 && (
-        <div
-          className="no-print mb-4 flex flex-wrap items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 p-2"
-          data-preview-penilaian-subtabs="true"
-        >
-          <span className="font-sans text-xs font-semibold uppercase tracking-wide text-gray-500">
-            Form Penilaian Penguji Preview
-          </span>
-          <button
-            type="button"
-            onClick={() => setPenilaianPreviewSubTab('rubric')}
-            className={`rounded px-3 py-1.5 font-sans text-sm ${
-              penilaianPreviewSubTab === 'rubric'
-                ? 'bg-green-900 text-white'
-                : 'border border-gray-300 bg-white text-gray-700'
-            }`}
-          >
-            Halaman 1: Komponen 1-3
-          </button>
-          <button
-            type="button"
-            onClick={() => setPenilaianPreviewSubTab('signature')}
-            className={`rounded px-3 py-1.5 font-sans text-sm ${
-              penilaianPreviewSubTab === 'signature'
-                ? 'bg-green-900 text-white'
-                : 'border border-gray-300 bg-white text-gray-700'
-            }`}
-          >
-            Halaman 2: Komponen 4-7 dan TTD
-          </button>
-        </div>
-      )}
-
       <div
         className="print-area space-y-10 bg-white p-8 md:p-12 print:space-y-0 print:p-0"
         style={{ fontFamily: "'Times New Roman', Georgia, serif" }}
       >
         {/* ===== LAPORAN SEMINAR PROPOSAL TESIS ===== */}
-        <div className={pageCls()}>
+        <div className="print-page">
           {renderPreviewDocHeader('Laporan Seminar Proposal Tesis')}
 
           <p className="text-justify">
@@ -1123,36 +1066,14 @@ function S2Preview({
           const nilai = total > 0 ? calcNilaiAkhir(total) : 0;
           const grade = total > 0 ? calcGrade(nilai) : '';
 
-          if (!enablePreviewPenilaianSplit) {
-            return (
-              <div key={person.id} className={pageCls()}>
-                {renderPreviewDocHeader('Formulir Penilaian Seminar Proposal Tesis')}
-                {renderPenilaianHeaderTable(person)}
-                {renderAssessmentTable({
-                  criteria: RUBRIC,
-                  startIndex: 0,
-                  examinerScores,
-                  showSummary: true,
-                  total,
-                  nilai,
-                  grade,
-                })}
-                {renderSignatureBlock(person)}
-              </div>
-            );
-          }
-
           return (
-            <div key={person.id} className="contents">
-              {/* PAGE 1: COMPONENTS 1-3 */}
-              <div
-                className={`${pageCls()} ${previewSubTabClass('rubric')}`}
-                data-preview-page="penilaian-page-1"
-              >
+            <div key={person.id}>
+              {/* PAGE 1: COMPONENTS 1-5 */}
+              <div className="print-page">
                 {renderPreviewDocHeader('Formulir Penilaian Seminar Proposal Tesis')}
                 {renderPenilaianHeaderTable(person)}
                 {renderAssessmentTable({
-                  criteria: RUBRIC.slice(0, 3),
+                  criteria: page1Rubric,
                   startIndex: 0,
                   examinerScores,
                   total,
@@ -1161,16 +1082,13 @@ function S2Preview({
                 })}
               </div>
 
-              {/* PAGE 2: COMPONENTS 4-7, SUMMARY, SIGNATURE */}
-              <div
-                className={`${pageCls()} ${previewSubTabClass('signature')}`}
-                data-preview-page="penilaian-page-2"
-              >
+              {/* PAGE 2: COMPONENTS 6-7, SUMMARY, SIGNATURE */}
+              <div className="print-break-before">
                 {renderPreviewDocHeader('Formulir Penilaian Seminar Proposal Tesis')}
                 {renderPenilaianHeaderTable(person)}
                 {renderAssessmentTable({
-                  criteria: RUBRIC.slice(3, 7),
-                  startIndex: 3,
+                  criteria: page2Rubric,
+                  startIndex: 5,
                   examinerScores,
                   showSummary: true,
                   total,
@@ -1184,7 +1102,7 @@ function S2Preview({
         })}
 
         {/* ===== REKAPITULASI ===== */}
-        <div className={pageCls()}>
+        <div className="print-page">
           {renderPreviewDocHeader('Rekapitulasi Nilai Seminar Proposal Tesis')}
 
           <table className="template-table mt-2 text-sm">

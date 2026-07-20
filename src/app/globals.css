@@ -14,6 +14,14 @@
   .page-break { page-break-before: always; break-before: page; padding-top: 8mm; }
   .avoid-break { page-break-inside: avoid; break-inside: avoid; }
   .break-before-page { page-break-before: always; break-before: page; }
+
+  /* S2 preview A4 page helpers */
+  .print-page { width: 210mm; min-height: 297mm; break-before: auto; }
+  .print-break-before { break-before: page; page-break-before: always; }
+  .rubric-detail { font-size: 8.5pt; line-height: 1.15; }
+  .signature-block { break-inside: avoid; page-break-inside: avoid; }
+  table { width: 100%; border-collapse: collapse; font-size: 10pt; }
+  th, td { padding-top: 3px; padding-bottom: 3px; }
   p, h1, h2, h3, li { orphans: 3; widows: 3; }
   img { max-width: 100% !important; height: auto !important; }
   .template-table { font-size: 11pt; }
