@@ -40,7 +40,9 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
   const supabase = createClient()
   const router = useRouter()
   const pathname = usePathname()
-  const isPublicAttendance = pathname.startsWith('/attendance/')
+  const isPublicAttendance =
+    pathname.startsWith('/attendance/') ||
+    pathname.startsWith('/s2/attendance/')
   const [user, setUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
