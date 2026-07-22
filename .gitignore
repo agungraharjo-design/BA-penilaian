@@ -20,3 +20,5 @@ puppeteer-browsers/
 # OS
 .DS_Store
 Thumbs.db
+# Scripts
+scripts/.env
