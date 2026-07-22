@@ -30,6 +30,11 @@ export const DOSEN_WHITELIST: { email: string; nama: string }[] = [
   { email: 'ikamaulidanurrahma@gmail.com', nama: 'Ika Maulida Nurrahma, S.K.M., M.Kes.' },
   { email: 'fathinahranggaunihardy@gmail.com', nama: 'Dr. Fathinah Ranggauni Hardy, SKM, M.Epid' },
   { email: 'h.iswanto@upnvj.ac.id', nama: 'Prof. Dr. Acim Heri Iswanto, S.K.M, MARS' },
+  // S2 Kesmas Dosen
+  { email: 'firliaayuarini@upnvj.ac.id', nama: 'Dr. Firlia Ayu Arini, S.K.M.,M.K.M' },
+  { email: 'intania@upnvj.ac.id', nama: 'Dr. Nur Intania Sofianita, S.I.Kom, MKM' },
+  { email: 'yessi@upnvj.ac.id', nama: 'Dr. dr. Yessi Crosita Octaria, M.I.H., MIH' },
+  { email: 'netti.herawati@upnvj.ac.id', nama: 'Prof. Dr. Ir. Netti Herawati, M.Si.' },
 ]
 
 export const SUPERADMIN_EMAILS = ['agungraharjo@upnvj.ac.id']
