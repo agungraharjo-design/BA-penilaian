@@ -342,6 +342,89 @@ ${dh}
 </html>`;
 }
 
+// ── Generate PDF for one session ────────────────────────────
+async function generatePdf(supabase, session, outputDir) {
+  const [peopleRes, scoresRes, attRes] = await Promise.all([
+    supabase.from('s2_session_people').select('*').eq('session_id', session.id).order('sequence_no'),
+    supabase.from('s2_scores').select('*').eq('session_id', session.id),
+    supabase.from('s2_attendance').select('*').eq('session_id', session.id),
+  ]);
+
+  const people = peopleRes.data || [];
+  const scores = scoresRes.data || [];
+  const attendance = attRes.data || [];
+
+  let kopDataUri = '';
+  try {
+    const imgBuf = fs.readFileSync(KOP_PATH);
+    kopDataUri = `data:image/png;base64,${imgBuf.toString('base64')}`;
+  } catch (e) {
+    console.warn('  Warning: Could not read KOP image, continuing without it.');
+  }
+
+  const html = buildHTML({ session, people, scores, attendance, kopDataUri });
+
+  const dateStr = new Date().toISOString().split('T')[0];
+  const nim = session.student_nim || session.id.substring(0, 8);
+  const outputFile = path.resolve(outputDir, `S2_Proposal_${nim}_${dateStr}.pdf`);
+
+  const browser = await puppeteer.launch({ headless: 'new', args: ['--no-sandbox', '--disable-setuid-sandbox'] });
+  try {
+    const page = await browser.newPage();
+    await page.setContent(html, { waitUntil: 'networkidle0', timeout: 45000 });
+    await page.evaluate(() => document.fonts?.ready);
+    await page.pdf({
+      path: outputFile,
+      format: 'A4',
+      margin: { top: '12mm', right: '14mm', bottom: '14mm', left: '14mm' },
+      printBackground: true,
+      displayHeaderFooter: false,
+    });
+    console.log(`  PDF saved: ${outputFile}`);
+  } finally {
+    await browser.close();
+  }
+}
+
+// ── Batch: find complete sessions ────────────────────────────
+async function findCompleteSessions(supabase, minComplete) {
+  const { data: rows, error } = await supabase
+    .from('s2_sessions')
+    .select(`
+      id, student_nim, student_name, semester, academic_year,
+      s2_session_people!inner ( id, role )
+    `)
+    .eq('exam_type', 'proposal');
+
+  if (error) { console.error('Query error:', error.message); return []; }
+
+  // Filter sessions that have at least 4 examiner roles
+  const sessions = [];
+  for (const s of rows) {
+    const examinerPeople = (s.s2_session_people || []).filter(p =>
+      ['ketua_penguji','anggota_penguji_1','anggota_penguji_2','anggota_penguji_3'].includes(p.role)
+    );
+    if (examinerPeople.length < minComplete) continue;
+
+    // Check how many have all 7 scores
+    let completed = 0;
+    for (const p of examinerPeople) {
+      const { count } = await supabase
+        .from('s2_scores')
+        .select('id', { count: 'exact', head: true })
+        .eq('examiner_person_id', p.id)
+        .not('score', 'is', null);
+      if (count >= 7) completed++;
+    }
+
+    if (completed >= minComplete) {
+      sessions.push({ ...s, total_examiners: examinerPeople.length, examiners_complete: completed });
+    }
+  }
+
+  return sessions.sort((a, b) => (a.student_nim || '').localeCompare(b.student_nim || ''));
+}
+
 // ── Main ─────────────────────────────────────────────────────
 async function main() {
   const args = {};
@@ -357,81 +440,89 @@ async function main() {
   const supabaseUrl = process.env.SUPABASE_URL || args['supabase-url'];
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || args['service-key'];
   const nim = args['nim'] || args['n'] || args['student'];
+  const nims = args['nims'];                 // comma-separated list
+  const doAll = args['all'] || args['batch']; // flag: generate for all complete
+  const minComplete = parseInt(args['min-complete'], 10) || 4;
   const sessionId = args['session-id'] || args['sid'];
   const outputDir = args['output'] || args['o'] || process.cwd();
 
   if (!supabaseUrl || !serviceKey) {
     console.error('ERROR: SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required.');
     console.error('  Set them as env vars or pass --supabase-url / --service-key');
-    console.error('  Example: node generate-s2-pdf.js --nim 2510722005');
+    console.error('');
+    console.error('Usage:');
+    console.error('  Single NIM:            node generate-s2-pdf.js --nim 2510722005');
+    console.error('  Multiple NIMs:         node generate-s2-pdf.js --nims 2510722005,2510722006');
+    console.error('  All complete sessions: node generate-s2-pdf.js --all');
+    console.error('  Min completeness:      node generate-s2-pdf.js --all --min-complete 2');
+    console.error('  Output directory:      node generate-s2-pdf.js --nim 2510722005 --output ./pdfs');
     process.exit(1);
   }
-  if (!nim && !sessionId) {
-    console.error('ERROR: Provide --nim or --session-id');
+  if (!nim && !nims && !doAll && !sessionId) {
+    console.error('ERROR: Provide --nim, --nims, --all, or --session-id');
     process.exit(1);
   }
+
+  fs.mkdirSync(outputDir, { recursive: true });
 
   const supabase = createClient(supabaseUrl, serviceKey, { auth: { persistSession: false } });
 
-  // Query session
-  let sessionResult;
+  // Resolve list of sessions to process
+  let sessionsToProcess = [];
+
   if (sessionId) {
-    sessionResult = await supabase.from('s2_sessions').select('*').eq('id', sessionId).single();
-  } else {
-    sessionResult = await supabase.from('s2_sessions').select('*').eq('student_nim', nim).eq('exam_type', 'proposal').order('created_at', { ascending: false }).limit(1).single();
-  }
-
-  if (sessionResult.error) {
-    console.error('Error querying session:', sessionResult.error.message);
-    process.exit(1);
-  }
-  const session = sessionResult.data;
-  console.log(`Session found: ${session.student_name} (${session.student_nim})`);
-
-  // Query people, scores, attendance
-  const [peopleRes, scoresRes, attRes] = await Promise.all([
-    supabase.from('s2_session_people').select('*').eq('session_id', session.id).order('sequence_no'),
-    supabase.from('s2_scores').select('*').eq('session_id', session.id),
-    supabase.from('s2_attendance').select('*').eq('session_id', session.id),
-  ]);
-
-  const people = peopleRes.data || [];
-  const scores = scoresRes.data || [];
-  const attendance = attRes.data || [];
-
-  // Read and embed KOP image
-  let kopDataUri = '';
-  try {
-    const imgBuf = fs.readFileSync(KOP_PATH);
-    kopDataUri = `data:image/png;base64,${imgBuf.toString('base64')}`;
-    console.log('KOP image loaded, size:', (kopDataUri.length / 1024).toFixed(0), 'KB');
-  } catch (e) {
-    console.warn('Warning: Could not read KOP image, continuing without it.');
-  }
-
-  console.log('Generating HTML...');
-  const html = buildHTML({ session, people, scores, attendance, kopDataUri });
-
-  const outputFile = path.resolve(outputDir, `S2_Proposal_${session.student_nim}_${new Date().toISOString().split('T')[0]}.pdf`);
-
-  console.log('Launching Puppeteer...');
-  const browser = await puppeteer.launch({ headless: 'new', args: ['--no-sandbox', '--disable-setuid-sandbox'] });
-  try {
-    const page = await browser.newPage();
-    await page.setContent(html, { waitUntil: 'networkidle0', timeout: 30000 });
-    await page.evaluate(() => document.fonts?.ready);
-    console.log('Generating PDF...');
-    await page.pdf({
-      path: outputFile,
-      format: 'A4',
-      margin: { top: '12mm', right: '14mm', bottom: '14mm', left: '14mm' },
-      printBackground: true,
-      displayHeaderFooter: false,
+    const { data, error } = await supabase.from('s2_sessions').select('*').eq('id', sessionId).single();
+    if (error) { console.error('Session query error:', error.message); process.exit(1); }
+    sessionsToProcess = [data];
+  } else if (nim) {
+    const { data, error } = await supabase
+      .from('s2_sessions').select('*')
+      .eq('student_nim', nim).eq('exam_type', 'proposal')
+      .order('created_at', { ascending: false }).limit(1).single();
+    if (error) { console.error('Error querying session:', error.message); process.exit(1); }
+    sessionsToProcess = [data];
+  } else if (nims) {
+    const nimList = nims.split(',').map(s => s.trim()).filter(Boolean);
+    console.log(`Looking up ${nimList.length} NIMs...`);
+    const { data, error } = await supabase
+      .from('s2_sessions').select('*')
+      .in('student_nim', nimList).eq('exam_type', 'proposal');
+    if (error) { console.error('Query error:', error.message); process.exit(1); }
+    sessionsToProcess = data || [];
+    // Maintain input order
+    const map = {};
+    sessionsToProcess.forEach(s => { map[s.student_nim] = s; });
+    sessionsToProcess = nimList.map(n => map[n]).filter(Boolean);
+    if (sessionsToProcess.length === 0) { console.error('No sessions found for given NIMs'); process.exit(1); }
+    if (sessionsToProcess.length < nimList.length) {
+      console.warn(`  Warning: ${nimList.length - sessionsToProcess.length} NIM(s) not found`);
+    }
+  } else if (doAll) {
+    console.log(`Finding sessions with >= ${minComplete} examiner(s) complete...`);
+    sessionsToProcess = await findCompleteSessions(supabase, minComplete);
+    if (sessionsToProcess.length === 0) {
+      console.log('No matching sessions found.');
+      return;
+    }
+    console.log(`Found ${sessionsToProcess.length} session(s):`);
+    sessionsToProcess.forEach(s => {
+      console.log(`  ${s.student_nim} ${s.student_name} (${s.examiners_complete}/${s.total_examiners} examiners)`);
     });
-    console.log(`PDF saved: ${outputFile}`);
-  } finally {
-    await browser.close();
   }
+
+  console.log(`\nGenerating PDFs for ${sessionsToProcess.length} session(s)...\n`);
+
+  for (let i = 0; i < sessionsToProcess.length; i++) {
+    const s = sessionsToProcess[i];
+    console.log(`[${i + 1}/${sessionsToProcess.length}] ${s.student_name} (${s.student_nim})`);
+    try {
+      await generatePdf(supabase, s, outputDir);
+    } catch (err) {
+      console.error(`  FAILED: ${err.message}`);
+    }
+  }
+
+  console.log(`\nDone. ${sessionsToProcess.length} session(s) processed.`);
 }
 
 if (require.main === module) {
