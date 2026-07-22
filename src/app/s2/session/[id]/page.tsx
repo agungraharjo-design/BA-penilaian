@@ -673,8 +673,8 @@ function RekapNilaiTab({ session, people, scores, onUpdate, isDosen }: { session
   });
 
   const valid = nilaiPerExaminer.filter((n) => n !== null) as number[];
-  const jumlah = valid.length ? valid.reduce((a, b) => a + b, 0) : 0;
-  const ip = valid.length ? calcIP(jumlah / valid.length) : null;
+  const rataRata = valid.length ? valid.reduce((a, b) => a + b, 0) / valid.length : 0;
+  const ip = valid.length ? calcIP(rataRata) : null;
 
   return (
     <div className="space-y-4">
@@ -692,7 +692,7 @@ function RekapNilaiTab({ session, people, scores, onUpdate, isDosen }: { session
           <tr>
             <th className="w-8">NO</th><th>NAMA</th><th className="w-20">NIM</th>
             <th className="w-14">I</th><th className="w-14">II</th><th className="w-14">III</th><th className="w-14">IV</th>
-            <th className="w-16">JUMLAH</th><th className="w-14">IP</th>
+            <th className="w-16">RATA-RATA</th><th className="w-14">IP</th>
           </tr>
         </thead>
         <tbody>
@@ -704,7 +704,7 @@ function RekapNilaiTab({ session, people, scores, onUpdate, isDosen }: { session
               <td key={i} className="text-center font-semibold">{n !== null ? n.toFixed(2) : ''}</td>
             ))}
             {Array.from({ length: Math.max(0, 4 - nilaiPerExaminer.length) }).map((_, i) => <td key={`e${i}`} className="text-center"></td>)}
-            <td className="text-center font-bold">{valid.length ? jumlah.toFixed(2) : ''}</td>
+            <td className="text-center font-bold">{valid.length ? rataRata.toFixed(2) : ''}</td>
             <td className="text-center font-bold">{ip !== null ? ip.toFixed(2) : ''}</td>
           </tr>
         </tbody>
@@ -1384,7 +1384,7 @@ function S2Preview({
                 <th className="w-14">II</th>
                 <th className="w-14">III</th>
                 <th className="w-14">IV</th>
-                <th className="w-16">JUMLAH</th>
+                <th className="w-16">RATA-RATA</th>
                 <th className="w-14">IP</th>
               </tr>
             </thead>
@@ -1424,7 +1424,7 @@ function S2Preview({
                       .filter((value) => value !== null) as number[];
 
                     return values.length
-                      ? values.reduce((sum, value) => sum + value, 0).toFixed(2)
+                      ? (values.reduce((sum, value) => sum + value, 0) / values.length).toFixed(2)
                       : '';
                   })()}
                 </td>
