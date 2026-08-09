@@ -19,7 +19,10 @@ export default function NavBar() {
         <div className="flex items-center gap-1 text-sm font-sans">
           <a href="/" className="px-2 py-1 rounded hover:bg-blue-800">S1 Skripsi</a>
           {isDosen && (
-            <a href="/s2/sessions" className="px-2 py-1 rounded hover:bg-blue-800">S2 Tesis</a>
+            <>
+              <a href="/s2/sessions" className="px-2 py-1 rounded hover:bg-blue-800">S2 Tesis</a>
+              <a href="/pbl/sessions" className="px-2 py-1 rounded hover:bg-blue-800">PBL 1</a>
+            </>
           )}
         </div>
       </div>
