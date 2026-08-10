@@ -461,6 +461,17 @@ alter table public.pbl_rubric_ratings enable row level security;
 alter table public.pbl_rubric_descriptors enable row level security;
 alter table public.pbl_peer_final_scores enable row level security;
 alter table public.pbl_audit_logs enable row level security;
+alter table public.pbl_assessment_components enable row level security;
+alter table public.pbl_rubric_criteria enable row level security;
+alter table public.pbl_rubric_performance_levels enable row level security;
+
+-- Public read policy for rubric reference tables (criteria/levels/components)
+drop policy if exists "Public read components" on public.pbl_assessment_components;
+drop policy if exists "Public read criteria" on public.pbl_rubric_criteria;
+drop policy if exists "Public read levels" on public.pbl_rubric_performance_levels;
+create policy "Public read components" on public.pbl_assessment_components for select using (true);
+create policy "Public read criteria" on public.pbl_rubric_criteria for select using (true);
+create policy "Public read levels" on public.pbl_rubric_performance_levels for select using (true);
 
 -- Helper: access check (admin/coordinator/superadmin OR assigned assessor)
 create or replace function public.can_access_pbl_group(target_group_id uuid)
