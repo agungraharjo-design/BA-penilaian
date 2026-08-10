@@ -430,6 +430,28 @@ create trigger update_pbl_peer_final_scores_updated_at
 -- 13. ROW LEVEL SECURITY
 -- ============================================================
 
+-- Idempotency guards: drop any pre-existing PBL policies before recreating
+drop policy if exists "Admin roles can view all PBL groups" on public.pbl_groups;
+drop policy if exists "Assigned assessors can view their PBL groups" on public.pbl_groups;
+drop policy if exists "Public roles can create PBL groups" on public.pbl_groups;
+drop policy if exists "Assigned/admin can update PBL groups" on public.pbl_groups;
+drop policy if exists "Admin can delete PBL groups" on public.pbl_groups;
+drop policy if exists "Assigned/admin can view group members" on public.pbl_group_members;
+drop policy if exists "Assigned/admin can create group members" on public.pbl_group_members;
+drop policy if exists "Assigned/admin can update group members" on public.pbl_group_members;
+drop policy if exists "Assigned/admin can delete group members" on public.pbl_group_members;
+drop policy if exists "Assigned/admin can view assessors" on public.pbl_assessors;
+drop policy if exists "Assigned/admin can create assessors" on public.pbl_assessors;
+drop policy if exists "Assigned/admin can update assessors" on public.pbl_assessors;
+drop policy if exists "Assigned/admin can delete assessors" on public.pbl_assessors;
+drop policy if exists "Assigned/admin can manage instances" on public.pbl_assessment_instances;
+drop policy if exists "Assigned/admin can view rubric descriptors" on public.pbl_rubric_descriptors;
+drop policy if exists "Assigned/admin can manage scores" on public.pbl_assessment_scores;
+drop policy if exists "Assigned/admin can manage ratings" on public.pbl_rubric_ratings;
+drop policy if exists "Assigned/admin can manage peer scores" on public.pbl_peer_final_scores;
+drop policy if exists "Admin can view audit logs" on public.pbl_audit_logs;
+drop policy if exists "Authorized insert audit logs" on public.pbl_audit_logs;
+
 alter table public.pbl_groups enable row level security;
 alter table public.pbl_group_members enable row level security;
 alter table public.pbl_assessors enable row level security;
@@ -589,14 +611,54 @@ create policy "Authorized insert audit logs"
 -- ============================================================
 -- 14. REALTIME PUBLICATION
 -- ============================================================
-alter publication supabase_realtime add table public.pbl_groups;
-alter publication supabase_realtime add table public.pbl_group_members;
-alter publication supabase_realtime add table public.pbl_assessors;
-alter publication supabase_realtime add table public.pbl_assessment_instances;
-alter publication supabase_realtime add table public.pbl_assessment_scores;
-alter publication supabase_realtime add table public.pbl_rubric_ratings;
-alter publication supabase_realtime add table public.pbl_rubric_descriptors;
-alter publication supabase_realtime add table public.pbl_peer_final_scores;
+do $$
+begin
+  if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'pbl_groups') then
+    alter publication supabase_realtime add table public.pbl_groups;
+  end if;
+end $$;
+do $$
+begin
+  if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'pbl_group_members') then
+    alter publication supabase_realtime add table public.pbl_group_members;
+  end if;
+end $$;
+do $$
+begin
+  if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'pbl_assessors') then
+    alter publication supabase_realtime add table public.pbl_assessors;
+  end if;
+end $$;
+do $$
+begin
+  if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'pbl_assessment_instances') then
+    alter publication supabase_realtime add table public.pbl_assessment_instances;
+  end if;
+end $$;
+do $$
+begin
+  if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'pbl_assessment_scores') then
+    alter publication supabase_realtime add table public.pbl_assessment_scores;
+  end if;
+end $$;
+do $$
+begin
+  if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'pbl_rubric_ratings') then
+    alter publication supabase_realtime add table public.pbl_rubric_ratings;
+  end if;
+end $$;
+do $$
+begin
+  if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'pbl_rubric_descriptors') then
+    alter publication supabase_realtime add table public.pbl_rubric_descriptors;
+  end if;
+end $$;
+do $$
+begin
+  if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'pbl_peer_final_scores') then
+    alter publication supabase_realtime add table public.pbl_peer_final_scores;
+  end if;
+end $$;
 
 -- ============================================================
 -- 15. GRANT PERMISSIONS
