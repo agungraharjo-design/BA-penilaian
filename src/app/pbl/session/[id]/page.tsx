@@ -38,15 +38,13 @@ import {
 type Tab =
   | 'berita-acara'
   | 'form-penguji'
-  | 'form-pembimbing'
   | 'laporan-individu'
   | 'peer-mahasiswa'
   | 'rekap';
 
 const PENGUJI_ROLES: PblAssessorRole[] = ['penguji_1', 'penguji_2'];
-const PEMBIMBING_ROLES: PblAssessorRole[] = ['pembimbing_1', 'pembimbing_2'];
-const EXAMINER_COMPONENTS: PblComponentCode[] = ['E1', 'E2'];
-const SUPERVISOR_COMPONENTS: PblComponentCode[] = ['B1', 'B2'];
+const PENGUJI_1_COMPONENTS: PblComponentCode[] = ['E1', 'E2'];
+const PENGUJI_2_COMPONENTS: PblComponentCode[] = ['B1', 'B2'];
 const INDIVIDUAL_COMPONENTS: PblComponentCode[] = ['I1', 'I2'];
 
 const LEVEL_LABELS: Record<number, string> = {
@@ -297,10 +295,10 @@ export default function PblSessionDetailPage() {
       I1: componentRaw('I1', null, m.id),
       I2: componentRaw('I2', null, m.id),
       P1: peerOf(m.id)?.final_peer_score ?? null,
-      B1: averageGroupRaw('B1', PEMBIMBING_ROLES),
-      B2: averageGroupRaw('B2', PEMBIMBING_ROLES),
-      E1: averageGroupRaw('E1', PENGUJI_ROLES),
-      E2: averageGroupRaw('E2', PENGUJI_ROLES),
+      B1: averageGroupRaw('B1', ['penguji_2']),
+      B2: averageGroupRaw('B2', ['penguji_2']),
+      E1: averageGroupRaw('E1', ['penguji_1']),
+      E2: averageGroupRaw('E2', ['penguji_1']),
     };
     const calc = calcPblBreakdown(raw);
     return {
@@ -465,7 +463,6 @@ export default function PblSessionDetailPage() {
   const tabs: { key: Tab; label: string }[] = [
     { key: 'berita-acara', label: 'Berita Acara' },
     { key: 'form-penguji', label: 'Form Penguji' },
-    { key: 'form-pembimbing', label: 'Form Pembimbing' },
     { key: 'laporan-individu', label: 'Laporan Individu' },
     { key: 'peer-mahasiswa', label: 'Peer Mahasiswa' },
     { key: 'rekap', label: 'Rekapitulasi' },
@@ -498,9 +495,6 @@ export default function PblSessionDetailPage() {
         <p className="text-xs text-gray-400 font-sans mt-1">
           {group.academic_year || '-'} • {group.semester || '-'} • Status: {PBL_STATUS_LABELS[group.status as keyof typeof PBL_STATUS_LABELS] || group.status}
         </p>
-        <div className="mt-2 inline-flex items-center gap-1 px-2 py-0.5 rounded bg-amber-100 text-amber-800 text-[11px] font-sans">
-          RPS Final — Assessment Weights Locked
-        </div>
       </div>
 
       <div className="no-print flex flex-wrap gap-1 mb-4 bg-white rounded-lg shadow-sm p-1 overflow-x-auto">
@@ -524,18 +518,10 @@ export default function PblSessionDetailPage() {
         {activeTab === 'form-penguji' && (
           <GroupAssessmentTab
             title="Form Penguji"
-            roles={PENGUJI_ROLES} codes={EXAMINER_COMPONENTS}
-            assessors={assessors} members={activeMembers}
-            group={group} isDosen={canEdit}
-            componentMeta={componentMeta} criteriaOf={criteriaOf} rubricVersion={rubricVersion}
-            componentRaw={componentRaw} averageGroupRaw={averageGroupRaw}
-            openDialog={openDialogFor}
-          />
-        )}
-        {activeTab === 'form-pembimbing' && (
-          <GroupAssessmentTab
-            title="Form Pembimbing"
-            roles={PEMBIMBING_ROLES} codes={SUPERVISOR_COMPONENTS}
+            sections={[
+              { role: 'penguji_1', codes: PENGUJI_1_COMPONENTS },
+              { role: 'penguji_2', codes: PENGUJI_2_COMPONENTS },
+            ]}
             assessors={assessors} members={activeMembers}
             group={group} isDosen={canEdit}
             componentMeta={componentMeta} criteriaOf={criteriaOf} rubricVersion={rubricVersion}
@@ -651,9 +637,6 @@ const BeritaAcaraTab = memo(function BeritaAcaraTab({
   const [newNim, setNewNim] = useState('');
   const [newRole, setNewRole] = useState<'member' | 'leader'>('member');
 
-  const superv = PEMBIMBING_ROLES.map((role) => assessors.find((a) => a.assessor_role === role));
-  const examiners = PENGUJI_ROLES.map((role) => assessors.find((a) => a.assessor_role === role));
-
   return (
     <div className="space-y-4">
       <DocHeader title="Berita Acara Seminar PBL 1" semester={group.semester} academicYear={group.academic_year} isDosen={isDosen} onUpdate={onUpdate} />
@@ -709,32 +692,22 @@ const BeritaAcaraTab = memo(function BeritaAcaraTab({
       </div>
 
       <div className="mt-4">
-        <h3 className="font-semibold mb-2">Dosen Pembimbing</h3>
-        {PEMBIMBING_ROLES.map((role) => (
-          <AssessorRow key={role} role={role} assessor={assessors.find((a) => a.assessor_role === role) || null} isDosen={isDosen} onSave={onSaveAssessor} onSaveSignature={onSaveAssessorSignature} />
-        ))}
-      </div>
-      <div className="mt-4">
         <h3 className="font-semibold mb-2">Dosen Penguji</h3>
         {PENGUJI_ROLES.map((role) => (
           <AssessorRow key={role} role={role} assessor={assessors.find((a) => a.assessor_role === role) || null} isDosen={isDosen} onSave={onSaveAssessor} onSaveSignature={onSaveAssessorSignature} />
         ))}
       </div>
 
-      <div className="mt-8 avoid-break no-print">
-        <p className="mb-2">Jakarta,{' '}
+      <div className="mt-8 text-right avoid-break">
+        <p>Jakarta,{' '}
           <input value={group.tanggal_ba} onChange={(e) => onUpdate('tanggal_ba', e.target.value)} className="border-b border-gray-400 bg-transparent w-40 text-center" disabled={!isDosen} />
         </p>
-        <p className="font-semibold mb-1">{group.koordinator ? 'Koordinator Program Studi' : 'Nama & Tanda Tangan'}</p>
-        <div className="flex items-end gap-3">
-          <div className="flex-1">
-            <input value={group.koordinator} onChange={(e) => onUpdate('koordinator', e.target.value)} className="w-full text-right border-b border-black bg-transparent font-semibold" placeholder="Nama Koordinator" disabled={!isDosen} />
-            <input value={group.nip_koordinator} onChange={(e) => onUpdate('nip_koordinator', e.target.value)} className="w-full text-right text-xs text-gray-600 border-b border-transparent bg-transparent" placeholder="NIP." disabled={!isDosen} />
-          </div>
-          {isDosen && (
-            <S2SignatureUpload value={group.koordinator_signature_path} onChange={(v) => onUpdate('koordinator_signature_path', v || '')} label="Tanda Tangan" />
-          )}
-        </div>
+        <p className="mt-4">Koordinator Program Studi Kesehatan Masyarakat Program Sarjana</p>
+        <S2SignatureUpload value={group.koordinator_signature_path} onChange={(v) => onUpdate('koordinator_signature_path', v || '')} label="Koordinator Prodi" />
+        <div className="h-8"></div>
+        <input value={group.koordinator} onChange={(e) => onUpdate('koordinator', e.target.value)} className="border-b border-gray-400 bg-transparent text-center font-semibold" placeholder="Nama Koordinator" disabled={!isDosen} />
+        <br />
+        <input value={group.nip_koordinator} onChange={(e) => onUpdate('nip_koordinator', e.target.value)} className="border-b border-gray-400 bg-transparent text-center text-sm" placeholder="NIP." disabled={!isDosen} />
       </div>
     </div>
   );
@@ -791,13 +764,13 @@ function ScoreCell({ value, label, onClick, dim }: { value: number | null; label
   );
 }
 
-// Group-scoped assessment tabs (Form Penguji / Form Pembimbing)
+// Group-scoped assessment tabs (Form Penguji — per penguji component set)
 function GroupAssessmentTab({
-  title, roles, codes, assessors, members, group, isDosen,
+  title, sections, assessors, members, group, isDosen,
   componentMeta, criteriaOf, rubricVersion,
   componentRaw, averageGroupRaw, openDialog,
 }: {
-  title: string; roles: PblAssessorRole[]; codes: PblComponentCode[];
+  title: string; sections: { role: PblAssessorRole; codes: PblComponentCode[] }[];
   assessors: PblAssessor[]; members: PblGroupMember[]; group: PblGroup; isDosen: boolean;
   componentMeta: (c: PblComponentCode) => { name: string; weight: number; cpmk: string; scope: string };
   criteriaOf: (c: PblComponentCode) => CriterionWithLevels[];
@@ -806,24 +779,24 @@ function GroupAssessmentTab({
   averageGroupRaw: (c: PblComponentCode, roles: PblAssessorRole[]) => number | null;
   openDialog: (code: PblComponentCode, role: string | null, memberId: string | null, targetLabel: string) => void;
 }) {
-  const present = assessors.filter((a) => roles.includes(a.assessor_role));
+  const present = sections.filter((s) => assessors.some((a) => a.assessor_role === s.role));
   if (present.length === 0) {
-    return <div className="text-amber-600 text-sm">Belum ada {roles.includes('penguji_1') ? 'penguji' : 'pembimbing'} yang ditambahkan di Berita Acara.</div>;
+    return <div className="text-amber-600 text-sm">Belum ada Dosen Penguji yang ditambahkan di Berita Acara.</div>;
   }
   return (
     <div className="space-y-6">
       <DocHeader title={title} semester={group.semester} academicYear={group.academic_year} isDosen={isDosen} />
-      {present.map((a) => {
-        const role = a.assessor_role;
+      {present.map((s) => {
+        const a = assessors.find((x) => x.assessor_role === s.role);
         return (
-          <div key={role} className="space-y-4">
+          <div key={s.role} className="space-y-4">
             <h3 className="text-lg font-bold flex items-center justify-between">
-              <span>{PBL_ROLE_LABELS[role]} {a.display_name ? `— ${a.display_name}` : ''}</span>
+              <span>{PBL_ROLE_LABELS[s.role]} {a?.display_name ? `— ${a.display_name}` : ''}</span>
             </h3>
-            {codes.map((code) => {
+            {s.codes.map((code) => {
               const meta = componentMeta(code);
               const criteria = criteriaOf(code);
-              const raw = componentRaw(code, role, null);
+              const raw = componentRaw(code, s.role, null);
               return (
                 <ComponentCard
                   key={code}
@@ -836,8 +809,8 @@ function GroupAssessmentTab({
                   criteria={criteria}
                   targets={[{ key: 'group', label: 'Kelompok', subtitle: `Berlaku untuk ${members.length} anggota`, value: raw }]}
                   isDosen={isDosen}
-                  onOpen={() => openDialog(code, role, null, 'Kelompok')}
-                  actorName={PBL_ROLE_LABELS[role]}
+                  onOpen={() => openDialog(code, s.role, null, 'Kelompok')}
+                  actorName={PBL_ROLE_LABELS[s.role]}
                 />
               );
             })}
@@ -904,11 +877,9 @@ function ComponentCard({
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
           <p className="font-bold">{name} <span className="text-xs text-gray-400 font-sans">({code})</span></p>
-          <p className="text-xs text-gray-500 font-sans">
-            {(weight * 100).toFixed(1)}% RPS | {cpmk} | {scope === 'GROUP' ? 'Group' : 'Individual'}
-            {actorName ? ` | ${actorName}` : ''}
-          </p>
-          <p className="text-[10px] text-gray-400 font-sans mt-0.5">Rubrik: {version}</p>
+          {actorName && (
+            <p className="text-xs text-gray-500 font-sans">{actorName}</p>
+          )}
         </div>
         <button type="button" onClick={onOpen} className="no-print text-xs font-sans text-blue-800 border border-blue-200 rounded px-2 py-1 hover:bg-blue-50">
           ⓘ Lihat Rubrik
@@ -1000,9 +971,6 @@ function RubricDialog({
               <p className="text-xs text-blue-100 mt-0.5">
                 Mahasiswa/Kelompok: <span className="font-semibold">{targetLabel}</span>
                 {assessorLabel ? ` | Penilai: ${assessorLabel}` : ''}
-              </p>
-              <p className="text-[11px] text-blue-200 mt-0.5">
-                Bobot RPS: {(componentInfo.weight * 100).toFixed(1)}% | {componentInfo.cpmk} | Rubrik: {version}
               </p>
             </div>
             <button type="button" onClick={() => { if (!changed || confirm('Ada perubahan yang belum disimpan. Batalkan?')) onClose(); }} className="text-white hover:text-blue-200 text-xl leading-none w-8 h-8 rounded hover:bg-blue-800">✕</button>
@@ -1138,9 +1106,6 @@ function PeerTab({ members, peers, isDosen, onSavePeer }: {
   return (
     <div className="space-y-4">
       <DocHeader title="Penilaian Sesama Mahasiswa (Peer)" semester="" academicYear="" />
-      <p className="text-xs text-gray-500 italic">
-        Nilai peer berasal dari agregasi eksternal dan diverifikasi oleh dosen. Sistem menerapkan bobot RPS 10%.
-      </p>
       <div className="flex items-center gap-2 no-print">
         <button type="button" onClick={() => setShowPeerCrit(!showPeerCrit)} className="text-xs font-sans text-blue-800 border border-blue-200 rounded px-2 py-1 hover:bg-blue-50">
           ⓘ Lihat Kriteria Peer
@@ -1264,7 +1229,7 @@ function RekapTab({
           </tbody>
         </table>
       </div>
-      <p className="text-[11px] text-gray-500">Klik angka komponen pada tautan biru untuk melihat detail butir penilaian. Komponen B1/B2 (rata-rata pembimbing), E1/E2 (rata-rata penguji), P1 (peer skor akhir).</p>
+      <p className="text-[11px] text-gray-500">Klik angka komponen pada tautan biru untuk melihat detail butir penilaian. B1/B2 dinilai Penguji 2, E1/E2 dinilai Penguji 1, P1 (peer skor akhir).</p>
     </div>
   );
 }
@@ -1289,7 +1254,6 @@ function ScoreDetailDialog({
           <div>
             <p className="text-sm font-bold uppercase">{componentInfo.name} <span className="text-gray-300 text-xs">({code})</span></p>
             <p className="text-xs text-gray-300 mt-0.5">Mahasiswa/Kelompok: <span className="font-semibold">{targetLabel}</span></p>
-            <p className="text-[11px] text-gray-400 mt-0.5">Rubrik: {version} | {(componentInfo.weight * 100).toFixed(1)}% RPS | {componentInfo.cpmk}</p>
           </div>
           <button type="button" onClick={onClose} className="text-white hover:text-gray-200 text-xl leading-none w-8 h-8 rounded hover:bg-gray-700">✕</button>
         </div>

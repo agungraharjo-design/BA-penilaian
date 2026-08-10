@@ -229,10 +229,10 @@ export const PBL_COMPONENT_LABELS: Record<PblComponentCode, string> = {
   I1: 'Laporan Keluarga Binaan',
   I2: 'Laporan Kasus Binaan',
   P1: 'Penilaian Sesama Mahasiswa',
-  B1: 'Kegiatan Pelaksanaan (Pembimbing)',
-  B2: 'Presentasi Kelompok (Pembimbing)',
-  E1: 'Kegiatan Pelaksanaan (Penguji)',
-  E2: 'Presentasi Kelompok (Penguji)',
+  B1: 'Kegiatan Pelaksanaan (Penguji 2)',
+  B2: 'Presentasi Kelompok (Penguji 2)',
+  E1: 'Kegiatan Pelaksanaan (Penguji 1)',
+  E2: 'Presentasi Kelompok (Penguji 1)',
 };
 
 export const PBL_COMPONENT_WEIGHTS: Record<PblComponentCode, number> = {

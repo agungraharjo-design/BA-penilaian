@@ -122,11 +122,17 @@ values
   ('I1', 'Laporan Keluarga Binaan', 0.15000, 'CPMK1', 'INDIVIDUAL', NULL, 1),
   ('I2', 'Laporan Kasus Binaan', 0.25000, 'CPMK2', 'INDIVIDUAL', NULL, 2),
   ('P1', 'Penilaian sesama mahasiswa', 0.10000, 'CPMK2', 'INDIVIDUAL', NULL, 3),
-  ('B1', 'Kegiatan pelaksanaan (laporan) - Dosen Pembimbing', 0.17500, 'CPMK1', 'GROUP', 'PEMBIMBING', 4),
-  ('B2', 'Presentasi Kelompok - Dosen Pembimbing', 0.17500, 'CPMK1', 'GROUP', 'PEMBIMBING', 5),
-  ('E1', 'Kegiatan pelaksanaan - Dosen Penguji', 0.07500, 'CPMK2', 'GROUP', 'PENGUJI', 6),
-  ('E2', 'Presentasi Kelompok - Dosen Penguji', 0.07500, 'CPMK2', 'GROUP', 'PENGUJI', 7)
-on conflict (code) do nothing;
+  ('B1', 'Kegiatan Pelaksanaan (Penguji 2)', 0.17500, 'CPMK1', 'GROUP', 'PENGUJI', 4),
+  ('B2', 'Presentasi Kelompok (Penguji 2)', 0.17500, 'CPMK1', 'GROUP', 'PENGUJI', 5),
+  ('E1', 'Kegiatan Pelaksanaan (Penguji 1)', 0.07500, 'CPMK2', 'GROUP', 'PENGUJI', 6),
+  ('E2', 'Presentasi Kelompok (Penguji 1)', 0.07500, 'CPMK2', 'GROUP', 'PENGUJI', 7)
+on conflict (code) do update set
+  name = excluded.name,
+  rps_weight = excluded.rps_weight,
+  cpmk_code = excluded.cpmk_code,
+  default_scope = excluded.default_scope,
+  assessor_role = excluded.assessor_role,
+  display_order = excluded.display_order;
 
 -- ============================================================
 -- 5. PBL_RUBRIC_CRITERIA - Internal rubric criteria per component
