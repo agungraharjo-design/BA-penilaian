@@ -233,8 +233,24 @@ create table if not exists public.pbl_rubric_performance_levels (
   level_value smallint not null check (level_value between 0 and 4),
   label text not null,
   descriptor text not null,
-  display_order int not null default 0
+  display_order int not null default 0,
+
+  unique (level_value)
 );
+
+-- Guard: ensure the unique constraint exists even if the table was created before it was added
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint
+    where conrelid = 'public.pbl_rubric_performance_levels'::regclass
+      and contype = 'u'
+      and conname = 'pbl_rubric_performance_levels_level_value_key'
+  ) then
+    alter table public.pbl_rubric_performance_levels
+      add constraint pbl_rubric_performance_levels_level_value_key unique (level_value);
+  end if;
+end $$;
 
 insert into public.pbl_rubric_performance_levels (level_value, label, descriptor, display_order)
 values
