@@ -35,15 +35,15 @@ export function S2SignatureUpload({
       {value ? (
         <img src={value} alt={label || 'Tanda Tangan'} className="max-h-14 max-w-28 object-contain" />
       ) : (
-        <span className="text-[10px] text-gray-400 italic">(upload)</span>
+        <span className="text-[10px] text-gray-400 italic">(upload ttd)</span>
       )}
       <input type="file" accept="image/*" ref={fileRef} onChange={handleFile} className="hidden" />
       <button type="button" onClick={() => fileRef.current?.click()} className="text-[10px] text-blue-700 underline">
-        {value ? 'Ganti' : 'Upload'}
+        {value ? 'Ganti TTD' : 'Upload TTD'}
       </button>
       {value && (
         <button type="button" onClick={() => onChange(null)} className="text-[10px] text-red-600 underline">
-          Hapus
+          Hapus TTD
         </button>
       )}
     </div>

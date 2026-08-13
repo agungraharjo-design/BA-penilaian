@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/app/components/AuthProvider';
+import { isDosenEmail } from '@/lib/dosen';
 import { S2SignatureUpload } from '@/app/components/common/S2SignatureUpload';
 import { getPblBlueprint } from '@/lib/pbl1/repositories';
 import type {
@@ -37,7 +38,8 @@ import {
 
 type Tab =
   | 'berita-acara'
-  | 'form-penguji'
+  | 'form-penguji-1'
+  | 'form-penguji-2'
   | 'laporan-individu'
   | 'peer-mahasiswa'
   | 'rekap'
@@ -423,7 +425,7 @@ export default function PblSessionDetailPage() {
     setMembers((prev) => prev.filter((m) => m.id !== id));
   }
 
-  async function saveAssessor(role: string, data: { display_name: string; nip: string; email: string }) {
+  async function saveAssessor(role: string, data: { display_name: string; nip: string }) {
     const existing = assessors.find((a) => a.assessor_role === role);
     const payload = { ...data, group_id: groupId, assessor_role: role };
     if (existing) {
@@ -461,14 +463,55 @@ export default function PblSessionDetailPage() {
     </div>
   );
 
-  const tabs: { key: Tab; label: string }[] = [
+  // Match current user to their penguji assignment — same logic as S1/S2.
+  const whitelistMatch = profile?.email ? isDosenEmail(profile.email) : null;
+  const canonicalName = whitelistMatch?.nama || '';
+  const dbFullName = profile?.full_name || '';
+  const emailPrefix = profile?.email?.split('@')[0] || '';
+  const allUserNames = [canonicalName, dbFullName, emailPrefix].filter(Boolean);
+
+  const matchPenguji = (pengujiName: string) => {
+    if (allUserNames.length === 0 || !pengujiName) return false;
+    const normalize = (s: string) => s.toLowerCase().replace(/[,.\-]/g, '').replace(/\s+/g, ' ').trim();
+    const b = normalize(pengujiName);
+    for (const name of allUserNames) {
+      const a = normalize(name);
+      if (a === b) return true;
+      if (a.includes(b) || b.includes(a)) return true;
+      const wordsA = a.split(' ').filter((w: string) => w.length > 2);
+      const wordsB = b.split(' ').filter((w: string) => w.length > 2);
+      if (wordsA.length >= 2 && wordsB.length >= 2 && wordsA[0] === wordsB[0] && wordsA[1] === wordsB[1]) return true;
+    }
+    return false;
+  };
+
+  let allowedPenguji: number[] | null = null; // null = no form penguji access
+  if (!isSuperadmin && isDosen) {
+    const matched = PENGUJI_ROLES.map((role) => matchPenguji(assessors.find((a) => a.assessor_role === role)?.display_name || ''));
+    const matchedIndices = matched.map((m, i) => (m ? i : -1)).filter((i) => i >= 0);
+    if (matchedIndices.length > 0) {
+      allowedPenguji = matchedIndices;
+    }
+  }
+
+  const allTabs: { key: Tab; label: string }[] = [
     { key: 'berita-acara', label: 'Berita Acara' },
-    { key: 'form-penguji', label: 'Form Penguji' },
+    { key: 'form-penguji-1', label: 'Form Penguji 1' },
+    { key: 'form-penguji-2', label: 'Form Penguji 2' },
     { key: 'laporan-individu', label: 'Laporan Individu' },
     { key: 'peer-mahasiswa', label: 'Peer Mahasiswa' },
     { key: 'rekap', label: 'Rekapitulasi' },
     { key: 'preview', label: 'Preview & PDF' },
   ];
+
+  const tabs = isDosen
+    ? allTabs.filter((t) => {
+        if (isSuperadmin) return true;
+        if (t.key === 'form-penguji-1') return allowedPenguji !== null && allowedPenguji.includes(0);
+        if (t.key === 'form-penguji-2') return allowedPenguji !== null && allowedPenguji.includes(1);
+        return true;
+      })
+    : allTabs.filter((t) => t.key === 'berita-acara' || t.key === 'laporan-individu' || t.key === 'peer-mahasiswa' || t.key === 'rekap' || t.key === 'preview');
 
   // Shared handlers for matrix cards
   const openDialogFor = (code: PblComponentCode, role: string | null, memberId: string | null, targetLabel: string) => {
@@ -517,11 +560,23 @@ export default function PblSessionDetailPage() {
             onSaveAssessor={saveAssessor} onSaveAssessorSignature={saveAssessorSignature}
           />
         )}
-        {activeTab === 'form-penguji' && (
+        {activeTab === 'form-penguji-1' && (
           <GroupAssessmentTab
-            title="Form Penguji"
+            title="Form Penguji 1"
             sections={[
               { role: 'penguji_1', codes: PENGUJI_1_COMPONENTS },
+            ]}
+            assessors={assessors} members={activeMembers}
+            group={group} isDosen={canEdit}
+            componentMeta={componentMeta} criteriaOf={criteriaOf} rubricVersion={rubricVersion}
+            componentRaw={componentRaw} averageGroupRaw={averageGroupRaw}
+            openDialog={openDialogFor}
+          />
+        )}
+        {activeTab === 'form-penguji-2' && (
+          <GroupAssessmentTab
+            title="Form Penguji 2"
+            sections={[
               { role: 'penguji_2', codes: PENGUJI_2_COMPONENTS },
             ]}
             assessors={assessors} members={activeMembers}
@@ -640,7 +695,7 @@ const BeritaAcaraTab = memo(function BeritaAcaraTab({
   members: PblGroupMember[]; assessors: PblAssessor[];
   onAddMember: (name: string, nim: string, role: 'member' | 'leader') => void;
   onRemoveMember: (id: string) => void;
-  onSaveAssessor: (role: string, data: { display_name: string; nip: string; email: string }) => void;
+  onSaveAssessor: (role: string, data: { display_name: string; nip: string }) => void;
   onSaveAssessorSignature: (id: string, path: string) => void;
 }) {
   const [newName, setNewName] = useState('');
@@ -727,14 +782,13 @@ function AssessorRow({
   role, assessor, isDosen, onSave, onSaveSignature,
 }: {
   role: PblAssessorRole; assessor: PblAssessor | null; isDosen: boolean;
-  onSave: (role: string, data: { display_name: string; nip: string; email: string }) => void;
+  onSave: (role: string, data: { display_name: string; nip: string }) => void;
   onSaveSignature: (id: string, path: string) => void;
 }) {
   const [name, setName] = useState(assessor?.display_name || '');
   const [nip, setNip] = useState(assessor?.nip || '');
-  const [email, setEmail] = useState(assessor?.email || '');
   const [saved, setSaved] = useState(false);
-  useEffect(() => { setName(assessor?.display_name || ''); setNip(assessor?.nip || ''); setEmail(assessor?.email || ''); }, [assessor]);
+  useEffect(() => { setName(assessor?.display_name || ''); setNip(assessor?.nip || ''); }, [assessor]);
 
   return (
     <div className="flex flex-wrap items-center gap-3 py-2 border-b border-gray-100">
@@ -743,8 +797,7 @@ function AssessorRow({
         <>
           <input value={name} onChange={(e) => setName(e.target.value)} className="flex-1 min-w-[160px] border border-gray-300 rounded px-2 py-1 text-sm" placeholder="Nama lengkap" />
           <input value={nip} onChange={(e) => setNip(e.target.value)} className="w-44 border border-gray-300 rounded px-2 py-1 text-sm" placeholder="NIP" />
-          <input value={email} onChange={(e) => setEmail(e.target.value)} className="w-56 border border-gray-300 rounded px-2 py-1 text-sm" placeholder="email@upnvj.ac.id" />
-          <button type="button" onClick={() => { onSave(role, { display_name: name, nip, email }); setSaved(true); setTimeout(() => setSaved(false), 1500); }} className={`px-3 py-1 rounded text-xs font-sans font-medium ${saved ? 'bg-green-700 text-white' : 'bg-blue-900 text-white'}`}>
+          <button type="button" onClick={() => { onSave(role, { display_name: name, nip }); setSaved(true); setTimeout(() => setSaved(false), 1500); }} className={`px-3 py-1 rounded text-xs font-sans font-medium ${saved ? 'bg-green-700 text-white' : 'bg-blue-900 text-white'}`}>
             {saved ? '✓ Tersimpan' : 'Simpan'}
           </button>
           {assessor && <S2SignatureUpload value={assessor.signature_path} onChange={(v) => onSaveSignature(assessor.id, v || '')} label={PBL_ROLE_LABELS[role]} />}
