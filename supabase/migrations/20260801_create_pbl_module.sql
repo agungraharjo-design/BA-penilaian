@@ -352,7 +352,7 @@ create table if not exists public.pbl_rubric_ratings (
   id uuid primary key default gen_random_uuid(),
   assessment_score_id uuid not null references public.pbl_assessment_scores(id) on delete cascade,
   criterion_id uuid not null references public.pbl_rubric_criteria(id),
-  level_value smallint not null check (level_value between 0 and 4),
+  level_value numeric(3,2) not null check (level_value between 0 and 4),
   criterion_points numeric(6,2) null,
   evidence_note text null,
   selected_descriptor_snapshot text null,
@@ -361,6 +361,17 @@ create table if not exists public.pbl_rubric_ratings (
 
   unique (assessment_score_id, criterion_id)
 );
+
+-- Idempotent upgrade: allow decimal levels (e.g. 3.7; 3.25) besides integer 0–4
+do $$
+begin
+  if exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'pbl_rubric_ratings' and column_name = 'level_value'
+  ) then
+    alter table public.pbl_rubric_ratings alter column level_value type numeric(3,2) using level_value::numeric;
+  end if;
+end $$;
 
 create index if not exists pbl_rubric_ratings_score_idx on public.pbl_rubric_ratings(assessment_score_id);
 

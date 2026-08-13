@@ -1031,6 +1031,28 @@ function RubricDialog({
                     );
                   })}
                 </div>
+                <label className="block mt-3 flex items-center gap-2">
+                  <span className="text-xs text-gray-500 font-sans">Atau isi skor langsung (1–4, desimal):</span>
+                  <input
+                    type="number"
+                    min={0}
+                    max={4}
+                    step="0.01"
+                    value={d.level ?? ''}
+                    disabled={!canEdit}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      if (v === '') { setLevel(c.id, null); return; }
+                      const n = Number(v);
+                      if (isNaN(n)) return;
+                      setLevel(c.id, Math.min(4, Math.max(0, n)));
+                    }}
+                    className="w-24 border border-gray-300 rounded px-2 py-1 text-xs font-sans"
+                  />
+                  {d.level !== null && !Number.isInteger(d.level) && (
+                    <span className="text-[11px] text-blue-700 font-sans">skor manual: {d.level}</span>
+                  )}
+                </label>
 
                 <label className="block mt-3">
                   <span className="text-xs text-gray-500 font-sans">Catatan bukti (evidence note)</span>
