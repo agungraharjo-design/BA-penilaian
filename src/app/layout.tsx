@@ -4,8 +4,8 @@ import AuthProvider from '@/app/components/AuthProvider'
 import NavBar from '@/app/components/NavBar'
 
 export const metadata: Metadata = {
-  title: 'Sistem Berita Acara & Penilaian Sidang Skripsi',
-  description: 'PSKMPS - FIKES UPN Veteran Jakarta',
+  title: 'Berita Acara & Penilaian Kesehatan Masyarakat',
+  description: 'FIKES UPN Veteran Jakarta',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

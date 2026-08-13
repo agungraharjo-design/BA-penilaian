@@ -116,6 +116,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
       setAuthError(error.message)
       return error.message
     }
+    router.push('/program')
     router.refresh()
     return null
   }
@@ -141,8 +142,8 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
         <div className="w-full max-w-md bg-white rounded-lg shadow-md p-8">
           <div className="text-center mb-6">
             <img src="/kop-surat-resize.png" alt="KOP UPN Veteran Jakarta" className="mx-auto max-h-16 mb-3" />
-            <h1 className="text-xl font-bold font-serif">Sistem Informasi Berita Acara & Penilaian Sidang Skripsi</h1>
-            <p className="text-sm text-gray-600 mt-1">PSKMPS FIKES UPN Veteran Jakarta</p>
+            <h1 className="text-xl font-bold font-serif">Berita Acara & Penilaian Kesehatan Masyarakat</h1>
+            <p className="text-sm text-gray-600 mt-1">FIKES UPN Veteran Jakarta</p>
             <p className="text-xs text-gray-400 mt-2">Login dengan email dan password yang diberikan oleh admin.</p>
           </div>
 

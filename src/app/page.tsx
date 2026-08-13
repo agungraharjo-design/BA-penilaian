@@ -81,7 +81,7 @@ export default function Home() {
   return (
     <div className="max-w-4xl mx-auto p-6 font-serif">
       <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-        <h1 className="text-2xl font-bold text-center mb-2">Sistem Informasi Berita Acara & Penilaian Sidang Skripsi</h1>
+        <h1 className="text-2xl font-bold text-center mb-2">Berita Acara & Penilaian Kesehatan Masyarakat</h1>
         <p className="text-center text-sm text-gray-600 mb-6">
           Program Studi Kesehatan Masyarakat Program Sarjana<br />
           Fakultas Ilmu Kesehatan UPN "Veteran" Jakarta<br />

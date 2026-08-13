@@ -1,6 +1,5 @@
 'use client';
 
-import { useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/app/components/AuthProvider';
@@ -14,17 +13,6 @@ export default function ProgramPage() {
   const from = searchParams.get('from') || '/program';
   const isDosen = profile && isDosenEmail(profile.email);
   const isSuperadmin = profile?.role === 'superadmin';
-
-  // Redirect authenticated users
-  useEffect(() => {
-    if (!loading && profile) {
-      if (isDosen) {
-        router.push('/s2/sessions');
-      } else {
-        router.push('/session');
-      }
-    }
-  }, [loading, profile, isDosen, router]);
 
   if (loading) {
     return (
