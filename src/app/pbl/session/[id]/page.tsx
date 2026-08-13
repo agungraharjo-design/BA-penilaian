@@ -40,7 +40,8 @@ type Tab =
   | 'form-penguji'
   | 'laporan-individu'
   | 'peer-mahasiswa'
-  | 'rekap';
+  | 'rekap'
+  | 'preview';
 
 const PENGUJI_ROLES: PblAssessorRole[] = ['penguji_1', 'penguji_2'];
 const PENGUJI_1_COMPONENTS: PblComponentCode[] = ['E1', 'E2'];
@@ -466,6 +467,7 @@ export default function PblSessionDetailPage() {
     { key: 'laporan-individu', label: 'Laporan Individu' },
     { key: 'peer-mahasiswa', label: 'Peer Mahasiswa' },
     { key: 'rekap', label: 'Rekapitulasi' },
+    { key: 'preview', label: 'Preview & PDF' },
   ];
 
   // Shared handlers for matrix cards
@@ -546,6 +548,14 @@ export default function PblSessionDetailPage() {
             blueprints={blueprint} memberSummary={memberSummary}
             peers={peers} isDosen={canEdit} onUpdate={updateGroupField}
             openDetail={openDetailFor}
+          />
+        )}
+        {activeTab === 'preview' && (
+          <PblPreview
+            group={group}
+            members={members} assessors={assessors}
+            instances={instances} scores={scores} ratings={ratings} peers={peers}
+            componentMeta={componentMeta} criteriaOf={criteriaOf} memberSummary={memberSummary}
           />
         )}
       </div>
@@ -1064,7 +1074,7 @@ function PeerTab({ members, peers, isDosen, onSavePeer }: {
   onSavePeer: (memberId: string, v: Partial<PblPeerFinalScore>) => void;
 }) {
   const [showPeerCrit, setShowPeerCrit] = useState(false);
-  const [vals, setVals] = useState<Record<string, { score: string; respondents: string; expected: string; method: string; aggregation: string; source: string; verified: string; status: string }>>({});
+  const [vals, setVals] = useState<Record<string, { score: string; source: string; status: string }>>({});
 
   useEffect(() => {
     const init: Record<string, typeof vals[string]> = {};
@@ -1072,12 +1082,7 @@ function PeerTab({ members, peers, isDosen, onSavePeer }: {
       const p = peers.find((x) => x.student_id === m.id);
       init[m.id] = {
         score: p ? String(p.final_peer_score) : '',
-        respondents: p ? String(p.respondent_count) : '',
-        expected: p?.expected_respondent_count != null ? String(p.expected_respondent_count) : '',
-        method: p?.source_method || 'MANUAL',
-        aggregation: p?.aggregation_method || '',
         source: p?.source_reference || '',
-        verified: p?.verified_by ? '✓' : '',
         status: p?.status || 'DRAFT',
       };
     });
@@ -1094,10 +1099,6 @@ function PeerTab({ members, peers, isDosen, onSavePeer }: {
     if (isNaN(score) || score < 0 || score > 100) { alert('Skor akhir harus 0–100'); return; }
     onSavePeer(m.id, {
       final_peer_score: score,
-      respondent_count: Number(d.respondents) || 0,
-      expected_respondent_count: d.expected ? Number(d.expected) : null,
-      source_method: (d.method as PblPeerFinalScore['source_method']) || 'MANUAL',
-      aggregation_method: d.aggregation || 'VERIFIED',
       source_reference: d.source || null,
       status: (d.status as 'DRAFT' | 'FINALIZED') || 'DRAFT',
     });
@@ -1120,34 +1121,23 @@ function PeerTab({ members, peers, isDosen, onSavePeer }: {
       )}
 
       <div className="overflow-x-auto">
-        <table className="template-table text-[13px] leading-snug min-w-[900px]">
+        <table className="template-table text-[13px] leading-snug">
           <thead>
             <tr>
               <th className="w-8">NO</th><th>NIM</th><th>NAMA</th>
-              <th className="w-24">SKOR AKHIR (0–100)</th><th className="w-20">RESPONDEN</th><th className="w-20">DITARGET</th>
-              <th className="w-32">METODE</th><th className="w-32">AGREGASI</th><th className="w-32">REFERENSI</th><th className="w-24">STATUS</th>{isDosen && <th className="w-16">AKSI</th>}
+              <th className="w-28">SKOR AKHIR (0–100)</th>
+              <th className="w-48">REFERENSI</th><th className="w-24">STATUS</th>{isDosen && <th className="w-16">AKSI</th>}
             </tr>
           </thead>
           <tbody>
             {members.map((m, i) => {
-              const d = vals[m.id] || { score: '', respondents: '', expected: '', method: 'MANUAL', aggregation: '', source: '', verified: '', status: 'DRAFT' };
+              const d = vals[m.id] || { score: '', source: '', status: 'DRAFT' };
               return (
                 <tr key={m.id} className="align-top">
                   <td className="text-center">{i + 1}.</td>
                   <td>{m.nim}</td>
                   <td className="whitespace-nowrap">{m.name}</td>
                   <td className="text-center">{isDosen ? <input type="number" min={0} max={100} step="0.01" value={d.score} onChange={(e) => input(m, 'score', e.target.value)} className="w-20 text-center border border-gray-300 rounded px-1 py-1" /> : (d.score || '—')}</td>
-                  <td className="text-center">{isDosen ? <input type="number" min={0} value={d.respondents} onChange={(e) => input(m, 'respondents', e.target.value)} className="w-14 text-center border border-gray-300 rounded px-1 py-1" /> : d.respondents}</td>
-                  <td className="text-center">{isDosen ? <input type="number" min={0} value={d.expected} onChange={(e) => input(m, 'expected', e.target.value)} className="w-14 text-center border border-gray-300 rounded px-1 py-1" /> : d.expected}</td>
-                  <td>{isDosen ? (
-                    <select value={d.method} onChange={(e) => input(m, 'method', e.target.value)} className="w-full border border-gray-300 rounded px-1 py-1 text-xs">
-                      <option value="MANUAL">MANUAL</option>
-                      <option value="GOOGLE_FORM_RANKING">GOOGLE_FORM_RANKING</option>
-                      <option value="GOOGLE_FORM_RUBRIC">GOOGLE_FORM_RUBRIC</option>
-                      <option value="OTHER">OTHER</option>
-                    </select>
-                  ) : d.method}</td>
-                  <td>{isDosen ? <input value={d.aggregation} onChange={(e) => input(m, 'aggregation', e.target.value)} className="w-full border border-gray-300 rounded px-1 py-1 text-xs" placeholder="VERIFIED" /> : d.aggregation}</td>
                   <td>{isDosen ? <input value={d.source} onChange={(e) => input(m, 'source', e.target.value)} className="w-full border border-gray-300 rounded px-1 py-1 text-xs" placeholder="Referensi/URL" /> : d.source || '—'}</td>
                   <td className="text-center">
                     {isDosen ? (
@@ -1289,6 +1279,404 @@ function ScoreDetailDialog({
           <button type="button" onClick={onClose} className="px-3 py-2 rounded border border-gray-300 text-sm font-sans hover:bg-gray-100">Tutup</button>
           <button type="button" onClick={() => { onClose(); openDialog(); }} className="px-3 py-2 rounded bg-blue-900 text-white text-sm font-sans font-medium hover:bg-blue-800">Buka Rubrik</button>
         </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── PRINT PREVIEW & PDF ────────────────────────────────────
+function PblPreview({
+  group, members, assessors, instances, scores, ratings, peers,
+  componentMeta, criteriaOf, memberSummary,
+}: {
+  group: PblGroup; members: PblGroupMember[]; assessors: PblAssessor[];
+  instances: PblAssessmentInstance[]; scores: PblAssessmentScore[]; ratings: PblRubricRating[]; peers: PblPeerFinalScore[];
+  componentMeta: (c: PblComponentCode) => { name: string; weight: number; cpmk: string; scope: string };
+  criteriaOf: (c: PblComponentCode) => CriterionWithLevels[];
+  memberSummary: (m: PblGroupMember) => ComponentRawScores & { cpmk1: number | null; cpmk2: number | null; finalScore: number | null; grade: string | null; complete: boolean; missing: string[] };
+}) {
+  const handlePrint = () => window.print();
+  const activeMembers = members.filter((m) => m.active);
+
+  const ratesFor = (code: PblComponentCode, role: string | null, memberId: string | null) => {
+    const inst = instances.find((i) => i.component_code === code && (i.assessor_role ?? null) === role);
+    if (!inst) return null;
+    const score = scores.find((s) => s.instance_id === inst.id && (s.student_id ?? null) === memberId);
+    if (!score) return null;
+    const map: Record<string, { level: number | null; points: number | null }> = {};
+    ratings.filter((r) => r.assessment_score_id === score.id).forEach((r) => {
+      map[r.criterion_id] = { level: r.level_value, points: r.criterion_points };
+    });
+    return map;
+  };
+
+  const renderPreviewDivider = () => <div aria-hidden="true" className="my-2 w-full border-b-2 border-black" />;
+
+  const renderPreviewDocHeader = (title: string) => (
+    <div className="pb-3 text-center" data-preview-doc-header="true">
+      <img
+        src="/kop-surat-resize.png"
+        alt="KOP UPN Veteran Jakarta"
+        className="mx-auto mb-2 block h-auto max-h-[88px] w-auto max-w-full"
+      />
+      {renderPreviewDivider()}
+      <div className="space-y-0">
+        <h1 className="text-[16px] font-bold uppercase leading-tight">{title}</h1>
+        <p className="text-[11px] leading-tight">PROGRAM STUDI KESEHATAN MASYARAKAT</p>
+        <p className="text-[11px] leading-tight">FAKULTAS ILMU KESEHATAN UPN &ldquo;VETERAN&rdquo; JAKARTA</p>
+        <p className="text-[11px] font-semibold leading-tight">SEMESTER {group.semester} T.A. {group.academic_year}</p>
+      </div>
+    </div>
+  );
+
+  const renderComponentTable = (code: PblComponentCode, role: string | null, memberId: string | null) => {
+    const meta = componentMeta(code);
+    const criteria = criteriaOf(code);
+    const rates = ratesFor(code, role, memberId);
+    const points = criteria.map((c) => rates?.[c.id]?.points ?? null);
+    const raw = calcComponentRawFromCriterionPoints(points);
+    return (
+      <div className="mb-5 avoid-break">
+        <p className="font-bold text-[12px] leading-snug">
+          {meta.name} <span className="text-[10px] font-normal">({code})</span> — BOBOT {(meta.weight * 100).toFixed(1)}% — {meta.cpmk}
+        </p>
+        <table className="template-table pbl-assessment-table mt-1">
+          <colgroup>
+            <col style={{ width: '5%' }} />
+            <col style={{ width: '68%' }} />
+            <col style={{ width: '9%' }} />
+            <col style={{ width: '9%' }} />
+            <col style={{ width: '9%' }} />
+          </colgroup>
+          <thead>
+            <tr>
+              <th>NO</th>
+              <th>PARAMETER PENILAIAN</th>
+              <th>LEVEL<br />(0-4)</th>
+              <th>BOBOT</th>
+              <th>POIN</th>
+            </tr>
+          </thead>
+          <tbody>
+            {criteria.map((c, i) => {
+              const r = rates?.[c.id];
+              return (
+                <tr key={c.id || i}>
+                  <td className="text-center align-top">{i + 1}.</td>
+                  <td className="align-top">
+                    <div className="font-semibold leading-tight">{c.name}</div>
+                    {c.evidence_guidance && (
+                      <div className="text-[9px] italic leading-snug text-gray-600">{c.evidence_guidance}</div>
+                    )}
+                  </td>
+                  <td className="text-center align-top">{r?.level ?? ''}</td>
+                  <td className="text-center align-top">{(c.weight * 100).toFixed(0)}%</td>
+                  <td className="text-center align-top font-semibold">
+                    {r?.points !== null && r?.points !== undefined ? r.points.toFixed(2) : ''}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+          <tfoot className="font-bold">
+            <tr>
+              <td colSpan={4} className="text-center">NILAI AKHIR KOMPONEN (0-100)</td>
+              <td className="text-center">{raw !== null ? raw.toFixed(2) : ''}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    );
+  };
+
+  const renderSignatureBlock = (role: PblAssessorRole, name?: string, nip?: string, sig?: string | null) => (
+    <div className="ml-auto mt-5 w-[240px] signature-block text-left">
+      <p>Jakarta, {group.tanggal_ba || '______________'}</p>
+      <p className="mt-2">{PBL_ROLE_LABELS[role]}</p>
+      <div className="flex h-12 items-end">
+        {sig ? <img src={sig} alt="TTD" className="max-h-12 max-w-32 object-contain" /> : null}
+      </div>
+      <p className="inline-block min-w-[220px] border-b border-black pb-0.5 font-bold">
+        {name || '…………………………………'}
+      </p>
+      <p className="text-[10px]">NIP. {nip || ''}</p>
+    </div>
+  );
+
+  const pengujiSections = [
+    { role: 'penguji_1' as PblAssessorRole, codes: PENGUJI_1_COMPONENTS, label: 'Dosen Penguji 1' },
+    { role: 'penguji_2' as PblAssessorRole, codes: PENGUJI_2_COMPONENTS, label: 'Dosen Penguji 2' },
+  ];
+
+  return (
+    <div data-pbl-preview-root="true">
+      <div className="no-print mb-4 flex gap-3">
+        <button onClick={handlePrint} className="rounded bg-blue-900 px-6 py-2 font-sans text-sm font-medium text-white hover:bg-blue-800">
+          🖨 Preview Print / Save PDF
+        </button>
+      </div>
+
+      <style jsx global>{`
+        @media print {
+          @page { size: A4 portrait; margin: 12mm 14mm 14mm 14mm; }
+          html, body { margin: 0 !important; padding: 0 !important; background: white !important; }
+          body * { visibility: hidden; }
+          [data-pbl-preview-root='true'],
+          [data-pbl-preview-root='true'] * { visibility: visible; }
+          [data-pbl-preview-root='true'] { position: absolute !important; inset: 0 !important; width: 100% !important; max-width: none !important; margin: 0 !important; padding: 0 !important; }
+          [data-pbl-preview-root='true'] .print-area { width: 100% !important; max-width: none !important; margin: 0 !important; padding: 0 !important; overflow: visible !important; }
+          [data-pbl-preview-root='true'] .pbl-report-page,
+          [data-pbl-preview-root='true'] .pbl-examiner-form,
+          [data-pbl-preview-root='true'] .pbl-member-block,
+          [data-pbl-preview-root='true'] .pbl-peer-page,
+          [data-pbl-preview-root='true'] .pbl-rekap-page {
+            break-after: page !important;
+            page-break-after: always !important;
+            width: 100% !important; margin: 0 !important; padding: 0 !important;
+          }
+          [data-pbl-preview-root='true'] .pbl-rekap-page { break-before: page !important; page-break-before: always !important; }
+          [data-pbl-preview-root='true'] [data-preview-doc-header='true'],
+          [data-pbl-preview-root='true'] .avoid-break { break-inside: avoid !important; page-break-inside: avoid !important; }
+          [data-pbl-preview-root='true'] .pbl-assessment-table { width: 100% !important; max-width: 100% !important; table-layout: fixed !important; border-collapse: collapse !important; box-sizing: border-box !important; font-size: 9.4pt !important; line-height: 1.08 !important; break-inside: auto !important; page-break-inside: auto !important; }
+          [data-pbl-preview-root='true'] .pbl-assessment-table thead { display: table-header-group !important; }
+          [data-pbl-preview-root='true'] .pbl-assessment-table tbody { break-inside: auto !important; page-break-inside: auto !important; }
+          [data-pbl-preview-root='true'] .pbl-assessment-table tr { break-inside: avoid !important; page-break-inside: avoid !important; }
+          [data-pbl-preview-root='true'] .pbl-assessment-table th, [data-pbl-preview-root='true'] .pbl-assessment-table td { box-sizing: border-box !important; padding: 1mm 1.2mm !important; overflow-wrap: anywhere; word-break: normal; }
+          [data-pbl-preview-root='true'] .signature-block { width: 74mm !important; max-width: 74mm !important; margin-left: auto !important; margin-right: 0 !important; break-inside: avoid !important; page-break-inside: avoid !important; }
+          [data-pbl-preview-root='true'] img { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+        }
+      `}</style>
+
+      <div className="print-area space-y-10 bg-white p-8 md:p-12 print:space-y-0 print:p-0" style={{ fontFamily: "'Times New Roman', Georgia, serif" }}>
+        {/* ===== BERITA ACARA ===== */}
+        <section className="pbl-report-page">
+          {renderPreviewDocHeader('Berita Acara Seminar PBL 1')}
+          <table className="w-full text-[11px]">
+            <tbody>
+              <tr><td className="w-32">Kode Kelompok</td><td className="w-3">:</td><td>{group.code || '______________'}</td></tr>
+              <tr><td>Nama Kelompok</td><td>:</td><td>{group.name || '______________'}</td></tr>
+              <tr><td>Lokasi Lapangan</td><td>:</td><td>{group.field_location || '______________'}</td></tr>
+              <tr><td>Judul / Agenda</td><td>:</td><td>{group.title || '______________'}</td></tr>
+              <tr><td>Hari, Tanggal</td><td>:</td><td>{group.hari_tanggal || '______________'}</td></tr>
+              <tr><td>Waktu</td><td>:</td><td>{group.start_time || '______'} – {group.end_time || '______'}</td></tr>
+              <tr><td>Tempat</td><td>:</td><td>{group.venue || '______________'}</td></tr>
+            </tbody>
+          </table>
+
+          <h3 className="mt-3 text-center font-bold">ANGGOTA KELOMPOK</h3>
+          <table className="template-table mt-1 text-[11px]">
+            <thead>
+              <tr>
+                <th className="w-10">NO</th><th>NAMA</th><th className="w-24">NIM</th><th className="w-20">ROLE</th><th className="w-20">STATUS</th>
+              </tr>
+            </thead>
+            <tbody>
+              {members.map((m, i) => (
+                <tr key={m.id}>
+                  <td className="text-center">{i + 1}.</td>
+                  <td>{m.name}</td>
+                  <td>{m.nim}</td>
+                  <td className="text-center">{m.role === 'leader' ? 'Ketua' : 'Anggota'}</td>
+                  <td className="text-center">{m.active ? 'Aktif' : 'Non-aktif'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          <h3 className="mt-3 text-center font-bold">DOSEN PENGUJI</h3>
+          <table className="template-table mt-1 text-[11px]">
+            <thead>
+              <tr>
+                <th className="w-10">NO</th><th>JABATAN</th><th>NAMA PENGUJI</th><th className="w-28">NIP</th><th className="w-28">TANDA TANGAN</th>
+              </tr>
+            </thead>
+            <tbody>
+              {PENGUJI_ROLES.map((role, i) => {
+                const a = assessors.find((x) => x.assessor_role === role);
+                return (
+                  <tr key={role}>
+                    <td className="text-center">{i + 1}.</td>
+                    <td>{PBL_ROLE_LABELS[role]}</td>
+                    <td>{a?.display_name || '…………………………………'}</td>
+                    <td>{a?.nip || ''}</td>
+                    <td className="text-center align-middle">
+                      {a?.signature_path ? (
+                        <img src={a.signature_path} alt="TTD" className="mx-auto max-h-10 max-w-20 object-contain" />
+                      ) : ('')}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+
+          <p className="mt-4 text-justify text-[11px] italic">
+            Demikian berita acara seminar PBL 1 ini dibuat dan dipergunakan sebagaimana mestinya.
+          </p>
+
+          <div className="mt-8 break-inside-avoid text-right">
+            <p>Jakarta, {group.tanggal_ba || '______________'}</p>
+            <p className="mt-4">Koordinator Program Studi Kesehatan Masyarakat Program Sarjana</p>
+            {group.koordinator_signature_path ? (
+              <img src={group.koordinator_signature_path} alt="TTD Koordinator" className="my-2 ml-auto max-h-16 max-w-32 object-contain" />
+            ) : (
+              <div className="h-16" />
+            )}
+            <p className="font-bold">{group.koordinator || '…………………………………'}</p>
+            <p className="text-sm">NIP. {group.nip_koordinator || ''}</p>
+          </div>
+        </section>
+
+        {/* ===== FORM PENILAIAN PENGUJI ===== */}
+        {pengujiSections.map((s) => {
+          const a = assessors.find((x) => x.assessor_role === s.role);
+          return (
+            <section key={s.role} className="pbl-examiner-form">
+              <div className="pbl-form-intro">
+                {renderPreviewDocHeader(`Formulir Penilaian PBL 1 — ${s.label}`)}
+                <table className="w-full text-[11px]">
+                  <tbody>
+                    <tr><td className="w-[20%]">Kelompok</td><td className="w-3">:</td><td>{group.name} ({group.code})</td></tr>
+                    <tr><td>Nama Dosen</td><td>:</td><td>{a?.display_name || '…………………………………'}</td></tr>
+                    <tr><td>NIP</td><td>:</td><td>{a?.nip || ''}</td></tr>
+                    <tr><td>Hari, Tanggal</td><td>:</td><td>{group.hari_tanggal || '______________'}</td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <div className="mt-2">
+                {s.codes.map((code) => (
+                  <div key={code}>
+                    {renderComponentTable(code, s.role, null)}
+                  </div>
+                ))}
+              </div>
+              {renderSignatureBlock(s.role, a?.display_name, a?.nip, a?.signature_path)}
+            </section>
+          );
+        })}
+
+        {/* ===== LAPORAN INDIVIDU per member ===== */}
+        {activeMembers.map((m) => (
+          <section key={m.id} className="pbl-member-block">
+            {renderPreviewDocHeader('Formulir Penilaian Laporan Individu')}
+            <table className="w-full text-[11px]">
+              <tbody>
+                <tr><td className="w-[20%]">Nama Mahasiswa</td><td className="w-3">:</td><td>{m.name}</td></tr>
+                <tr><td>NIM</td><td>:</td><td>{m.nim}</td></tr>
+                <tr><td>Kelompok</td><td>:</td><td>{group.name} ({group.code})</td></tr>
+              </tbody>
+            </table>
+            <div className="mt-2">
+              {INDIVIDUAL_COMPONENTS.map((code) => (
+                <div key={code}>{renderComponentTable(code, null, m.id)}</div>
+              ))}
+            </div>
+            {renderSignatureBlock('penguji_1')}
+          </section>
+        ))}
+
+        {/* ===== PEER MAHASISWA ===== */}
+        <section className="pbl-peer-page">
+          {renderPreviewDocHeader('Penilaian Sesama Mahasiswa (Peer Assessment)')}
+          <table className="template-table mt-2 text-[11px]">
+            <thead>
+              <tr>
+                <th className="w-10">NO</th><th>NIM</th><th>NAMA</th>
+                <th className="w-24">SKOR AKHIR (0-100)</th><th>REFERENSI</th><th className="w-20">STATUS</th>
+              </tr>
+            </thead>
+            <tbody>
+              {members.map((m, i) => {
+                const p = peers.find((x) => x.student_id === m.id);
+                return (
+                  <tr key={m.id}>
+                    <td className="text-center">{i + 1}.</td>
+                    <td>{m.nim}</td>
+                    <td>{m.name}</td>
+                    <td className="text-center font-semibold">{p?.final_peer_score != null ? p.final_peer_score.toFixed(2) : ''}</td>
+                    <td>{p?.source_reference || ''}</td>
+                    <td className="text-center">{p?.status || ''}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+          <p className="mt-2 text-[10px] italic">
+            Referensi penilaian: {PEER_REFERENCE_CRITERIA.join(' · ')}. Skor merupakan hasil verifikasi dosen atas agregat penilaian antar mahasiswa.
+          </p>
+        </section>
+
+        {/* ===== REKAPITULASI ===== */}
+        <section className="pbl-rekap-page">
+          {renderPreviewDocHeader('Rekapitulasi Nilai PBL 1')}
+          <table className="template-table mt-2 text-[11px]">
+            <thead>
+              <tr>
+                <th className="w-8" rowSpan={2}>NO</th>
+                <th rowSpan={2}>NAMA</th>
+                <th className="w-20" rowSpan={2}>NIM</th>
+                {(['I1','I2','P1','B1','B2','E1','E2'] as PblComponentCode[]).map((c) => (
+                  <th key={c} className="w-12">{c}<br />({(PBL_COMPONENT_WEIGHTS[c] * 100).toFixed(1)}%)</th>
+                ))}
+                <th className="w-16" rowSpan={2}>CPMK1</th>
+                <th className="w-16" rowSpan={2}>CPMK2</th>
+                <th className="w-16" rowSpan={2}>FINAL</th>
+                <th className="w-12" rowSpan={2}>HURUF</th>
+              </tr>
+              <tr>
+                {(['I1','I2','P1','B1','B2','E1','E2'] as PblComponentCode[]).map((c) => (
+                  <th key={c} className="text-[9px] font-normal">{PBL_COMPONENT_LABELS[c].split(' ')[0]}…</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {members.map((m, i) => {
+                const s = memberSummary(m);
+                return (
+                  <tr key={m.id}>
+                    <td className="text-center">{i + 1}.</td>
+                    <td>{m.name}</td>
+                    <td>{m.nim}</td>
+                    {(['I1','I2','P1','B1','B2','E1','E2'] as PblComponentCode[]).map((c) => (
+                      <td key={c} className="text-center">{s[c] !== null ? s[c]!.toFixed(2) : ''}</td>
+                    ))}
+                    <td className="text-center font-semibold">{s.cpmk1 !== null ? s.cpmk1.toFixed(2) : ''}</td>
+                    <td className="text-center font-semibold">{s.cpmk2 !== null ? s.cpmk2.toFixed(2) : ''}</td>
+                    <td className="text-center font-bold">{s.finalScore !== null ? s.finalScore.toFixed(2) : ''}</td>
+                    <td className="text-center font-bold">{s.grade || ''}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+
+          <div className="mt-3">
+            <p className="text-[10px] italic">
+              B1/B2 dinilai Dosen Penguji 2 · E1/E2 dinilai Dosen Penguji 1 · P1 (peer skor akhir) · I1/I2 dinilai per mahasiswa.
+              CPMK1 = (I1×15% + B1×17.5% + B2×17.5%)/0.5 · CPMK2 = (I2×25% + P1×10% + E1×7.5% + E2×7.5%)/0.5.
+            </p>
+          </div>
+
+          <div className="mt-10 flex justify-between gap-10">
+            {pengujiSections.map((s) => {
+              const a = assessors.find((x) => x.assessor_role === s.role);
+              return (
+                <div key={s.role} className="w-[220px] text-left">
+                  <p>{PBL_ROLE_LABELS[s.role]}</p>
+                  <div className="h-12">{a?.signature_path ? <img src={a.signature_path} alt="TTD" className="max-h-12 max-w-32 object-contain" /> : null}</div>
+                  <p className="border-b border-black pb-0.5 font-bold">{a?.display_name || '………………………'}</p>
+                  <p className="text-[10px]">NIP. {a?.nip || ''}</p>
+                </div>
+              );
+            })}
+            <div className="w-[220px] text-left">
+              <p>Koordinator Program Studi</p>
+              <div className="h-12">{group.koordinator_signature_path ? <img src={group.koordinator_signature_path} alt="TTD" className="max-h-12 max-w-32 object-contain" /> : null}</div>
+              <p className="border-b border-black pb-0.5 font-bold">{group.koordinator || '………………………'}</p>
+              <p className="text-[10px]">NIP. {group.nip_koordinator || ''}</p>
+            </div>
+          </div>
+        </section>
       </div>
     </div>
   );

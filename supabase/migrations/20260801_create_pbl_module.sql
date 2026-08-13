@@ -150,42 +150,67 @@ create table if not exists public.pbl_rubric_criteria (
   unique (component_code, code)
 );
 
+-- Remove previously-seeded criteria whose codes are no longer in the new set
+-- (kept safe for uuid FK to descriptors/ratings: only codes that were replaced).
+delete from public.pbl_rubric_criteria
+where component_code in ('B1', 'B2', 'E1', 'E2', 'I1', 'I2')
+  and code not in (
+    'B1-C1','B1-C2','B1-C3','B1-C4','B1-C5',
+    'B2-C1','B2-C2','B2-C3','B2-C4','B2-C5',
+    'E1-C1','E1-C2','E1-C3','E1-C4','E1-C5',
+    'E2-C1','E2-C2','E2-C3','E2-C4','E2-C5',
+    'I1-C1','I1-C2','I1-C3','I1-C4','I1-C5',
+    'I2-C1','I2-C2','I2-C3','I2-C4','I2-C5','I2-C6','I2-C7'
+  );
+
 insert into public.pbl_rubric_criteria (component_code, code, name, evidence_guidance, internal_weight, criterion_order)
 values
-  -- E1 Penguji kegiatan pelaksanaan 7.5%
-  ('E1', 'E1-C1', 'Evidence & analisis situasi', 'Evaluasi kualitas dan ketelusuran analisis situasi: pengumpulan, pengolahan, penyajian data.', 0.30, 1),
-  ('E1', 'E1-C2', 'Reasoning masalah/prioritas', 'Evaluasi kesesuaian prioritas/rencana dengan bukti dan alur penalaran.', 0.25, 2),
-  ('E1', 'E1-C3', 'Koherensi intervensi & feasibility', 'Evaluasi koherensi intervensi dengan masalah dan kelayakan pelaksanaannya.', 0.25, 3),
-  ('E1', 'E1-C4', 'Budaya, equity & etika', 'Evaluasi pertimbangan budaya, kesetaraan, etika, dan akuntabilitas stakeholder.', 0.20, 4),
-  -- E2 Penguji presentasi 7.5%
-  ('E2', 'E2-C1', 'Penguasaan & diskusi', 'Evaluasi penguasaan materi saat penyajian dan tanggapan dalam diskusi.', 0.40, 1),
-  ('E2', 'E2-C2', 'Narasi evidence-to-action', 'Evaluasi kemampuan menyusun narasi dari bukti menuju aksi/intervensi.', 0.25, 2),
-  ('E2', 'E2-C3', 'Media/visualisasi', 'Evaluasi kualitas media dan visualisasi pendukung presentasi.', 0.15, 3),
-  ('E2', 'E2-C4', 'Refleksi kritis', 'Evaluasi refleksi kritis terhadap proses dan hasil kegiatan.', 0.10, 4),
-  ('E2', 'E2-C5', 'Komunikasi profesional', 'Evaluasi cara berkomunikasi secara profesional kepada audiens.', 0.10, 5),
-  -- B1 Pembimbing kegiatan pelaksanaan (laporan) 17.5%
-  ('B1', 'B1-C1', 'Kedisiplinan/kehadiran', 'Evaluasi disiplin dan kehadiran pada kegiatan lapangan.', 0.20, 1),
-  ('B1', 'B1-C2', 'Logbook & evidence trail', 'Evaluasi kelengkapan logbook dan jejak bukti kegiatan.', 0.30, 2),
-  ('B1', 'B1-C3', 'Keaktifan/kontribusi lapangan', 'Evaluasi keaktifan dan kontribusi dalam kegiatan lapangan.', 0.30, 3),
-  ('B1', 'B1-C4', 'Etika & komunikasi stakeholder', 'Evaluasi etika dan komunikasi dengan pemangku kepentingan.', 0.20, 4),
-  -- B2 Pembimbing presentasi 17.5%
-  ('B2', 'B2-C1', 'Penguasaan materi (penyajian & diskusi)', 'Evaluasi penguasaan materi dalam penyajian dan diskusi.', 0.50, 1),
-  ('B2', 'B2-C2', 'Media/alat bantu', 'Evaluasi penggunaan media dan alat bantu presentasi.', 0.20, 2),
-  ('B2', 'B2-C3', 'Tampilan/struktur presentasi', 'Evaluasi tampilan dan struktur presentasi.', 0.20, 3),
-  ('B2', 'B2-C4', 'Gesture/delivery profesional', 'Evaluasi sikap dan penyampaian (delivery) profesional.', 0.10, 4),
-  -- I1 Laporan Keluarga Binaan 15%
-  ('I1', 'I1-C1', 'Rancangan & relevansi data primer', 'Evaluasi rancangan dan relevansi pengumpulan data primer.', 0.25, 1),
-  ('I1', 'I1-C2', 'Pelaksanaan sistematis, etis, aman', 'Evaluasi pelaksanaan pengumpulan data yang sistematis, etis, dan aman.', 0.25, 2),
-  ('I1', 'I1-C3', 'Kualitas data & keterbatasan', 'Evaluasi kualitas data dan pengakuan keterbatasan.', 0.25, 3),
-  ('I1', 'I1-C4', 'Ketelusuran laporan', 'Evaluasi keterlacakan (traceability) laporan.', 0.25, 4),
-  -- I2 Laporan Kasus Binaan 25%
-  ('I2', 'I2-C1', 'Diagnosis masalah berbasis bukti', 'Evaluasi diagnosis masalah yang didukung oleh bukti.', 0.20, 1),
-  ('I2', 'I2-C2', 'Prioritas & reasoning', 'Evaluasi penentuan prioritas beserta alasan/logikanya.', 0.20, 2),
-  ('I2', 'I2-C3', 'Intervensi: tujuan, metode, indikator', 'Evaluasi kesesuaian tujuan, metode, dan indikator intervensi.', 0.20, 3),
-  ('I2', 'I2-C4', 'Budaya, aspirasi & equity', 'Evaluasi perhatian pada budaya, aspirasi masyarakat, dan kesetaraan.', 0.20, 4),
-  ('I2', 'I2-C5', 'Analisis, simpulan & feasibility', 'Evaluasi analisis, kesimpulan, dan kelayakan intervensi.', 0.20, 5),
+  -- E1 Penguji 1 — Kegiatan Pelaksanaan 7.5% (5 butir, bobot 0.20 each)
+  ('E1', 'E1-C1', 'Presensi dan keterlibatan mahasiswa dalam rangkaian kegiatan PBL', 'Kehadiran, ketepatan waktu, dan partisipasi aktif pada setiap tahap kegiatan PBL (persiapan, pelaksanaan, evaluasi).', 0.20, 1),
+  ('E1', 'E1-C2', 'Proses perizinan dan komunikasi dengan pemerintah lokal/pemangku kepentingan', 'Kelengkapan surat izin, koordinasi, dan kualitas komunikasi dengan pemerintah lokal serta pemangku kepentingan.', 0.20, 2),
+  ('E1', 'E1-C3', 'Analisis situasi (pengumpulan, pengolahan, analisis, dan penyajian data serta identifikasi masalah dan penyebab)', 'Kualitas pengumpulan, pengolahan, analisis, penyajian data, serta ketepatan identifikasi masalah dan penyebabnya.', 0.20, 3),
+  ('E1', 'E1-C4', 'Keaktifan Mahasiswa secara individu berdasarkan Logbook (termasuk mengikuti kegiatan kemasyarakatan bila memungkinkan)', 'Keteraturan pengisian logbook dan keaktifan individu pada kegiatan lapangan/kemasyarakatan.', 0.20, 4),
+  ('E1', 'E1-C5', 'Kesesuaian prioritas masalah dan rencana intervensi dengan bukti, aspirasi/budaya masyarakat, equity, serta kelayakan pelaksanaan', 'Kesesuaian prioritas masalah dan rencana intervensi dengan bukti, aspirasi/budaya masyarakat, kesetaraan, serta kelayakan pelaksanaan.', 0.20, 5),
+  -- E2 Penguji 1 — Presentasi Kelompok 7.5% (5 butir, bobot 0.20 each)
+  ('E2', 'E2-C1', 'Penguasaan materi (penyajian dan diskusi)', 'Kedalaman dan ketepatan penguasaan materi dalam penyajian maupun saat diskusi.', 0.20, 1),
+  ('E2', 'E2-C2', 'Penggunaan media/alat bantu (jenis, kualitas, akurasi, keterbacaan, dan relevansi media)', 'Pemilihan media/alat bantu yang sesuai, akurat, terbaca, dan relevan dengan materi.', 0.20, 2),
+  ('E2', 'E2-C3', 'Tampilan dan struktur presentasi (alur konteks–data–diagnosis–prioritas–intervensi–implikasi)', 'Struktur penyajian runtut mulai konteks, data, diagnosis, prioritas, intervensi, hingga implikasi.', 0.20, 3),
+  ('E2', 'E2-C4', 'Bahasa tubuh (gesture) dan delivery presenter yang profesional', 'Gestur, intonasi, kontak mata, dan sikap profesional saat menyampaikan presentasi.', 0.20, 4),
+  ('E2', 'E2-C5', 'Kemampuan mempertanggungjawabkan keputusan, menjelaskan keterbatasan/risiko, serta merespons pertanyaan secara berbasis bukti', 'Kemampuan mempertanggungjawabkan keputusan, mengenali keterbatasan/risiko, dan menjawab pertanyaan berdasarkan bukti.', 0.20, 5),
+  -- B1 Penguji 2 — Kegiatan Pelaksanaan 17.5% (5 butir, bobot 0.20 each)
+  ('B1', 'B1-C1', 'Presensi dan keterlibatan mahasiswa dalam rangkaian kegiatan PBL', 'Kehadiran, ketepatan waktu, dan partisipasi aktif pada setiap tahap kegiatan PBL (persiapan, pelaksanaan, evaluasi).', 0.20, 1),
+  ('B1', 'B1-C2', 'Proses perizinan dan komunikasi dengan pemerintah lokal/pemangku kepentingan', 'Kelengkapan surat izin, koordinasi, dan kualitas komunikasi dengan pemerintah lokal serta pemangku kepentingan.', 0.20, 2),
+  ('B1', 'B1-C3', 'Analisis situasi (pengumpulan, pengolahan, analisis, dan penyajian data serta identifikasi masalah dan penyebab)', 'Kualitas pengumpulan, pengolahan, analisis, penyajian data, serta ketepatan identifikasi masalah dan penyebabnya.', 0.20, 3),
+  ('B1', 'B1-C4', 'Keaktifan Mahasiswa secara individu berdasarkan Logbook (termasuk mengikuti kegiatan kemasyarakatan bila memungkinkan)', 'Keteraturan pengisian logbook dan keaktifan individu pada kegiatan lapangan/kemasyarakatan.', 0.20, 4),
+  ('B1', 'B1-C5', 'Kesesuaian prioritas masalah dan rencana intervensi dengan bukti, aspirasi/budaya masyarakat, equity, serta kelayakan pelaksanaan', 'Kesesuaian prioritas masalah dan rencana intervensi dengan bukti, aspirasi/budaya masyarakat, kesetaraan, serta kelayakan pelaksanaan.', 0.20, 5),
+  -- B2 Penguji 2 — Presentasi Kelompok 17.5% (5 butir, bobot 0.20 each)
+  ('B2', 'B2-C1', 'Penguasaan materi (penyajian dan diskusi)', 'Kedalaman dan ketepatan penguasaan materi dalam penyajian maupun saat diskusi.', 0.20, 1),
+  ('B2', 'B2-C2', 'Penggunaan media/alat bantu (jenis, kualitas, akurasi, keterbacaan, dan relevansi media)', 'Pemilihan media/alat bantu yang sesuai, akurat, terbaca, dan relevan dengan materi.', 0.20, 2),
+  ('B2', 'B2-C3', 'Tampilan dan struktur presentasi (alur konteks–data–diagnosis–prioritas–intervensi–implikasi)', 'Struktur penyajian runtut mulai konteks, data, diagnosis, prioritas, intervensi, hingga implikasi.', 0.20, 3),
+  ('B2', 'B2-C4', 'Bahasa tubuh (gesture) dan delivery presenter yang profesional', 'Gestur, intonasi, kontak mata, dan sikap profesional saat menyampaikan presentasi.', 0.20, 4),
+  ('B2', 'B2-C5', 'Kemampuan mempertanggungjawabkan keputusan, menjelaskan keterbatasan/risiko, serta merespons pertanyaan secara berbasis bukti', 'Kemampuan mempertanggungjawabkan keputusan, mengenali keterbatasan/risiko, dan menjawab pertanyaan berdasarkan bukti.', 0.20, 5),
+  -- I1 Laporan Keluarga Binaan 15% (5 butir, bobot 0.20 each)
+  ('I1', 'I1-C1', 'Pemilihan keluarga binaan dan kesesuaian alasan pemilihan', 'Kesesuaian kriteria dan alasan pemilihan keluarga binaan yang didokumentasikan.', 0.20, 1),
+  ('I1', 'I1-C2', 'Perencanaan/pelaksanaan pengumpulan data primer pada keluarga binaan secara sistematis, etis, aman, dan adaptif budaya', 'Perencanaan yang utuh dan pelaksanaan pengumpulan data primer yang sistematis, etis, aman, serta peka budaya.', 0.20, 2),
+  ('I1', 'I1-C3', 'Pemilihan tema promosi kesehatan/intervensi berdasarkan kebutuhan/data keluarga', 'Kesesuaian tema promosi kesehatan/intervensi dengan kebutuhan dan data keluarga binaan.', 0.20, 3),
+  ('I1', 'I1-C4', 'Pemilihan dan penggunaan media promosi/intervensi yang relevan', 'Pemilihan dan penggunaan media intervensi yang relevan, tepat sasaran, dan dapat dipahami keluarga.', 0.20, 4),
+  ('I1', 'I1-C5', 'Kualitas data, dokumentasi, hasil kegiatan, dan refleksi terhadap keterbatasan', 'Kualitas data, kelengkapan dokumentasi, capaian kegiatan, serta refleksi atas keterbatasan pelaksanaan.', 0.20, 5),
+  -- I2 Laporan Kasus Binaan 25% (7 butir)
+  ('I2', 'I2-C1', 'Diagnosis masalah kesehatan berdasarkan bukti', 'Ketepatan diagnosis masalah kesehatan yang didukung bukti (data primer/sekunder).', 0.15, 1),
+  ('I2', 'I2-C2', 'Pemilihan prioritas masalah dan justifikasi', 'Kesesuaian pemilihan prioritas masalah beserta justifikasi/alasan yang jelas.', 0.15, 2),
+  ('I2', 'I2-C3', 'Tujuan intervensi yang jelas dan terukur', 'Rumusan tujuan intervensi yang spesifik dan dapat diukur (SMART).', 0.15, 3),
+  ('I2', 'I2-C4', 'Metode/rencana pelaksanaan, sasaran, sumber daya, waktu dan indikator', 'Kelengkapan metode, sasaran, sumber daya, jadwal waktu, dan indikator keberhasilan intervensi.', 0.15, 4),
+  ('I2', 'I2-C5', 'Analisis dan kesinambungan masalah–determinan–intervensi', 'Kesinambungan logis antara masalah, determinan, dan intervensi yang direncanakan.', 0.15, 5),
+  ('I2', 'I2-C6', 'Pertimbangan aspirasi masyarakat, budaya/kearifan lokal, equity, etika dan kelayakan', 'Perhatian pada aspirasi masyarakat, kearifan lokal, kesetaraan, etika, dan kelayakan pelaksanaan.', 0.15, 6),
+  ('I2', 'I2-C7', 'Simpulan, keterbatasan, risiko dan tindak lanjut', 'Kesesuaian simpulan dengan hasil, pengakuan keterbatasan/risiko, dan rencana tindak lanjut.', 0.10, 7),
   ('P1', 'P1-C1', 'Final peer score (verified aggregate)', 'Skor akhir hasil verifikasi penilaian antar mahasiswa.', 1.00000, 1)
-on conflict (component_code, code) do nothing;
+on conflict (component_code, code)
+  do update set
+    name = excluded.name,
+    evidence_guidance = excluded.evidence_guidance,
+    internal_weight = excluded.internal_weight,
+    criterion_order = excluded.criterion_order,
+    active = true;
 
 -- ============================================================
 -- 5b. PBL_RUBRIC_DESCRIPTORS - Level 0-4 descriptor per criterion
@@ -202,13 +227,19 @@ create table if not exists public.pbl_rubric_descriptors (
 );
 
 -- Seed descriptors for every active criterion × level 0-4
+-- The richer template embeds the criterion name + evidence focus, so every
+-- item in the kriteria is explicitly explained in the rubric.
 do $$
 declare
   c record;
   lbl text;
   txt text;
+  focus text;
 begin
-  for c in select c2.id, c2.name, c2.code from public.pbl_rubric_criteria c2 where c2.active loop
+  for c in select c2.id, c2.name, c2.code, c2.evidence_guidance
+           from public.pbl_rubric_criteria c2 where c2.active loop
+    focus := case when coalesce(c.evidence_guidance, '') = '' then ''
+             else ' Bukti yang diamati: ' || c.evidence_guidance end;
     for i in 0..4 loop
       lbl := case i
         when 4 then 'Melampaui Standar'
@@ -218,15 +249,16 @@ begin
         else 'Tidak Ada Bukti'
       end;
       txt := case i
-        when 4 then 'Bukti lengkap dan konsisten; performa secara substansial melampaui harapan untuk aspek: ' || c.name || '.'
-        when 3 then 'Bukti relevan dan memadai; memenuhi standar yang diharapkan untuk aspek: ' || c.name || '.'
-        when 2 then 'Terdapat bukti, namun masih terdapat kesenjangan penting pada aspek: ' || c.name || '.'
-        when 1 then 'Bukti belum memadai; kekurangan besar pada aspek: ' || c.name || '.'
-        else 'Tidak ada bukti yang dapat dinilai untuk aspek: ' || c.name || '.'
+        when 4 then c.name || '. Bukti lengkap dan konsisten; seluruh aspek terpenuhi secara menyeluruh dan melampaui standar.' || focus
+        when 3 then c.name || '. Memenuhi standar; bukti relevan dan memadai.' || focus
+        when 2 then c.name || '. Terdapat bukti, namun masih ada kesenjangan penting.' || focus
+        when 1 then c.name || '. Bukti lemah dan banyak kekurangan; belum memenuhi standar.' || focus
+        else c.name || '. Tidak ada bukti yang dapat dinilai.' || focus
       end;
       insert into public.pbl_rubric_descriptors (criterion_id, level_value, level_label, descriptor_text, display_order)
       values (c.id, i, lbl, txt, i)
-      on conflict (criterion_id, level_value) do nothing;
+      on conflict (criterion_id, level_value)
+        do update set level_label = excluded.level_label, descriptor_text = excluded.descriptor_text, display_order = excluded.display_order;
     end loop;
   end loop;
 end $$;
