@@ -1646,7 +1646,7 @@ function PblPreview({
                 <div key={code}>{renderComponentTable(code, null, m.id)}</div>
               ))}
             </div>
-            {renderSignatureBlock('penguji_1')}
+            {(() => { const a = assessors.find(x => x.assessor_role === 'penguji_1'); return renderSignatureBlock('penguji_1', a?.display_name, a?.nip, a?.signature_path); })()}
           </section>
         ))}
 
