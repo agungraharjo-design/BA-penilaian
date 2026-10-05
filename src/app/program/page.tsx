@@ -133,7 +133,7 @@ export default function ProgramPage() {
                   Pengalaman Belajar Lapangan 2 — Intervensi Keluarga &amp; Kelompok, Seminar &amp; Presentasi
                 </p>
                 <p className="text-xs text-gray-500 mt-3 font-sans">
-                  {isDosen ? 'Penilaian intervensi berbasis bukti &amp; presentasi kelompok' : 'Akses terbatas untuk dosen'}
+                  {isDosen ? 'Penilaian intervensi berbasis bukti & presentasi kelompok' : 'Akses terbatas untuk dosen'}
                 </p>
               </div>
             </div>
