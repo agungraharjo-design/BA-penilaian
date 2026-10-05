@@ -114,6 +114,42 @@ export default function ProgramPage() {
             </div>
           </Link>
 
+          {/* PBL 2 Card */}
+          <Link
+            href="/pbl2/sessions"
+            className={`group block bg-white rounded-xl shadow-lg p-8 border border-gray-200 transition-all duration-300 ${
+              !isDosen ? 'opacity-50 pointer-events-none cursor-not-allowed' : 'hover:shadow-xl hover:border-purple-300'
+            }`}
+          >
+            <div className="flex items-start gap-4">
+              <div className="flex-shrink-0 w-14 h-14 bg-purple-100 rounded-xl flex items-center justify-center group-hover:bg-purple-900 group-hover:text-white transition-colors">
+                <svg className="w-7 h-7 text-purple-700 group-hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-gray-900 font-serif uppercase">PBL 2 Kesmas</h3>
+                <p className="text-sm text-gray-600 mt-1 font-serif">
+                  Pengalaman Belajar Lapangan 2 — Intervensi Keluarga &amp; Kelompok, Seminar &amp; Presentasi
+                </p>
+                <p className="text-xs text-gray-500 mt-3 font-sans">
+                  {isDosen ? 'Penilaian intervensi berbasis bukti &amp; presentasi kelompok' : 'Akses terbatas untuk dosen'}
+                </p>
+              </div>
+            </div>
+            <div className="mt-6 pt-4 border-t border-gray-100">
+              {isDosen ? (
+                <span className="inline-flex items-center px-4 py-2 bg-purple-900 text-white text-sm font-medium rounded-lg group-hover:bg-purple-800 transition-colors">
+                  Buka PBL 2 →
+                </span>
+              ) : (
+                <span className="inline-flex items-center px-4 py-2 bg-gray-300 text-gray-500 text-sm font-medium rounded-lg cursor-not-allowed">
+                  Dalam Pengembangan
+                </span>
+              )}
+            </div>
+          </Link>
+
           {/* S2 Card */}
           <Link
             href="/s2/sessions"
