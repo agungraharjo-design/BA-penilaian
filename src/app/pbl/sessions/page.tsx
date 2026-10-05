@@ -29,7 +29,9 @@ export default function PblSessionsPage() {
       console.error('Error loading PBL groups:', error)
       setGroups([])
     } else {
-      setGroups((data as PblGroup[]) || [])
+      // Only show PBL 1 groups (exclude PBL 2 groups which live on /pbl2/sessions)
+      const rows = (data as PblGroup[]) || []
+      setGroups(rows.filter((g) => !(g.code?.toUpperCase().startsWith('PBL2') || g.title?.toUpperCase().includes('PBL 2'))))
     }
     setLoading(false)
   }
