@@ -7,26 +7,29 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/app/components/AuthProvider';
 import { isDosenEmail } from '@/lib/dosen';
 import { S2SignatureUpload } from '@/app/components/common/S2SignatureUpload';
-import { getPblBlueprint } from '@/lib/pbl1/repositories';
+import { getPblBlueprint } from '@/lib/pbl2/repositories';
 import type {
   PblGroup,
   PblGroupMember,
   PblAssessor,
-  PblBlueprint,
-  PblAssessmentInstance,
+  Pbl2Blueprint as PblBlueprint,
+  Pbl2AssessmentInstance as PblAssessmentInstance,
   PblAssessmentScore,
   PblRubricRating,
   PblPeerFinalScore,
-  PblComponentCode,
+  Pbl2ComponentCode as PblComponentCode,
   PblAssessorRole,
   PblRubricDescriptor,
-} from '@/types/pbl1';
+} from '@/types/pbl2';
 import {
   PBL_ROLE_LABELS,
   PBL_STATUS_LABELS,
-  PBL_COMPONENT_LABELS,
-  PBL_COMPONENT_WEIGHTS,
 } from '@/types/pbl1';
+import {
+  PBL2_COMPONENT_LABELS as PBL_COMPONENT_LABELS,
+  PBL2_COMPONENT_WEIGHTS as PBL_COMPONENT_WEIGHTS,
+  PBL2_COMPONENT_SHORT,
+} from '@/types/pbl2';
 import {
   calcCriterionPoints,
   calcComponentRawFromCriterionPoints,
@@ -34,7 +37,7 @@ import {
   type ComponentRawScores,
   calcPblGrade,
   calcPblBreakdown,
-} from '@/lib/pbl1/calculations';
+} from '@/lib/pbl2/calculations';
 
 type Tab =
   | 'berita-acara'
@@ -46,9 +49,9 @@ type Tab =
   | 'preview';
 
 const PENGUJI_ROLES: PblAssessorRole[] = ['penguji_1', 'penguji_2'];
-const PENGUJI_1_COMPONENTS: PblComponentCode[] = ['E1', 'E2'];
-const PENGUJI_2_COMPONENTS: PblComponentCode[] = ['B1', 'B2'];
-const INDIVIDUAL_COMPONENTS: PblComponentCode[] = ['I1', 'I2'];
+const PENGUJI_1_COMPONENTS: PblComponentCode[] = ['2E1', '2E2'];
+const PENGUJI_2_COMPONENTS: PblComponentCode[] = ['2B1', '2B2'];
+const INDIVIDUAL_COMPONENTS: PblComponentCode[] = ['2I1', '2I2'];
 
 const LEVEL_LABELS: Record<number, string> = {
   4: 'Melampaui Standar',
@@ -249,7 +252,7 @@ export default function PblSessionDetailPage() {
     return {
       name: comp?.name || PBL_COMPONENT_LABELS[code] || code,
       weight: comp ? Number(comp.rps_weight) : PBL_COMPONENT_WEIGHTS[code],
-      cpmk: comp?.cpmk_code || (code === 'I1' || code === 'B1' || code === 'B2' ? 'CPMK1' : 'CPMK2'),
+      cpmk: comp?.cpmk_code || (code === '2I1' || code === '2B1' || code === '2B2' ? 'CPMK1' : 'CPMK2'),
       scope: comp?.default_scope || 'INDIVIDUAL',
     };
   }, [blueprint]);
@@ -295,13 +298,13 @@ export default function PblSessionDetailPage() {
     cpmk1: number | null; cpmk2: number | null; finalScore: number | null; grade: string | null; complete: boolean; missing: string[];
   } => {
     const raw: ComponentRawScores = {
-      I1: componentRaw('I1', null, m.id),
-      I2: componentRaw('I2', null, m.id),
-      P1: peerOf(m.id)?.final_peer_score ?? null,
-      B1: averageGroupRaw('B1', ['penguji_2']),
-      B2: averageGroupRaw('B2', ['penguji_2']),
-      E1: averageGroupRaw('E1', ['penguji_1']),
-      E2: averageGroupRaw('E2', ['penguji_1']),
+      '2I1': componentRaw('2I1', null, m.id),
+      '2I2': componentRaw('2I2', null, m.id),
+      '2P1': peerOf(m.id)?.final_peer_score ?? null,
+      '2B1': averageGroupRaw('2B1', ['penguji_2']),
+      '2B2': averageGroupRaw('2B2', ['penguji_2']),
+      '2E1': averageGroupRaw('2E1', ['penguji_1']),
+      '2E2': averageGroupRaw('2E2', ['penguji_1']),
     };
     const calc = calcPblBreakdown(raw);
     return {
@@ -1245,13 +1248,13 @@ function RekapTab({
   openDetail: (code: PblComponentCode, memberId: string | null, targetLabel: string) => void;
 }) {
   const cols: { code: PblComponentCode; label: string; w: string; weight: number }[] = [
-    { code: 'I1', label: 'I1', w: 'w-16', weight: 0.15 },
-    { code: 'I2', label: 'I2', w: 'w-16', weight: 0.25 },
-    { code: 'P1', label: 'P1', w: 'w-16', weight: 0.1 },
-    { code: 'B1', label: 'B1', w: 'w-16', weight: 0.175 },
-    { code: 'B2', label: 'B2', w: 'w-16', weight: 0.175 },
-    { code: 'E1', label: 'E1', w: 'w-16', weight: 0.075 },
-    { code: 'E2', label: 'E2', w: 'w-16', weight: 0.075 },
+    { code: '2I1', label: 'I1', w: 'w-16', weight: 0.15 },
+    { code: '2I2', label: 'I2', w: 'w-16', weight: 0.25 },
+    { code: '2P1', label: 'P1', w: 'w-16', weight: 0.1 },
+    { code: '2B1', label: 'B1', w: 'w-16', weight: 0.175 },
+    { code: '2B2', label: 'B2', w: 'w-16', weight: 0.175 },
+    { code: '2E1', label: 'E1', w: 'w-16', weight: 0.075 },
+    { code: '2E2', label: 'E2', w: 'w-16', weight: 0.075 },
   ];
   return (
     <div className="space-y-4">
@@ -1287,7 +1290,7 @@ function RekapTab({
                   <td className="text-center font-semibold">{s.cpmk2 !== null ? s.cpmk2.toFixed(2) : '—'}</td>
                   <td className="text-center font-bold">{s.finalScore !== null ? s.finalScore.toFixed(2) : '—'}</td>
                   <td className="text-center font-bold">{s.grade || '—'}</td>
-                  <td className="text-center text-[11px] font-sans">{s.complete ? <span className="text-green-700">Lengkap ✓</span> : <span className="text-amber-600">Kurang: {s.missing.join(', ')}</span>}</td>
+                  <td className="text-center text-[11px] font-sans">{s.complete ? <span className="text-green-700">Lengkap ✓</span> : <span className="text-amber-600">Kurang: {s.missing.map((c) => PBL2_COMPONENT_SHORT[c as PblComponentCode] ?? c).join(', ')}</span>}</td>
                 </tr>
               );
             })}
@@ -1690,8 +1693,8 @@ function Pbl2Preview({
                 <th className="w-8" rowSpan={2}>NO</th>
                 <th rowSpan={2}>NAMA</th>
                 <th className="w-20" rowSpan={2}>NIM</th>
-                {(['I1','I2','P1','B1','B2','E1','E2'] as PblComponentCode[]).map((c) => (
-                  <th key={c} className="w-12">{c}<br />({(PBL_COMPONENT_WEIGHTS[c] * 100).toFixed(1)}%)</th>
+                {(['2I1','2I2','2P1','2B1','2B2','2E1','2E2'] as PblComponentCode[]).map((c) => (
+                  <th key={c} className="w-12">{PBL2_COMPONENT_SHORT[c]}<br />({(PBL_COMPONENT_WEIGHTS[c] * 100).toFixed(1)}%)</th>
                 ))}
                 <th className="w-16" rowSpan={2}>CPMK1</th>
                 <th className="w-16" rowSpan={2}>CPMK2</th>
@@ -1699,7 +1702,7 @@ function Pbl2Preview({
                 <th className="w-12" rowSpan={2}>HURUF</th>
               </tr>
               <tr>
-                {(['I1','I2','P1','B1','B2','E1','E2'] as PblComponentCode[]).map((c) => (
+                {(['2I1','2I2','2P1','2B1','2B2','2E1','2E2'] as PblComponentCode[]).map((c) => (
                   <th key={c} className="text-[9px] font-normal">{PBL_COMPONENT_LABELS[c].split(' ')[0]}…</th>
                 ))}
               </tr>
@@ -1712,7 +1715,7 @@ function Pbl2Preview({
                     <td className="text-center">{i + 1}.</td>
                     <td>{m.name}</td>
                     <td>{m.nim}</td>
-                    {(['I1','I2','P1','B1','B2','E1','E2'] as PblComponentCode[]).map((c) => (
+                    {(['2I1','2I2','2P1','2B1','2B2','2E1','2E2'] as PblComponentCode[]).map((c) => (
                       <td key={c} className="text-center">{s[c] !== null ? s[c]!.toFixed(2) : ''}</td>
                     ))}
                     <td className="text-center font-semibold">{s.cpmk1 !== null ? s.cpmk1.toFixed(2) : ''}</td>
