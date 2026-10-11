@@ -21,7 +21,13 @@ export function calcComponentRawFromCriterionPoints(
 ): number | null {
   const valid = criterionPoints.filter((v) => v !== null && v !== undefined);
   if (valid.length === 0) return null;
-  return valid.reduce((a, b) => a + b, 0);
+  const sum = valid.reduce((a, b) => a + b, 0);
+  // pbl_assessment_scores.final_raw_score is numeric(5,2) with
+  // check (final_raw_score between 0 and 100). Per-criterion points are
+  // rounded to 2dp in the DB, so a sum can drift a fraction above 100
+  // (e.g. 6 x 16.67 = 100.02) and the UPDATE is silently rejected.
+  // Clamp so a rounding quirk can never exceed the constraint.
+  return Math.min(100, Math.round(sum * 100) / 100);
 }
 
 // ── RPS recap ───────────────────────────────────────────────
