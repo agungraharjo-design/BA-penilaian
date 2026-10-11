@@ -29,9 +29,16 @@ export default function PblSessionsPage() {
       console.error('Error loading PBL groups:', error)
       setGroups([])
     } else {
-      // Only show PBL 1 groups (exclude PBL 2 groups which live on /pbl2/sessions)
+      // Only show PBL 1 groups. Exclude PBL 2 (live on /pbl2/sessions) and
+      // Seminar Proposal Skripsi (live on /seminar-proposal/sessions) — all three
+      // share pbl_groups, discriminated by code prefix.
       const rows = (data as PblGroup[]) || []
-      setGroups(rows.filter((g) => !(g.code?.toUpperCase().startsWith('PBL2') || g.title?.toUpperCase().includes('PBL 2'))))
+      setGroups(rows.filter((g) => !(
+        g.code?.toUpperCase().startsWith('PBL2') ||
+        g.title?.toUpperCase().includes('PBL 2') ||
+        g.code?.toUpperCase().startsWith('SP-') ||
+        g.blueprint_version === 'sp-rps-v1'
+      )))
     }
     setLoading(false)
   }
