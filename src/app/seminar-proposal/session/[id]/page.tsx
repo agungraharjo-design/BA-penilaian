@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/app/components/AuthProvider'
+import { isDosenEmail } from '@/lib/dosen'
 import { S2SignatureUpload } from '@/app/components/common/S2SignatureUpload'
 import { SpImageUpload } from '@/app/components/common/SpImageUpload'
 import { getSpBlueprint } from '@/lib/seminarproposal/repositories'
@@ -51,6 +52,54 @@ export default function SpSessionPage() {
   const [screenshots, setScreenshots] = useState<SpScreenshots>(() => emptyScreenshots())
 
   const canEdit = !!isDosen || !!isSuperadmin
+
+  // ── Penguji tab access — same matching logic as PBL 2 ─────────────────────
+  const whitelistMatch = profile?.email ? isDosenEmail(profile.email) : null
+  const canonicalName = whitelistMatch?.nama || ''
+  const dbFullName = profile?.full_name || ''
+  const emailPrefix = profile?.email?.split('@')[0] || ''
+  const allUserNames = [canonicalName, dbFullName, emailPrefix].filter(Boolean)
+
+  const matchPenguji = (pengujiName: string) => {
+    if (allUserNames.length === 0 || !pengujiName) return false
+    const normalize = (s: string) => s.toLowerCase().replace(/[,.\-]/g, '').replace(/\s+/g, ' ').trim()
+    const b = normalize(pengujiName)
+    for (const name of allUserNames) {
+      const a = normalize(name)
+      if (a === b) return true
+      if (a.includes(b) || b.includes(a)) return true
+      const wordsA = a.split(' ').filter((w) => w.length > 2)
+      const wordsB = b.split(' ').filter((w) => w.length > 2)
+      if (wordsA.length >= 2 && wordsB.length >= 2 && wordsA[0] === wordsB[0] && wordsA[1] === wordsB[1]) return true
+    }
+    return false
+  }
+
+  let allowedRoles: SpAssessorRole[] | null = null // null = no form penguji access
+  if (!isSuperadmin && isDosen) {
+    const matched = SP_ASSESSOR_ROLES.filter((role) =>
+      matchPenguji(assessors.find((a) => a.assessor_role === role)?.display_name || ''))
+    if (matched.length > 0) allowedRoles = matched
+  }
+
+  const isTabAllowed = (key: SpTab) => {
+    if (isSuperadmin) return true
+    if (SP_ASSESSOR_ROLES.includes(key as SpAssessorRole)) {
+      if (!isDosen) return false
+      return allowedRoles !== null && allowedRoles.includes(key as SpAssessorRole)
+    }
+    return true
+  }
+
+  // Bounce away from a penguji tab that is no longer visible (e.g. on load).
+  useEffect(() => {
+    if (loading || !group) return
+    if (SP_ASSESSOR_ROLES.includes(activeTab as SpAssessorRole) && !isTabAllowed(activeTab)) {
+      setActiveTab('berita-acara')
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, group, activeTab, assessors, isDosen, isSuperadmin, profile])
+
   const groupRef = useRef<PblGroup | null>(null)
   const dirty = useRef<Set<string>>(new Set())
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -268,13 +317,14 @@ export default function SpSessionPage() {
   const rerata = calcRerata(SP_ASSESSOR_ROLES.map((r) => roleRaw(r)))
   const grade = spGrade(rerata)
 
-  const tabs: { key: SpTab; label: string }[] = [
+  const allTabs: { key: SpTab; label: string }[] = [
     { key: 'berita-acara', label: 'Berita Acara' },
     ...SP_ASSESSOR_ROLES.map((r) => ({ key: r as SpTab, label: SP_ROLE_SHORT[r] })),
     { key: 'rekap', label: 'Rekap' },
     { key: 'screenshot', label: 'Tangkapan Layar' },
     { key: 'preview', label: 'Preview & PDF' },
   ]
+  const tabs = allTabs.filter((t) => isTabAllowed(t.key))
 
   return (
     <div className="max-w-6xl mx-auto p-4 font-serif">
@@ -451,6 +501,10 @@ function BeritaAcaraTab({
               <td className="py-1 font-sans"><input className="w-full border-b border-gray-400 bg-transparent" placeholder="197705072024212008"
                 value={val('nip_koordinator', group.nip_koordinator)} disabled={!isDosen}
                 onChange={(e) => { setD('nip_koordinator', e.target.value); onUpdate('nip_koordinator', e.target.value) }} /></td></tr>
+            <tr><td className="py-1">Tanggal Berita Acara</td><td className="py-1">:</td>
+              <td className="py-1"><input className="w-full border-b border-gray-400 bg-transparent" placeholder="14 Oktober 2026"
+                value={val('tanggal_ba', group.tanggal_ba)} disabled={!isDosen}
+                onChange={(e) => { setD('tanggal_ba', e.target.value); onUpdate('tanggal_ba', e.target.value) }} /></td></tr>
             <tr><td className="py-1 align-top">Tanda Tangan</td><td className="py-1 align-top">:</td>
               <td className="py-1">
                 <S2SignatureUpload value={group.koordinator_signature_path} label="Koordinator Prodi"
@@ -761,6 +815,11 @@ function PreviewTab({
   const handlePrint = () => window.print()
   const shotRows = screenshots.hadir.filter((r) => r.bukti)
   const hasShot = shotRows.length > 0 || !!screenshots.overall
+  // TTD date: explicit Tanggal Berita Acara wins; otherwise derive the day
+  // from "Hari, Tanggal Ujian" (e.g. "Rabu, 14 Oktober 2026" → "14 Oktober 2026")
+  // so a date entered once appears synchronously in every TTD block.
+  const ttdDate = (group.tanggal_ba || '').trim()
+    || (group.hari_tanggal || '').replace(/^(Senin|Selasa|Rabu|Kamis|Jumat|Sabtu|Minggu)\s*,?\s*/i, '').trim()
 
   return (
     <div data-sp-preview-root="true">
@@ -850,7 +909,7 @@ function PreviewTab({
 
           <div className="mt-10 flex justify-end text-center text-sm signature-block">
             <div>
-              <p>Jakarta, {group.tanggal_ba || '.............. 2026'}</p>
+              <p>Jakarta, {ttdDate || '.............. 2026'}</p>
               <p className="mt-1">Koordinator Program Studi Kesehatan Masyarakat</p>
               {group.koordinator_signature_path
                 ? <img src={group.koordinator_signature_path} alt="TTD Koordinator" className="max-h-16 object-contain mx-auto mt-1" />
@@ -910,7 +969,7 @@ function PreviewTab({
               <p className="text-[11px] text-gray-500 font-sans mt-1">Nilai Akhir = (Total Skor Nilai × Bobot) / 400 × 100</p>
               <div className="mt-4 flex justify-end text-center text-sm signature-block">
                 <div>
-                  <p>{group.tanggal_ba || '.............. 2026'}</p>
+                  <p>{ttdDate || '.............. 2026'}</p>
                   <p className="mt-1 font-semibold">{SP_ROLE_LABELS[role]}</p>
                   {sig(role)
                     ? <img src={sig(role)!} alt={SP_ROLE_SHORT[role]} className="max-h-14 object-contain mx-auto mt-1" />
