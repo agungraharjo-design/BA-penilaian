@@ -73,7 +73,8 @@ export default function SpSessionPage() {
     if (g.error || !g.data) { setLoading(false); return }
     const gr = g.data as PblGroup
     setGroup(gr); groupRef.current = gr
-    setScreenshots(parseScreenshots((gr as unknown as { evidence?: unknown }).evidence as string, gr.name || ''))
+    const ev = (gr as unknown as { evidence?: { screenshot?: unknown } | null }).evidence
+    setScreenshots(parseScreenshots(ev?.screenshot ?? null, gr.name || ''))
     setMembers((m.data as PblGroupMember[]) || [])
     setAssessors((a.data as PblAssessor[]) || [])
     const inst = (i.data as PblAssessmentInstance[]) || []
@@ -282,7 +283,7 @@ export default function SpSessionPage() {
         {sync === 'live' ? 'Tersimpan' : sync === 'saving' ? 'Menyimpan...' : 'Offline'}
       </div>
 
-      <div className="bg-white rounded-lg shadow-md p-4 mb-4">
+      <div className="bg-white rounded-lg shadow-md p-4 mb-4 no-print">
         <Link href="/seminar-proposal/sessions" className="text-sm text-blue-700 hover:underline">← Kembali ke daftar</Link>
         <h1 className="text-xl font-bold mt-1">{group.name} <span className="text-gray-500 text-base">({group.code})</span></h1>
         <p className="text-sm text-gray-600">{group.field_location || '—'}</p>
@@ -758,205 +759,238 @@ function PreviewTab({
 }) {
   const sig = (role: SpAssessorRole) => assessors.find((a) => a.assessor_role === role)?.signature_path
   const handlePrint = () => window.print()
+  const shotRows = screenshots.hadir.filter((r) => r.bukti)
+  const hasShot = shotRows.length > 0 || !!screenshots.overall
+
   return (
-    <div className="space-y-8">
-      <div className="no-print flex justify-end print:hidden">
+    <div data-sp-preview-root="true">
+      <div className="no-print mb-4 flex justify-end gap-3 print:hidden">
         <button onClick={handlePrint}
           className="bg-emerald-900 text-white px-5 py-2.5 rounded-lg hover:bg-emerald-800 font-sans text-sm font-medium shadow">
           🖨 Cetak / Simpan PDF
         </button>
       </div>
-      <DocHeader title="Laporan Seminar Proposal Skripsi" semester={group.semester} academicYear={group.academic_year} />
-      <div className="text-sm leading-relaxed">
-        <p>
-          Pada hari <span className="border-b border-gray-500 px-6 inline-block min-w-[10rem]">{group.hari_tanggal || '............'}</span> telah dilaksanakan seminar proposal skripsi.
-        </p>
-        <table className="mt-4 w-full text-sm">
-          <tbody>
-            <tr><td className="w-40 py-1">Nama Mahasiswa</td><td className="w-4 py-1">:</td><td className="py-1 font-semibold">{group.name}</td></tr>
-            <tr><td className="py-1">NIM</td><td className="py-1">:</td><td className="py-1 font-sans font-semibold">{member?.nim || '—'}</td></tr>
-            <tr><td className="py-1">Peminatan</td><td className="py-1">:</td><td className="py-1">{group.field_location || '—'}</td></tr>
-            <tr><td className="py-1 align-top">Judul Skripsi</td><td className="py-1 align-top">:</td><td className="py-1">{group.title || '—'}</td></tr>
-            <tr><td className="py-1">Waktu</td><td className="py-1">:</td><td className="py-1">{group.start_time && group.end_time ? `${group.start_time} – ${group.end_time}` : '—'}</td></tr>
-            <tr><td className="py-1">Tempat</td><td className="py-1">:</td><td className="py-1">{group.venue || '—'}</td></tr>
-          </tbody>
-        </table>
-        <p className="mt-4">
-          Dinyatakan yang bersangkutan:{' '}
-          <span className="font-bold">{group.decision === 'Lulus' ? 'LULUS' : group.decision === 'Tidak Lulus' ? 'TIDAK LULUS' : '........................'}</span>
-        </p>
-        {group.report_notes && <p className="mt-2 text-gray-700">Catatan: {group.report_notes}</p>}
-      </div>
 
-      <div>
-        <h3 className="font-bold text-base mb-2">TIM PENGUJI</h3>
-        <table className="w-full text-sm border border-gray-300">
-          <thead><tr className="bg-gray-100 border-b border-gray-300">
-            <th className="w-10 py-2">No</th><th className="py-2 text-left">Dosen Penguji</th>
-            <th className="w-56 py-2 text-left">Jabatan</th><th className="w-40 py-2">Tanda Tangan</th>
-          </tr></thead>
-          <tbody>
-            {SP_ASSESSOR_ROLES.map((r, i) => {
-              const a = assessors.find((x) => x.assessor_role === r)
-              return (
-                <tr key={r} className="border-b border-gray-200">
-                  <td className="py-4 text-center">{i + 1}</td>
-                  <td className="py-4">{a?.display_name || '—'}</td>
-                  <td className="py-4 text-sm text-gray-600">{SP_ROLE_LABELS[r]}</td>
-                  <td className="py-4 text-center">
-                    {sig(r) ? <img src={sig(r)!} alt={SP_ROLE_SHORT[r]} className="max-h-14 max-w-28 object-contain mx-auto" /> : <span className="text-gray-300">—</span>}
-                  </td>
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
-      </div>
+      <style jsx global>{`
+        @media print {
+          @page { size: A4 portrait; margin: 12mm 14mm 14mm 14mm; }
+          html, body { margin: 0 !important; padding: 0 !important; background: white !important; }
+          body * { visibility: hidden; }
+          [data-sp-preview-root='true'],
+          [data-sp-preview-root='true'] * { visibility: visible; }
+          [data-sp-preview-root='true'] { position: absolute !important; inset: 0 !important; width: 100% !important; max-width: none !important; margin: 0 !important; padding: 0 !important; }
+          [data-sp-preview-root='true'] .print-area { width: 100% !important; max-width: none !important; margin: 0 !important; padding: 0 !important; overflow: visible !important; }
+          [data-sp-preview-root='true'] .sp-preview-section { width: 100% !important; margin: 0 !important; padding: 0 !important; }
+          [data-sp-preview-root='true'] .sp-preview-section + .sp-preview-section { break-before: page !important; page-break-before: always !important; }
+          [data-sp-preview-root='true'] [data-preview-doc-header='true'],
+          [data-sp-preview-root='true'] .avoid-break { break-inside: avoid !important; page-break-inside: avoid !important; }
+          [data-sp-preview-root='true'] .signature-block { break-inside: avoid !important; page-break-inside: avoid !important; width: 74mm !important; max-width: 74mm !important; margin-left: auto !important; margin-right: 0 !important; }
+          [data-sp-preview-root='true'] table { width: 100% !important; max-width: 100% !important; border-collapse: collapse !important; }
+          [data-sp-preview-root='true'] thead { display: table-header-group !important; }
+          [data-sp-preview-root='true'] tr { break-inside: avoid !important; page-break-inside: avoid !important; }
+          [data-sp-preview-root='true'] img { print-color-adjust: exact; -webkit-print-color-adjust: exact; max-width: 100% !important; }
+        }
+      `}</style>
 
-      <div>
-        <h3 className="font-bold text-base mb-2">Ringkasan Nilai per Parameter</h3>
-        <table className="w-full text-sm template-table">
-          <thead><tr className="border-b border-black">
-            <th className="w-8">No</th><th className="text-left">Parameter</th><th className="w-14">Bobot</th>
-            {SP_ASSESSOR_ROLES.map((r) => <th key={r} className="w-20">{SP_ROLE_SHORT[r].split(' ')[0]}</th>)}
-          </tr></thead>
-          <tbody>
-            {criteria.map((c, i) => (
-              <tr key={c.id} className="border-b border-gray-200">
-                <td className="text-center">{i + 1}.</td>
-                <td>{c.name}</td>
-                <td className="text-center font-sans">{(Number(c.internal_weight) * 100).toFixed(0)}%</td>
-                {SP_ASSESSOR_ROLES.map((r) => <td key={r} className="text-center font-sans">{roleRaw(r) !== null ? roleRaw(r)!.toFixed(2) : ''}</td>)}
-              </tr>
-            ))}
-          </tbody>
-          <tfoot>
-            <tr className="font-bold border-t-2 border-black">
-              <td colSpan={2} className="text-right">Rerata Nilai Hasil Seminar</td>
-              <td></td>
-              <td colSpan={3} className="text-center">{rerata !== null ? rerata.toFixed(2) : '—'}</td>
-            </tr>
-          </tfoot>
-        </table>
-        <p className="text-sm mt-3">
-          Hasil seminar proposal:{' '}
-          <span className="font-bold">{grade ? `${grade.huruf} (${grade.skala})` : rerata !== null ? 'TIDAK LULUS' : '—'}</span>
-        </p>
-      </div>
+      <div className="print-area space-y-10 bg-white p-8 md:p-12 print:space-y-0 print:p-0"
+        style={{ fontFamily: "'Times New Roman', Georgia, serif" }}>
 
-      {/* ── Lembar penilaian ketiga penguji (ikut tercetak) ─────────────── */}
-      {SP_ASSESSOR_ROLES.map((role) => {
-        const a = assessors.find((x) => x.assessor_role === role)
-        const m = ratingsFor(role)
-        return (
-          <div key={role} className="break-before-page">
-            <DocHeader title={`Formulir Penilaian — ${SP_ROLE_LABELS[role]}`} semester={group.semester} academicYear={group.academic_year} />
-            <table className="w-full text-sm">
+        {/* ===== BERITA ACARA (halaman 1) ===== */}
+        <section className="sp-preview-section">
+          <DocHeader title="Laporan Seminar Proposal Skripsi" semester={group.semester} academicYear={group.academic_year} />
+          <div className="text-sm leading-relaxed">
+            <p>
+              Pada hari <span className="border-b border-gray-500 px-6 inline-block min-w-[10rem]">{group.hari_tanggal || '............'}</span> telah dilaksanakan seminar proposal skripsi.
+            </p>
+            <table className="mt-4 w-full text-sm">
               <tbody>
-                <tr><td className="w-40 py-1">Nama Mahasiswa</td><td className="w-4 py-1">:</td><td className="py-1">{group.name}</td></tr>
-                <tr><td className="py-1">NIM</td><td className="py-1">:</td><td className="py-1 font-sans">{member?.nim || '—'}</td></tr>
+                <tr><td className="w-40 py-1">Nama Mahasiswa</td><td className="w-4 py-1">:</td><td className="py-1 font-semibold">{group.name}</td></tr>
+                <tr><td className="py-1">NIM</td><td className="py-1">:</td><td className="py-1 font-sans font-semibold">{member?.nim || '—'}</td></tr>
+                <tr><td className="py-1">Peminatan</td><td className="py-1">:</td><td className="py-1">{group.field_location || '—'}</td></tr>
                 <tr><td className="py-1 align-top">Judul Skripsi</td><td className="py-1 align-top">:</td><td className="py-1">{group.title || '—'}</td></tr>
-                <tr><td className="py-1">Tempat / Hari-Tanggal</td><td className="py-1">:</td>
-                  <td className="py-1">{group.venue || '—'} / {group.hari_tanggal || '—'}</td></tr>
-                <tr><td className="py-1">Nama Penguji</td><td className="py-1">:</td><td className="py-1 font-semibold">{a?.display_name || '—'}</td></tr>
+                <tr><td className="py-1">Waktu</td><td className="py-1">:</td><td className="py-1">{group.start_time && group.end_time ? `${group.start_time} – ${group.end_time}` : '—'}</td></tr>
+                <tr><td className="py-1">Tempat</td><td className="py-1">:</td><td className="py-1">{group.venue || '—'}</td></tr>
               </tbody>
             </table>
-            <table className="w-full text-sm mt-3 template-table">
-              <thead><tr className="border-b border-black">
-                <th className="w-8">No</th><th className="text-left">Parameter Penilaian</th>
-                <th className="w-14">Bobot</th><th className="w-16">Skor</th><th className="w-20">Poin</th>
+            <p className="mt-4">
+              Dinyatakan yang bersangkutan:{' '}
+              <span className="font-bold">{group.decision === 'Lulus' ? 'LULUS' : group.decision === 'Tidak Lulus' ? 'TIDAK LULUS' : '........................'}</span>
+            </p>
+            {group.report_notes && <p className="mt-2 text-gray-700">Catatan: {group.report_notes}</p>}
+            <p className="mt-4 text-justify">
+              Demikian laporan seminar proposal ini dibuat sebagai laporan selama seminar berlangsung
+              untuk diketahui dan dipergunakan sebagaimana mestinya.
+            </p>
+          </div>
+
+          <div className="mt-4 avoid-break">
+            <h3 className="font-bold text-base mb-2">TIM PENGUJI</h3>
+            <table className="w-full text-sm border border-gray-300">
+              <thead><tr className="bg-gray-100 border-b border-gray-300">
+                <th className="w-10 py-2">No</th><th className="py-2 text-left">Dosen Penguji</th>
+                <th className="w-56 py-2 text-left">Jabatan</th><th className="w-40 py-2">Tanda Tangan</th>
               </tr></thead>
               <tbody>
-                {criteria.map((c, i) => {
-                  const r = m[c.id]
+                {SP_ASSESSOR_ROLES.map((r, i) => {
+                  const a = assessors.find((x) => x.assessor_role === r)
                   return (
-                    <tr key={c.id} className="border-b border-gray-200">
-                      <td className="text-center align-top">{i + 1}.</td>
-                      <td className="align-top">
-                        <div className="font-semibold leading-tight">{c.name}</div>
-                        {c.evidence_guidance && <div className="text-[9px] italic leading-snug text-gray-600 mt-0.5">{c.evidence_guidance}</div>}
+                    <tr key={r} className="border-b border-gray-200">
+                      <td className="py-4 text-center">{i + 1}</td>
+                      <td className="py-4">{a?.display_name || '—'}</td>
+                      <td className="py-4 text-sm text-gray-600">{SP_ROLE_LABELS[r]}</td>
+                      <td className="py-4 text-center">
+                        {sig(r) ? <img src={sig(r)!} alt={SP_ROLE_SHORT[r]} className="max-h-14 max-w-28 object-contain mx-auto" /> : <span className="text-gray-300">—</span>}
                       </td>
-                      <td className="text-center align-top font-sans">{(Number(c.internal_weight) * 100).toFixed(0)}%</td>
-                      <td className="text-center align-top font-sans">{r?.level ?? '—'}</td>
-                      <td className="text-center align-top font-semibold font-sans">{r?.points != null ? Number(r.points).toFixed(2) : ''}</td>
                     </tr>
                   )
                 })}
               </tbody>
-              <tfoot>
-                <tr className="font-bold border-t-2 border-black">
-                  <td colSpan={4} className="text-right">NILAI AKHIR</td>
-                  <td className="text-center">{roleRaw(role) !== null ? roleRaw(role)!.toFixed(2) : '—'}</td>
-                </tr>
-              </tfoot>
             </table>
-            <p className="text-[11px] text-gray-500 font-sans mt-1">Nilai Akhir = (Total Skor Nilai × Bobot) / 400 × 100</p>
-            <div className="flex justify-end mt-6 text-center text-sm">
-              <div>
-                <p>{group.tanggal_ba || '.............. 2026'}</p>
-                <p className="mt-1 font-semibold">{SP_ROLE_LABELS[role]}</p>
-                {sig(role)
-                  ? <img src={sig(role)!} alt={SP_ROLE_SHORT[role]} className="max-h-16 object-contain mx-auto mt-1" />
-                  : <div className="w-48 border-b border-gray-500 mt-8 mx-auto" />}
-                <p className="mt-1 font-semibold">{a?.display_name || '..........................'}</p>
-              </div>
+          </div>
+
+          <div className="mt-10 flex justify-end text-center text-sm signature-block">
+            <div>
+              <p>Jakarta, {group.tanggal_ba || '.............. 2026'}</p>
+              <p className="mt-1">Koordinator Program Studi Kesehatan Masyarakat</p>
+              {group.koordinator_signature_path
+                ? <img src={group.koordinator_signature_path} alt="TTD Koordinator" className="max-h-16 object-contain mx-auto mt-1" />
+                : <div className="w-48 border-b border-gray-500 mt-8 mx-auto" />}
+              <p className="mt-1 font-semibold">{group.koordinator || 'Dr. Suparni, S.T., M.K.K.K.'}</p>
+              <p className="text-xs font-sans">NIP. {group.nip_koordinator || '197705072024212008'}</p>
             </div>
           </div>
-        )
-      })}
+        </section>
 
-      {/* ── Tangkapan layar (bukti seminar online) ───────────────────────── */}
-      <div className="break-before-page">
-        <DocHeader title="Tangkapan Layar Seminar Proposal Skripsi" semester={group.semester} academicYear={group.academic_year} />
-        {!screenshots.overall && screenshots.hadir.every((r) => !r.bukti) ? (
-          <p className="text-sm text-gray-500 italic">
-            Belum ada bukti tangkapan layar yang diunggah.
-          </p>
-        ) : (
-          <>
-            <h3 className="font-bold text-base mb-2">Daftar Hadir (Screencapture)</h3>
-            <table className="w-full text-sm border border-gray-300">
-              <thead><tr className="bg-gray-100 border-b border-gray-300">
-                <th className="w-10 py-2">No</th>
-                <th className="py-2 text-left">Nama</th>
-                <th className="py-2 text-left">Jabatan</th>
-                <th className="w-52 py-2">Bukti Wajah</th>
-              </tr></thead>
-              <tbody>
-                {screenshots.hadir.map((r, i) => (
-                  <tr key={i} className="border-b border-gray-200 align-middle">
-                    <td className="py-3 text-center">{i + 1}.</td>
-                    <td className="py-3">{r.nama || '—'}</td>
-                    <td className="py-3 text-sm text-gray-600">{r.jabatan}</td>
-                    <td className="py-3 text-center">
-                      {r.bukti
-                        ? <img src={r.bukti} alt={`Bukti ${r.jabatan}`} className="max-h-24 max-w-48 object-contain mx-auto border rounded" />
-                        : <span className="text-gray-300 text-xs">—</span>}
-                    </td>
+        {/* ===== LEMBAR PENILAIAN KETIGA PENGUJI (masing-masing satu halaman) ===== */}
+        {SP_ASSESSOR_ROLES.map((role) => {
+          const a = assessors.find((x) => x.assessor_role === role)
+          const m = ratingsFor(role)
+          return (
+            <section key={role} className="sp-preview-section">
+              <DocHeader title={`Formulir Penilaian — ${SP_ROLE_LABELS[role]}`} semester={group.semester} academicYear={group.academic_year} />
+              <table className="w-full text-sm">
+                <tbody>
+                  <tr><td className="w-40 py-0.5">Nama Mahasiswa</td><td className="w-4 py-0.5">:</td><td className="py-0.5">{group.name}</td></tr>
+                  <tr><td className="py-0.5">NIM</td><td className="py-0.5">:</td><td className="py-0.5 font-sans">{member?.nim || '—'}</td></tr>
+                  <tr><td className="py-0.5 align-top">Judul Skripsi</td><td className="py-0.5 align-top">:</td><td className="py-0.5">{group.title || '—'}</td></tr>
+                  <tr><td className="py-0.5">Tempat / Hari-Tanggal</td><td className="py-0.5">:</td>
+                    <td className="py-0.5">{group.venue || '—'} / {group.hari_tanggal || '—'}</td></tr>
+                  <tr><td className="py-0.5">Nama Penguji</td><td className="py-0.5">:</td><td className="py-0.5 font-semibold">{a?.display_name || '—'}</td></tr>
+                </tbody>
+              </table>
+              <table className="w-full text-sm mt-2 template-table">
+                <thead><tr className="border-b border-black">
+                  <th className="w-8">No</th><th className="text-left">Parameter Penilaian</th>
+                  <th className="w-14">Bobot</th><th className="w-16">Skor</th><th className="w-20">Poin</th>
+                </tr></thead>
+                <tbody>
+                  {criteria.map((c, i) => {
+                    const r = m[c.id]
+                    return (
+                      <tr key={c.id} className="border-b border-gray-200">
+                        <td className="text-center align-top">{i + 1}.</td>
+                        <td className="align-top">
+                          <div className="font-semibold leading-tight">{c.name}</div>
+                          {c.evidence_guidance && <div className="text-[9px] italic leading-snug text-gray-600 mt-0.5">{c.evidence_guidance}</div>}
+                        </td>
+                        <td className="text-center align-top font-sans">{(Number(c.internal_weight) * 100).toFixed(0)}%</td>
+                        <td className="text-center align-top font-sans">{r?.level ?? '—'}</td>
+                        <td className="text-center align-top font-semibold font-sans">{r?.points != null ? Number(r.points).toFixed(2) : ''}</td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+                <tfoot>
+                  <tr className="font-bold border-t-2 border-black">
+                    <td colSpan={4} className="text-right">NILAI AKHIR</td>
+                    <td className="text-center">{roleRaw(role) !== null ? roleRaw(role)!.toFixed(2) : '—'}</td>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-            <h3 className="font-bold text-base mt-6 mb-2">Bukti Tangkapan Layar Secara Keseluruhan</h3>
-            {screenshots.overall
-              ? <img src={screenshots.overall} alt="Tangkapan layar keseluruhan"
-                  className="max-w-full border rounded" />
-              : <p className="text-gray-300 text-sm">—</p>}
-          </>
-        )}
-      </div>
+                </tfoot>
+              </table>
+              <p className="text-[11px] text-gray-500 font-sans mt-1">Nilai Akhir = (Total Skor Nilai × Bobot) / 400 × 100</p>
+              <div className="mt-4 flex justify-end text-center text-sm signature-block">
+                <div>
+                  <p>{group.tanggal_ba || '.............. 2026'}</p>
+                  <p className="mt-1 font-semibold">{SP_ROLE_LABELS[role]}</p>
+                  {sig(role)
+                    ? <img src={sig(role)!} alt={SP_ROLE_SHORT[role]} className="max-h-14 object-contain mx-auto mt-1" />
+                    : <div className="w-48 border-b border-gray-500 mt-6 mx-auto" />}
+                  <p className="mt-1 font-semibold">{a?.display_name || '..........................'}</p>
+                </div>
+              </div>
+            </section>
+          )
+        })}
 
-      <div className="flex justify-between items-end pt-6">
-        <div />
-        <div className="text-center text-sm">
-          <p>Jakarta, {group.tanggal_ba || '.............. 2026'}</p>
-          <p className="mt-1">Koordinator Program Studi Kesehatan Masyarakat</p>
-          <p className="mt-1 font-semibold">{group.koordinator || 'Dr. Suparni, S.T., M.K.K.K.'}</p>
-          <p className="text-xs font-sans">NIP. {group.nip_koordinator || '197705072024212008'}</p>
-          {group.koordinator_signature_path
-            ? <img src={group.koordinator_signature_path} alt="TTD Koordinator" className="max-h-16 object-contain mx-auto mt-1" />
-            : <div className="w-48 border-b border-gray-500 mt-8 mx-auto" />}
-        </div>
+        {/* ===== REKAPITULASI ===== */}
+        <section className="sp-preview-section">
+          <DocHeader title="Rekapitulasi Nilai Seminar Proposal Skripsi" semester={group.semester} academicYear={group.academic_year} />
+          <table className="w-full text-sm template-table">
+            <thead><tr className="border-b border-black">
+              <th className="w-8">No</th><th className="text-left">Parameter</th><th className="w-14">Bobot</th>
+              {SP_ASSESSOR_ROLES.map((r) => <th key={r} className="w-20">{SP_ROLE_SHORT[r].split(' ')[0]}</th>)}
+            </tr></thead>
+            <tbody>
+              {criteria.map((c, i) => (
+                <tr key={c.id} className="border-b border-gray-200">
+                  <td className="text-center">{i + 1}.</td>
+                  <td>{c.name}</td>
+                  <td className="text-center font-sans">{(Number(c.internal_weight) * 100).toFixed(0)}%</td>
+                  {SP_ASSESSOR_ROLES.map((r) => <td key={r} className="text-center font-sans">{roleRaw(r) !== null ? roleRaw(r)!.toFixed(2) : ''}</td>)}
+                </tr>
+              ))}
+            </tbody>
+            <tfoot>
+              <tr className="font-bold border-t-2 border-black">
+                <td colSpan={2} className="text-right">Rerata Nilai Hasil Seminar</td>
+                <td></td>
+                <td colSpan={3} className="text-center">{rerata !== null ? rerata.toFixed(2) : '—'}</td>
+              </tr>
+            </tfoot>
+          </table>
+          <p className="text-sm mt-3">
+            Hasil seminar proposal:{' '}
+            <span className="font-bold">{grade ? `${grade.huruf} (${grade.skala})` : rerata !== null ? 'TIDAK LULUS' : '—'}</span>
+          </p>
+        </section>
+
+        {/* ===== TANGKAPAN LAYAR — hanya tampil bila diisi (seminar daring) ===== */}
+        {hasShot ? (
+          <section className="sp-preview-section">
+            <DocHeader title="Tangkapan Layar Seminar Proposal Skripsi" semester={group.semester} academicYear={group.academic_year} />
+            {shotRows.length > 0 && (
+              <>
+                <h3 className="font-bold text-base mb-2">Daftar Hadir (Screencapture)</h3>
+                <table className="w-full text-sm border border-gray-300">
+                  <thead><tr className="bg-gray-100 border-b border-gray-300">
+                    <th className="w-10 py-2">No</th>
+                    <th className="py-2 text-left">Nama</th>
+                    <th className="py-2 text-left">Jabatan</th>
+                    <th className="w-52 py-2">Bukti Wajah</th>
+                  </tr></thead>
+                  <tbody>
+                    {shotRows.map((r, i) => (
+                      <tr key={i} className="border-b border-gray-200 align-middle">
+                        <td className="py-3 text-center">{i + 1}.</td>
+                        <td className="py-3">{r.nama || '—'}</td>
+                        <td className="py-3 text-sm text-gray-600">{r.jabatan}</td>
+                        <td className="py-3 text-center">
+                          <img src={r.bukti!} alt={`Bukti ${r.jabatan}`} className="max-h-24 max-w-48 object-contain mx-auto border rounded" />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </>
+            )}
+            {screenshots.overall && (
+              <>
+                <h3 className="font-bold text-base mt-6 mb-2">Bukti Tangkapan Layar Secara Keseluruhan</h3>
+                <img src={screenshots.overall} alt="Tangkapan layar keseluruhan" className="max-w-full border rounded" />
+              </>
+            )}
+          </section>
+        ) : null}
       </div>
     </div>
   )
@@ -1055,7 +1089,7 @@ function ScreenshotTab({
 // ─── shared header ─────────────────────────────────────────────────────────
 function DocHeader({ title, semester, academicYear }: { title: string; semester?: string; academicYear?: string }) {
   return (
-    <div className="text-center border-b-2 border-black pb-3 mb-4">
+    <div data-preview-doc-header="true" className="text-center border-b-2 border-black pb-3 mb-4">
       <img src="/kop-surat-resize.png" alt="KOP UPN" className="mx-auto mb-2 print:block"
         style={{ maxWidth: '100%', maxHeight: '80px', width: 'auto', height: 'auto' }} />
       <h2 className="font-bold text-base uppercase leading-tight">{title}</h2>

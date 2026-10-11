@@ -73,8 +73,9 @@ export type SpTab =
   | 'preview';
 
 // ── Tangkapan Layar (online seminar evidence) ──────────────────────────────
-// Stored as JSON in pbl_groups.minutes, which the Seminar Proposal module
-// does not otherwise use (no DDL available to add a dedicated column).
+// Stored as JSON in pbl_groups.evidence (jsonb) under the "screenshot" key:
+//   { "screenshot": { "hadir": [...], "overall": "https://..." } }
+// Accepts either the raw object or a JSON string.
 export interface SpScreenshotRow {
   nama: string;
   jabatan: string;
@@ -104,10 +105,10 @@ export function emptyScreenshots(mahasiswa = ''): SpScreenshots {
   };
 }
 
-export function parseScreenshots(raw: string | null | undefined, mahasiswa = ''): SpScreenshots {
+export function parseScreenshots(raw: unknown, mahasiswa = ''): SpScreenshots {
   if (!raw) return emptyScreenshots(mahasiswa);
   try {
-    const parsed = JSON.parse(raw) as Partial<SpScreenshots>;
+    const parsed = (typeof raw === 'string' ? JSON.parse(raw) : raw) as Partial<SpScreenshots>;
     const base = emptyScreenshots(mahasiswa);
     return {
       hadir: Array.isArray(parsed.hadir) && parsed.hadir.length
