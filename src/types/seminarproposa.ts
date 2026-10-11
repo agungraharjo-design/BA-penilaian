@@ -69,7 +69,60 @@ export type SpTab =
   | 'penguji_2'
   | 'pembimbing_1'
   | 'rekap'
+  | 'screenshot'
   | 'preview';
+
+// ── Tangkapan Layar (online seminar evidence) ──────────────────────────────
+// Stored as JSON in pbl_groups.minutes, which the Seminar Proposal module
+// does not otherwise use (no DDL available to add a dedicated column).
+export interface SpScreenshotRow {
+  nama: string;
+  jabatan: string;
+  bukti: string | null;
+}
+
+export interface SpScreenshots {
+  hadir: SpScreenshotRow[];
+  overall: string | null;
+}
+
+export const SP_SCREENSHOT_SLOTS = [
+  'ketua', 'anggota_2', 'anggota_3', 'mahasiswa', 'overall',
+] as const;
+
+export type SpScreenshotSlot = (typeof SP_SCREENSHOT_SLOTS)[number];
+
+export function emptyScreenshots(mahasiswa = ''): SpScreenshots {
+  return {
+    hadir: [
+      { nama: '', jabatan: 'PENGUJI I/Ketua Penguji', bukti: null },
+      { nama: '', jabatan: 'PENGUJI II/Anggota Penguji', bukti: null },
+      { nama: '', jabatan: 'PENGUJI III/Anggota Penguji', bukti: null },
+      { nama: mahasiswa, jabatan: 'Mahasiswa', bukti: null },
+    ],
+    overall: null,
+  };
+}
+
+export function parseScreenshots(raw: string | null | undefined, mahasiswa = ''): SpScreenshots {
+  if (!raw) return emptyScreenshots(mahasiswa);
+  try {
+    const parsed = JSON.parse(raw) as Partial<SpScreenshots>;
+    const base = emptyScreenshots(mahasiswa);
+    return {
+      hadir: Array.isArray(parsed.hadir) && parsed.hadir.length
+        ? parsed.hadir.map((r, i) => ({
+            nama: r?.nama ?? base.hadir[i]?.nama ?? '',
+            jabatan: r?.jabatan ?? base.hadir[i]?.jabatan ?? '',
+            bukti: r?.bukti ?? null,
+          }))
+        : base.hadir,
+      overall: parsed.overall ?? null,
+    };
+  } catch {
+    return emptyScreenshots(mahasiswa);
+  }
+}
 
 // ── Assessment component ───────────────────────────────────────────────────
 export interface SpAssessmentComponent {

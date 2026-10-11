@@ -6,14 +6,16 @@ import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/app/components/AuthProvider'
 import { S2SignatureUpload } from '@/app/components/common/S2SignatureUpload'
+import { SpImageUpload } from '@/app/components/common/SpImageUpload'
 import { getSpBlueprint } from '@/lib/seminarproposal/repositories'
 import { calcCriterionPoints, calcRawFromCriterionPoints, calcRerata } from '@/lib/seminarproposal/calculations'
 import {
   SP_COMPONENT_CODE, SP_BLUEPRINT_VERSION,
   SP_ASSESSOR_ROLES, SP_ROLE_LABELS, SP_ROLE_SHORT, SP_STATUS_LABELS, spGrade,
+  parseScreenshots, emptyScreenshots,
 } from '@/types/seminarproposa'
 import type {
-  SpTab, SpAssessorRole, SpBlueprint, SpRubricCriterion,
+  SpTab, SpAssessorRole, SpBlueprint, SpRubricCriterion, SpScreenshots,
   PblGroup, PblGroupMember, PblAssessor, PblAssessmentInstance,
   PblAssessmentScore, PblRubricRating,
 } from '@/types/seminarproposa'
@@ -46,6 +48,7 @@ export default function SpSessionPage() {
   const [activeTab, setActiveTab] = useState<SpTab>('berita-acara')
   const [dialog, setDialog] = useState<{ role: SpAssessorRole; label: string } | null>(null)
   const [sync, setSync] = useState<'live' | 'saving' | 'offline'>('live')
+  const [screenshots, setScreenshots] = useState<SpScreenshots>(() => emptyScreenshots())
 
   const canEdit = !!isDosen || !!isSuperadmin
   const groupRef = useRef<PblGroup | null>(null)
@@ -70,6 +73,7 @@ export default function SpSessionPage() {
     if (g.error || !g.data) { setLoading(false); return }
     const gr = g.data as PblGroup
     setGroup(gr); groupRef.current = gr
+    setScreenshots(parseScreenshots((gr as unknown as { evidence?: unknown }).evidence as string, gr.name || ''))
     setMembers((m.data as PblGroupMember[]) || [])
     setAssessors((a.data as PblAssessor[]) || [])
     const inst = (i.data as PblAssessmentInstance[]) || []
@@ -111,6 +115,26 @@ export default function SpSessionPage() {
     if (timer.current) clearTimeout(timer.current)
     timer.current = setTimeout(() => { void saveNow() }, 800)
   }, [saveNow])
+
+  // Tangkapan layar lives in pbl_groups.evidence (jsonb). Kept out of the
+  // autosave path above because it is written as a whole object on upload.
+  const updateScreenshots = useCallback((next: SpScreenshots) => {
+    setScreenshots(next)
+    void (async () => {
+      setSync('saving')
+      const { error } = await supabase
+        .from('pbl_groups')
+        .update({ evidence: { screenshot: next }, updated_at: new Date().toISOString() })
+        .eq('id', groupId)
+      if (error) {
+        console.error('Gagal menyimpan tangkapan layar:', error)
+        setSync('offline')
+        return
+      }
+      setSync('live')
+    })()
+  }, [groupId])
+
 
   async function saveAssessor(role: SpAssessorRole, display_name: string, nip: string) {
     const existing = assessors.find((a) => a.assessor_role === role)
@@ -162,6 +186,19 @@ export default function SpSessionPage() {
 
   const roleRaw = useCallback((role: SpAssessorRole): number | null =>
     rawOf(scoreFor(instanceFor(role)?.id ?? null)?.id ?? null), [instanceFor, scoreFor, rawOf])
+
+  // Per-examiner rating map, so Preview can render the three full forms.
+  const ratingsFor = useCallback((role: SpAssessorRole) => {
+    const inst = instanceFor(role)
+    const sc = inst ? scoreFor(inst.id) : null
+    if (!sc) return {}
+    const map: Record<string, { level: number | null; points: number | null }> = {}
+    ratings.filter((r) => r.assessment_score_id === sc.id).forEach((r) => {
+      map[r.criterion_id] = { level: r.level_value, points: r.criterion_points }
+    })
+    return map
+  }, [instanceFor, scoreFor, ratings])
+
 
   async function saveRubric(role: SpAssessorRole, drafts: { criterionId: string; level: number | null; note: string }[]) {
     setSync('saving')
@@ -234,6 +271,7 @@ export default function SpSessionPage() {
     { key: 'berita-acara', label: 'Berita Acara' },
     ...SP_ASSESSOR_ROLES.map((r) => ({ key: r as SpTab, label: SP_ROLE_SHORT[r] })),
     { key: 'rekap', label: 'Rekap' },
+    { key: 'screenshot', label: 'Tangkapan Layar' },
     { key: 'preview', label: 'Preview & PDF' },
   ]
 
@@ -280,9 +318,14 @@ export default function SpSessionPage() {
           <RekapTab group={group} member={member} assessors={assessors}
             roleRaw={roleRaw} rerata={rerata} grade={grade} />
         )}
+        {activeTab === 'screenshot' && (
+          <ScreenshotTab group={group} member={member} assessors={assessors}
+            screenshots={screenshots} isDosen={canEdit} onChange={updateScreenshots} />
+        )}
         {activeTab === 'preview' && (
           <PreviewTab group={group} member={member} assessors={assessors}
-            criteria={criteria} roleRaw={roleRaw} rerata={rerata} grade={grade} />
+            criteria={criteria} roleRaw={roleRaw} ratingsFor={ratingsFor}
+            rerata={rerata} grade={grade} screenshots={screenshots} />
         )}
       </div>
 
@@ -586,6 +629,29 @@ function RubricDialog({
                     )
                   })}
                 </div>
+                <div className="mt-2 flex items-center gap-2 flex-wrap">
+                  <label className="text-xs text-gray-600 font-sans whitespace-nowrap">Skor manual (0–4, 2 desimal):</label>
+                  <input
+                    type="number"
+                    min={0}
+                    max={4}
+                    step={0.01}
+                    disabled={!canEdit}
+                    value={d.level ?? ''}
+                    placeholder="3.75"
+                    onChange={(e) => {
+                      const raw = e.target.value
+                      if (raw === '') { setLevel(c.id, null); return }
+                      const n = Number(raw)
+                      if (Number.isNaN(n)) return
+                      setLevel(c.id, Math.min(4, Math.max(0, Math.round(n * 100) / 100)))
+                    }}
+                    className="w-28 border border-gray-300 rounded px-2 py-1.5 text-sm font-sans disabled:bg-gray-100"
+                  />
+                  <span className="text-[11px] text-gray-500 font-sans">
+                    {d.level !== null ? `= ${calcCriterionPoints(d.level, Number(c.internal_weight)).toFixed(2)} poin` : 'belum diisi'}
+                  </span>
+                </div>
                 <input className="mt-2 w-full border border-gray-200 rounded px-2 py-1.5 text-xs"
                   placeholder="Catatan bukti (opsional)" value={d.note} disabled={!canEdit}
                   onChange={(e) => setNote(c.id, e.target.value)} />
@@ -682,15 +748,24 @@ function RekapTab({
 
 // ─── PREVIEW ───────────────────────────────────────────────────────────────
 function PreviewTab({
-  group, member, assessors, criteria, roleRaw, rerata, grade,
+  group, member, assessors, criteria, roleRaw, ratingsFor, rerata, grade, screenshots,
 }: {
   group: PblGroup; member: PblGroupMember | null; assessors: PblAssessor[]
   criteria: CriterionWithLevels[]; roleRaw: (r: SpAssessorRole) => number | null
+  ratingsFor: (r: SpAssessorRole) => Record<string, { level: number | null; points: number | null }>
   rerata: number | null; grade: { huruf: string; skala: string } | null
+  screenshots: SpScreenshots
 }) {
   const sig = (role: SpAssessorRole) => assessors.find((a) => a.assessor_role === role)?.signature_path
+  const handlePrint = () => window.print()
   return (
     <div className="space-y-8">
+      <div className="no-print flex justify-end print:hidden">
+        <button onClick={handlePrint}
+          className="bg-emerald-900 text-white px-5 py-2.5 rounded-lg hover:bg-emerald-800 font-sans text-sm font-medium shadow">
+          🖨 Cetak / Simpan PDF
+        </button>
+      </div>
       <DocHeader title="Laporan Seminar Proposal Skripsi" semester={group.semester} academicYear={group.academic_year} />
       <div className="text-sm leading-relaxed">
         <p>
@@ -769,6 +844,108 @@ function PreviewTab({
         </p>
       </div>
 
+      {/* ── Lembar penilaian ketiga penguji (ikut tercetak) ─────────────── */}
+      {SP_ASSESSOR_ROLES.map((role) => {
+        const a = assessors.find((x) => x.assessor_role === role)
+        const m = ratingsFor(role)
+        return (
+          <div key={role} className="break-before-page">
+            <DocHeader title={`Formulir Penilaian — ${SP_ROLE_LABELS[role]}`} semester={group.semester} academicYear={group.academic_year} />
+            <table className="w-full text-sm">
+              <tbody>
+                <tr><td className="w-40 py-1">Nama Mahasiswa</td><td className="w-4 py-1">:</td><td className="py-1">{group.name}</td></tr>
+                <tr><td className="py-1">NIM</td><td className="py-1">:</td><td className="py-1 font-sans">{member?.nim || '—'}</td></tr>
+                <tr><td className="py-1 align-top">Judul Skripsi</td><td className="py-1 align-top">:</td><td className="py-1">{group.title || '—'}</td></tr>
+                <tr><td className="py-1">Tempat / Hari-Tanggal</td><td className="py-1">:</td>
+                  <td className="py-1">{group.venue || '—'} / {group.hari_tanggal || '—'}</td></tr>
+                <tr><td className="py-1">Nama Penguji</td><td className="py-1">:</td><td className="py-1 font-semibold">{a?.display_name || '—'}</td></tr>
+              </tbody>
+            </table>
+            <table className="w-full text-sm mt-3 template-table">
+              <thead><tr className="border-b border-black">
+                <th className="w-8">No</th><th className="text-left">Parameter Penilaian</th>
+                <th className="w-14">Bobot</th><th className="w-16">Skor</th><th className="w-20">Poin</th>
+              </tr></thead>
+              <tbody>
+                {criteria.map((c, i) => {
+                  const r = m[c.id]
+                  return (
+                    <tr key={c.id} className="border-b border-gray-200">
+                      <td className="text-center align-top">{i + 1}.</td>
+                      <td className="align-top">
+                        <div className="font-semibold leading-tight">{c.name}</div>
+                        {c.evidence_guidance && <div className="text-[9px] italic leading-snug text-gray-600 mt-0.5">{c.evidence_guidance}</div>}
+                      </td>
+                      <td className="text-center align-top font-sans">{(Number(c.internal_weight) * 100).toFixed(0)}%</td>
+                      <td className="text-center align-top font-sans">{r?.level ?? '—'}</td>
+                      <td className="text-center align-top font-semibold font-sans">{r?.points != null ? Number(r.points).toFixed(2) : ''}</td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+              <tfoot>
+                <tr className="font-bold border-t-2 border-black">
+                  <td colSpan={4} className="text-right">NILAI AKHIR</td>
+                  <td className="text-center">{roleRaw(role) !== null ? roleRaw(role)!.toFixed(2) : '—'}</td>
+                </tr>
+              </tfoot>
+            </table>
+            <p className="text-[11px] text-gray-500 font-sans mt-1">Nilai Akhir = (Total Skor Nilai × Bobot) / 400 × 100</p>
+            <div className="flex justify-end mt-6 text-center text-sm">
+              <div>
+                <p>{group.tanggal_ba || '.............. 2026'}</p>
+                <p className="mt-1 font-semibold">{SP_ROLE_LABELS[role]}</p>
+                {sig(role)
+                  ? <img src={sig(role)!} alt={SP_ROLE_SHORT[role]} className="max-h-16 object-contain mx-auto mt-1" />
+                  : <div className="w-48 border-b border-gray-500 mt-8 mx-auto" />}
+                <p className="mt-1 font-semibold">{a?.display_name || '..........................'}</p>
+              </div>
+            </div>
+          </div>
+        )
+      })}
+
+      {/* ── Tangkapan layar (bukti seminar online) ───────────────────────── */}
+      <div className="break-before-page">
+        <DocHeader title="Tangkapan Layar Seminar Proposal Skripsi" semester={group.semester} academicYear={group.academic_year} />
+        {!screenshots.overall && screenshots.hadir.every((r) => !r.bukti) ? (
+          <p className="text-sm text-gray-500 italic">
+            Belum ada bukti tangkapan layar yang diunggah.
+          </p>
+        ) : (
+          <>
+            <h3 className="font-bold text-base mb-2">Daftar Hadir (Screencapture)</h3>
+            <table className="w-full text-sm border border-gray-300">
+              <thead><tr className="bg-gray-100 border-b border-gray-300">
+                <th className="w-10 py-2">No</th>
+                <th className="py-2 text-left">Nama</th>
+                <th className="py-2 text-left">Jabatan</th>
+                <th className="w-52 py-2">Bukti Wajah</th>
+              </tr></thead>
+              <tbody>
+                {screenshots.hadir.map((r, i) => (
+                  <tr key={i} className="border-b border-gray-200 align-middle">
+                    <td className="py-3 text-center">{i + 1}.</td>
+                    <td className="py-3">{r.nama || '—'}</td>
+                    <td className="py-3 text-sm text-gray-600">{r.jabatan}</td>
+                    <td className="py-3 text-center">
+                      {r.bukti
+                        ? <img src={r.bukti} alt={`Bukti ${r.jabatan}`} className="max-h-24 max-w-48 object-contain mx-auto border rounded" />
+                        : <span className="text-gray-300 text-xs">—</span>}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <h3 className="font-bold text-base mt-6 mb-2">Bukti Tangkapan Layar Secara Keseluruhan</h3>
+            {screenshots.overall
+              ? <img src={screenshots.overall} alt="Tangkapan layar keseluruhan"
+                  className="max-w-full border rounded" />
+              : <p className="text-gray-300 text-sm">—</p>}
+          </>
+        )}
+      </div>
+
       <div className="flex justify-between items-end pt-6">
         <div />
         <div className="text-center text-sm">
@@ -780,6 +957,96 @@ function PreviewTab({
             ? <img src={group.koordinator_signature_path} alt="TTD Koordinator" className="max-h-16 object-contain mx-auto mt-1" />
             : <div className="w-48 border-b border-gray-500 mt-8 mx-auto" />}
         </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── TANGKAPAN LAYAR ───────────────────────────────────────────────────────
+function ScreenshotTab({
+  group, member, assessors, screenshots, isDosen, onChange,
+}: {
+  group: PblGroup; member: PblGroupMember | null; assessors: PblAssessor[]
+  screenshots: SpScreenshots; isDosen: boolean
+  onChange: (s: SpScreenshots) => void
+}) {
+  const setRow = (i: number, patch: Partial<SpScreenshots['hadir'][number]>) => {
+    const hadir = screenshots.hadir.map((r, idx) => (idx === i ? { ...r, ...patch } : r))
+    onChange({ ...screenshots, hadir })
+  }
+
+  // Prefill examiner names from the Berita Acara TIM PENGUJI entries.
+  const prefill = () => {
+    const roleFor = (idx: number): SpAssessorRole | null =>
+      idx === 0 ? 'penguji_1' : idx === 1 ? 'penguji_2' : idx === 2 ? 'pembimbing_1' : null
+    const hadir = screenshots.hadir.map((r, i) => {
+      const role = roleFor(i)
+      const name = role ? assessors.find((a) => a.assessor_role === role)?.display_name : ''
+      return { ...r, nama: r.nama || name || (i === 3 ? member?.name || '' : '') }
+    })
+    onChange({ ...screenshots, hadir })
+  }
+
+  return (
+    <div className="space-y-6">
+      <DocHeader title="Tangkapan Layar (Screencapture)" semester={group.semester} academicYear={group.academic_year} />
+      <p className="text-sm text-gray-600 font-sans">
+        Diisi bila seminar dilaksanakan <strong>daring</strong>. Unggah tangkapan layar bukti kehadiran tiap peserta,
+        lalu satu gambar tangkapan layar keseluruhan. Gambar ikut tercetak pada tab <em>Preview &amp; PDF</em>.
+      </p>
+
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <h3 className="font-bold text-base">Daftar Hadir (Screencapture)</h3>
+        {isDosen && (
+          <button type="button" onClick={prefill}
+            className="text-xs font-sans text-emerald-800 border border-emerald-300 rounded px-3 py-1.5 hover:bg-emerald-50">
+            Isi nama dari TIM PENGUJI
+          </button>
+        )}
+      </div>
+
+      <table className="w-full text-sm border border-gray-300">
+        <thead><tr className="bg-gray-100 border-b border-gray-300">
+          <th className="w-10 py-2">No</th>
+          <th className="py-2 text-left">Nama</th>
+          <th className="py-2 text-left">Jabatan</th>
+          <th className="w-56 py-2">Bukti Wajah</th>
+        </tr></thead>
+        <tbody>
+          {screenshots.hadir.map((r, i) => (
+            <tr key={i} className="border-b border-gray-200 align-top">
+              <td className="py-3 text-center">{i + 1}.</td>
+              <td className="py-3">
+                <input value={r.nama} disabled={!isDosen} onChange={(e) => setRow(i, { nama: e.target.value })}
+                  placeholder={i === 3 ? (member?.name || 'Nama mahasiswa') : 'Nama dosen'}
+                  className="w-full border-b border-gray-400 bg-transparent text-sm disabled:opacity-60" />
+              </td>
+              <td className="py-3 text-sm text-gray-600">{r.jabatan}</td>
+              <td className="py-3">
+                {isDosen ? (
+                  <SpImageUpload groupCode={group.code} slot={['ketua', 'anggota_2', 'anggota_3', 'mahasiswa'][i]}
+                    label={r.jabatan} value={r.bukti} onChange={(v) => setRow(i, { bukti: v })} />
+                ) : r.bukti ? (
+                  <img src={r.bukti} alt={r.jabatan} className="max-h-20 max-w-40 object-contain border rounded mx-auto" />
+                ) : (
+                  <span className="text-[10px] text-gray-400 italic">(belum ada bukti)</span>
+                )}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      <div>
+        <h3 className="font-bold text-base mb-2">Bukti Tangkapan Layar Secara Keseluruhan</h3>
+        {isDosen ? (
+          <SpImageUpload groupCode={group.code} slot="overall" label="Tangkapan layar keseluruhan"
+            value={screenshots.overall} onChange={(v) => onChange({ ...screenshots, overall: v })} />
+        ) : screenshots.overall ? (
+          <img src={screenshots.overall} alt="Tangkapan layar keseluruhan" className="max-w-full border rounded" />
+        ) : (
+          <p className="text-gray-400 text-sm italic">Belum ada bukti</p>
+        )}
       </div>
     </div>
   )
