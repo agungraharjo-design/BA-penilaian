@@ -61,6 +61,21 @@ const LEVEL_LABELS: Record<number, string> = {
   0: 'Tidak Ada Bukti',
 };
 
+// Format a criterion weight as a percentage.
+// The internal weights always sum to exactly 1.0 per component, but rounding
+// to an integer made 8x12.5% read as 104% and 6x16.67% read as 102%.
+// Keep up to 2 decimals and drop trailing zeros instead.
+function formatWeightPercent(weight: number): string {
+  return `${Number((weight * 100).toFixed(2))}%`;
+}
+
+// Sum of criteria weights for a component, shown so the column is
+// self-evidently 100% regardless of how each row is rounded.
+function formatWeightTotal(criteria: { weight: number }[]): string {
+  const total = criteria.reduce((sum, c) => sum + Number(c.weight), 0);
+  return `${Number((total * 100).toFixed(2))}%`;
+}
+
 const PEER_REFERENCE_CRITERIA = [
   'Kedisiplinan',
   'Kontribusi',
@@ -957,9 +972,14 @@ function ComponentCard({
         <ol className="list-decimal ml-5 space-y-0.5 text-[13px]">
           {criteria.length === 0 && <li className="text-amber-600 italic text-xs">Rubrik belum dimuat dari blueprint.</li>}
           {criteria.map((c, i) => (
-            <li key={c.id || i}>{c.name} <span className="text-gray-400 text-[10px] font-sans">({(c.weight * 100).toFixed(0)}%)</span></li>
+            <li key={c.id || i}>{c.name} <span className="text-gray-400 text-[10px] font-sans">({formatWeightPercent(c.weight)})</span></li>
           ))}
         </ol>
+        {criteria.length > 0 && (
+          <p className="ml-5 mt-1 text-[11px] font-sans text-gray-500">
+            Total bobot kriteria: <span className="font-semibold text-gray-700">{formatWeightTotal(criteria)}</span>
+          </p>
+        )}
       </div>
 
       <div className="flex flex-wrap gap-2">
@@ -1051,7 +1071,7 @@ function RubricDialog({
             return (
               <div key={c.id} className="border border-gray-200 rounded-lg p-4">
                 <div className="flex items-start justify-between gap-2 flex-wrap">
-                  <p className="font-semibold text-sm">{i + 1}. {c.name} <span className="text-gray-400 text-[11px] font-sans">({(c.weight * 100).toFixed(0)}%)</span></p>
+                  <p className="font-semibold text-sm">{i + 1}. {c.name} <span className="text-gray-400 text-[11px] font-sans">({formatWeightPercent(c.weight)})</span></p>
                   <button type="button" onClick={() => setCompareAll(showAll ? null : c.id)} className="no-print text-[11px] text-blue-700 hover:underline font-sans">
                     {showAll ? 'Sembunyikan semua level' : 'Bandingkan semua level'}
                   </button>
@@ -1335,14 +1355,24 @@ function ScoreDetailDialog({
                   <tr key={c.id || i}>
                     <td className="text-center">{i + 1}.</td>
                     <td>{c.name}</td>
-                    <td className="text-center">{(c.weight * 100).toFixed(0)}%</td>
+                    <td className="text-center">{formatWeightPercent(c.weight)}</td>
                     <td className="text-center">{r?.level !== null && r?.level !== undefined ? `Level ${r.level} — ${LEVEL_LABELS[r.level]} ` : '—'}</td>
                     <td className="text-center font-semibold">{r?.points !== null && r?.points !== undefined ? r.points.toFixed(2) : ''}</td>
                   </tr>
                 );
               })}
             </tbody>
-            <tfoot><tr className="font-bold"><td colSpan={4} className="text-center">NILAI AKHIR (0–100)</td><td className="text-center">{raw !== null ? raw.toFixed(2) : 'Belum dinilai'}</td></tr></tfoot>
+            <tfoot>
+              <tr className="text-gray-600">
+                <td colSpan={2} className="text-right">Total bobot kriteria</td>
+                <td className="text-center font-semibold">{formatWeightTotal(criteria)}</td>
+                <td colSpan={2}></td>
+              </tr>
+              <tr className="font-bold">
+                <td colSpan={4} className="text-center">NILAI AKHIR (0–100)</td>
+                <td className="text-center">{raw !== null ? raw.toFixed(2) : 'Belum dinilai'}</td>
+              </tr>
+            </tfoot>
           </table>
           {criteria.some((c) => rates[c.id]?.note) && (
             <div className="mt-3 space-y-2">
@@ -1448,7 +1478,7 @@ function Pbl2Preview({
                     )}
                   </td>
                   <td className="text-center align-top">{r?.level ?? ''}</td>
-                  <td className="text-center align-top">{(c.weight * 100).toFixed(0)}%</td>
+                  <td className="text-center align-top">{formatWeightPercent(c.weight)}</td>
                   <td className="text-center align-top font-semibold">
                     {r?.points !== null && r?.points !== undefined ? r.points.toFixed(2) : ''}
                   </td>
@@ -1457,6 +1487,11 @@ function Pbl2Preview({
             })}
           </tbody>
           <tfoot className="font-bold">
+            <tr className="text-gray-600 font-normal">
+              <td colSpan={3} className="text-right">Total bobot kriteria</td>
+              <td className="text-center font-semibold">{formatWeightTotal(criteria)}</td>
+              <td></td>
+            </tr>
             <tr>
               <td colSpan={4} className="text-center">NILAI AKHIR KOMPONEN (0-100)</td>
               <td className="text-center">{raw !== null ? raw.toFixed(2) : ''}</td>
