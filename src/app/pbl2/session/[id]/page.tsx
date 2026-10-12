@@ -358,6 +358,30 @@ export default function PblSessionDetailPage() {
     return inserted as PblAssessmentInstance;
   }
 
+  // Re-fetch the shared score row + ratings for one cell from the DB so a dialog
+  // always shows the latest data — even if another dosen saved after this page
+  // loaded. Prevents "I didn't see their score, so I entered it again".
+  async function refreshCellState(code: PblComponentCode, role: string | null, memberId: string | null) {
+    let iq = supabase
+      .from('pbl_assessment_instances')
+      .select('*')
+      .eq('group_id', groupId)
+      .eq('component_code', code);
+    iq = role ? iq.eq('assessor_role', role) : iq.is('assessor_role', null);
+    const { data: inst } = await iq.maybeSingle();
+    if (!inst) return;
+    setInstances((prev) => (prev.some((i) => i.id === inst.id) ? prev : [...prev, inst as PblAssessmentInstance]));
+    let sq = supabase.from('pbl_assessment_scores').select('*').eq('instance_id', inst.id);
+    sq = memberId ? sq.eq('student_id', memberId) : sq.is('student_id', null);
+    const { data: rows } = await sq.limit(1);
+    const row = ((rows as PblAssessmentScore[]) || [])[0];
+    if (!row) return;
+    setScores((prev) => (prev.some((s) => s.id === row.id) ? prev.map((s) => (s.id === row.id ? row : s)) : [...prev, row]));
+    const { data: rts } = await supabase.from('pbl_rubric_ratings').select('*').eq('assessment_score_id', row.id);
+    const fresh = (rts as PblRubricRating[]) || [];
+    setRatings((prev) => prev.filter((r) => r.assessment_score_id !== row.id).concat(fresh));
+  }
+
   async function saveRubric(
     code: PblComponentCode,
     assessorRole: string | null,
@@ -558,16 +582,19 @@ export default function PblSessionDetailPage() {
       })
     : allTabs.filter((t) => t.key === 'berita-acara' || t.key === 'laporan-individu' || t.key === 'peer-mahasiswa' || t.key === 'rekap' || t.key === 'preview');
 
-  // Shared handlers for matrix cards
-  const openDialogFor = (code: PblComponentCode, role: string | null, memberId: string | null, targetLabel: string) => {
+  // Shared handlers for matrix cards — always refresh the cell from DB first so
+  // the dialog shows scores/notes any other dosen already entered.
+  const openDialogFor = async (code: PblComponentCode, role: string | null, memberId: string | null, targetLabel: string) => {
     setViewDetail(null);
+    await refreshCellState(code, role, memberId);
     const order = activeMembers;
     const index = memberId ? order.findIndex((m) => m.id === memberId) : -1;
     setDialog({ code, role, memberId, targetLabel, order: index >= 0 ? order : [], index: Math.max(index, 0) });
   };
 
-  const openDetailFor = (code: PblComponentCode, memberId: string | null, targetLabel: string) => {
+  const openDetailFor = async (code: PblComponentCode, memberId: string | null, targetLabel: string) => {
     setDialog(null);
+    await refreshCellState(code, null, memberId);
     setViewDetail({ code, memberId, targetLabel });
   };
 
@@ -674,9 +701,10 @@ export default function PblSessionDetailPage() {
           onSave={async (drafts) => saveRubric(dialog.code, dialog.role, dialog.memberId, drafts)}
           onClose={() => setDialog(null)}
           hasNextStudent={dialog.order.length > 1}
-          onSaveAndNext={() => {
+          onSaveAndNext={async () => {
             const nextIndex = dialog.index + 1;
             const next = dialog.order[nextIndex % dialog.order.length];
+            await refreshCellState(dialog.code, dialog.role, next.id);
             setDialog({ ...dialog, index: nextIndex % dialog.order.length, memberId: next.id, targetLabel: next.name });
           }}
         />
