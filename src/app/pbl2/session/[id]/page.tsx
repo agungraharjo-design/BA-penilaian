@@ -278,8 +278,10 @@ export default function PblSessionDetailPage() {
 
   const scoreFor = useCallback((instId: string | null, memberId: string | null): PblAssessmentScore | null => {
     if (!instId) return null;
-    return scores.find((s) => s.instance_id === instId && (s.student_id ?? null) === memberId) || null;
-  }, [scores]);
+    return scores.find((s) => s.instance_id === instId
+      && (s.student_id ?? null) === memberId
+      && (s.entered_by ?? null) === (profile?.id ?? null)) || null;
+  }, [scores, profile]);
 
   const pointsOf = useCallback((scoreId: string | null): (number | null)[] => {
     if (!scoreId) return [];
@@ -368,14 +370,26 @@ export default function PblSessionDetailPage() {
     if (!inst) { setSyncStatus('offline'); return false; }
     let scoreRow = scoreFor(inst.id, memberId);
     if (!scoreRow) {
-      const { data, error } = await supabase
-        .from('pbl_assessment_scores')
-        .insert({ instance_id: inst.id, student_id: memberId, entered_by: profile?.id, score_source: 'RUBRIC_CALCULATED' })
-        .select('*')
-        .single();
-      if (error) { setSyncStatus('offline'); return false; }
-      scoreRow = data as PblAssessmentScore;
-      setScores((prev) => [...prev, scoreRow!]);
+      // Re-fetch from DB (scoped to current user) in case the row was created
+      // after page load — e.g. another tab, or the same user in another window.
+      let rq = supabase.from('pbl_assessment_scores').select('*').eq('instance_id', inst.id);
+      rq = memberId ? rq.eq('student_id', memberId) : rq.is('student_id', null);
+      if (profile?.id) rq = rq.eq('entered_by', profile.id);
+      const { data: existingRows } = await rq.limit(1);
+      const existing = ((existingRows as PblAssessmentScore[]) || [])[0];
+      if (existing) {
+        scoreRow = existing;
+        setScores((prev) => (prev.some((s) => s.id === existing.id) ? prev : [...prev, existing]));
+      } else {
+        const { data, error } = await supabase
+          .from('pbl_assessment_scores')
+          .insert({ instance_id: inst.id, student_id: memberId, entered_by: profile?.id, score_source: 'RUBRIC_CALCULATED' })
+          .select('*')
+          .single();
+        if (error) { setSyncStatus('offline'); return false; }
+        scoreRow = data as PblAssessmentScore;
+        setScores((prev) => [...prev, scoreRow!]);
+      }
     }
     const criteria = criteriaOf(code);
     let ok = true;
@@ -394,7 +408,7 @@ export default function PblSessionDetailPage() {
         selected_descriptor_snapshot: descriptor,
       };
       if (d.level === null) {
-        // clear rating row entirely when deselected
+        // level_value is NOT NULL in DB; clear rating row entirely when deselected
         const { error } = await supabase.from('pbl_rubric_ratings').delete().eq('assessment_score_id', scoreRow.id).eq('criterion_id', d.criterionId);
         if (error) ok = false;
         continue;
@@ -610,6 +624,7 @@ export default function PblSessionDetailPage() {
             componentMeta={componentMeta} criteriaOf={criteriaOf} rubricVersion={rubricVersion}
             instances={instances} scores={scores} rawOf={rawOf}
             openDialog={openDialogFor}
+            userId={profile?.id ?? null}
           />
         )}
         {activeTab === 'peer-mahasiswa' && (
@@ -629,12 +644,14 @@ export default function PblSessionDetailPage() {
             members={members} assessors={assessors}
             instances={instances} scores={scores} ratings={ratings} peers={peers}
             componentMeta={componentMeta} criteriaOf={criteriaOf} memberSummary={memberSummary}
+            userId={profile?.id ?? null}
           />
         )}
       </div>
 
       {dialog && (
         <RubricDialog
+          key={`${dialog.code}-${dialog.role ?? 'null'}-${dialog.memberId ?? 'null'}`}
           code={dialog.code}
           componentInfo={componentMeta(dialog.code)}
           version={rubricVersion(dialog.code)}
@@ -662,7 +679,7 @@ export default function PblSessionDetailPage() {
           componentInfo={componentMeta(viewDetail.code)}
           version={rubricVersion(viewDetail.code)}
           criteria={criteriaOf(viewDetail.code)}
-          rates={ratingMap(viewDetail.memberId, viewDetail.code, instances, scores, ratings)}
+          rates={ratingMap(viewDetail.memberId, viewDetail.code, instances, scores, ratings, profile?.id ?? null)}
           onClose={() => setViewDetail(null)}
           openDialog={() => openDialogFor(viewDetail.code, null, viewDetail.memberId, viewDetail.targetLabel)}
         />
@@ -694,9 +711,12 @@ function ratingMap(
   instances: PblAssessmentInstance[],
   scores: PblAssessmentScore[],
   ratings: PblRubricRating[],
+  userId: string | null,
 ): Record<string, { level: number | null; points: number | null; note: string | null }> {
   const inst = instances.find((i) => i.component_code === code && (i.assessor_role ?? null) === null);
-  const score = inst ? scores.find((s) => s.instance_id === inst.id && (s.student_id ?? null) === memberId) || null : null;
+  const score = inst ? scores.find((s) => s.instance_id === inst.id
+    && (s.student_id ?? null) === memberId
+    && (s.entered_by ?? null) === (userId ?? null)) || null : null;
   const out: Record<string, { level: number | null; points: number | null; note: string | null }> = {};
   if (!score) return out;
   ratings.filter((r) => r.assessment_score_id === score.id).forEach((r) => {
@@ -904,7 +924,7 @@ function GroupAssessmentTab({
 
 // Individual assessments (I1, I2 per member)
 function IndividualAssessmentTab({
-  group, isDosen, members, componentMeta, criteriaOf, rubricVersion, instances, scores, rawOf, openDialog,
+  group, isDosen, members, componentMeta, criteriaOf, rubricVersion, instances, scores, rawOf, openDialog, userId,
 }: {
   group: PblGroup; isDosen: boolean; members: PblGroupMember[];
   componentMeta: (c: PblComponentCode) => { name: string; weight: number; cpmk: string; scope: string };
@@ -912,6 +932,7 @@ function IndividualAssessmentTab({
   rubricVersion: (c: PblComponentCode) => string;
   instances: PblAssessmentInstance[]; scores: PblAssessmentScore[]; rawOf: (scoreId: string | null) => number | null;
   openDialog: (code: PblComponentCode, role: string | null, memberId: string | null, targetLabel: string) => void;
+  userId: string | null;
 }) {
   if (members.length === 0) return <p className="text-amber-600 text-sm">Belum ada anggota kelompok.</p>;
   return (
@@ -922,7 +943,9 @@ function IndividualAssessmentTab({
         const criteria = criteriaOf(code);
         const targets = members.map((m) => {
           const inst = instances.find((i) => i.component_code === code && i.assessor_role === null);
-          const score = inst ? scores.find((s) => s.instance_id === inst.id && s.student_id === m.id) || null : null;
+          const score = inst ? scores.find((s) => s.instance_id === inst.id
+            && s.student_id === m.id
+            && (s.entered_by ?? null) === (userId ?? null)) || null : null;
           return { key: m.id, label: m.name.split(' ').slice(0, 2).join(' '), subtitle: m.nim, value: rawOf(score?.id ?? null) };
         });
         return (
@@ -1035,6 +1058,18 @@ function RubricDialog({
   const raw = calcComponentRawFromCriterionPoints(points);
 
   const doSave = async (next = false) => {
+    const anyLevel = criteria.some((c) => drafts[c.id]?.level !== null && drafts[c.id]?.level !== undefined);
+    const noteNoLevel = criteria.filter((c) => (drafts[c.id]?.note || '').trim() !== ''
+      && (drafts[c.id]?.level === null || drafts[c.id]?.level === undefined));
+    if (!anyLevel) {
+      alert('Pilih minimal satu level rubrik sebelum menyimpan.');
+      return;
+    }
+    if (noteNoLevel.length > 0) {
+      alert('Catatan bukti hanya tersimpan jika level dipilih. Pilih level terlebih dahulu untuk:\n- '
+        + noteNoLevel.map((c) => c.name).join('\n- '));
+      return;
+    }
     setSaving(true);
     const ok = await onSave(criteria.map((c) => ({ criterionId: c.id, level: drafts[c.id]?.level ?? null, note: drafts[c.id]?.note || '' })));
     setSaving(false);
@@ -1140,6 +1175,9 @@ function RubricDialog({
                     placeholder="Contoh: data primer/sekunder konsisten, prioritas dapat ditelusuri…"
                     className="mt-1 w-full border border-gray-300 rounded px-2 py-1 text-xs font-sans"
                   />
+                  {(d.note || '').trim() !== '' && (d.level === null || d.level === undefined) && (
+                    <span className="block mt-1 text-[11px] text-amber-700 font-sans">Pilih level agar catatan bukti ikut tersimpan.</span>
+                  )}
                 </label>
               </div>
             );
@@ -1395,13 +1433,14 @@ function ScoreDetailDialog({
 // ─── PRINT PREVIEW & PDF ────────────────────────────────────
 function Pbl2Preview({
   group, members, assessors, instances, scores, ratings, peers,
-  componentMeta, criteriaOf, memberSummary,
+  componentMeta, criteriaOf, memberSummary, userId,
 }: {
   group: PblGroup; members: PblGroupMember[]; assessors: PblAssessor[];
   instances: PblAssessmentInstance[]; scores: PblAssessmentScore[]; ratings: PblRubricRating[]; peers: PblPeerFinalScore[];
   componentMeta: (c: PblComponentCode) => { name: string; weight: number; cpmk: string; scope: string };
   criteriaOf: (c: PblComponentCode) => CriterionWithLevels[];
   memberSummary: (m: PblGroupMember) => ComponentRawScores & { cpmk1: number | null; cpmk2: number | null; finalScore: number | null; grade: string | null; complete: boolean; missing: string[] };
+  userId: string | null;
 }) {
   const handlePrint = () => window.print();
   const activeMembers = members.filter((m) => m.active);
@@ -1409,7 +1448,9 @@ function Pbl2Preview({
   const ratesFor = (code: PblComponentCode, role: string | null, memberId: string | null) => {
     const inst = instances.find((i) => i.component_code === code && (i.assessor_role ?? null) === role);
     if (!inst) return null;
-    const score = scores.find((s) => s.instance_id === inst.id && (s.student_id ?? null) === memberId);
+    const score = scores.find((s) => s.instance_id === inst.id
+      && (s.student_id ?? null) === memberId
+      && (s.entered_by ?? null) === (userId ?? null));
     if (!score) return null;
     const map: Record<string, { level: number | null; points: number | null }> = {};
     ratings.filter((r) => r.assessment_score_id === score.id).forEach((r) => {
