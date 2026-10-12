@@ -383,9 +383,25 @@ export default function PblSessionDetailPage() {
           .insert({ instance_id: inst.id, student_id: memberId, entered_by: profile?.id, score_source: 'RUBRIC_CALCULATED' })
           .select('*')
           .single();
-        if (error) { setSyncStatus('offline'); return false; }
-        scoreRow = data as PblAssessmentScore;
-        setScores((prev) => [...prev, scoreRow!]);
+        if (error) {
+          if (error.code === '23505') {
+            // Lost the race: another user inserted this row between our re-fetch and
+            // insert. The DB unique rule (PBL2-only) blocked the duplicate; re-fetch
+            // the shared row and update it instead.
+            let rq2 = supabase.from('pbl_assessment_scores').select('*').eq('instance_id', inst.id);
+            rq2 = memberId ? rq2.eq('student_id', memberId) : rq2.is('student_id', null);
+            const { data: raced } = await rq2.limit(1);
+            const row = ((raced as PblAssessmentScore[]) || [])[0];
+            if (!row) { setSyncStatus('offline'); return false; }
+            scoreRow = row;
+            setScores((prev) => (prev.some((s) => s.id === row.id) ? prev : [...prev, row]));
+          } else {
+            setSyncStatus('offline'); return false;
+          }
+        } else {
+          scoreRow = data as PblAssessmentScore;
+          setScores((prev) => [...prev, scoreRow!]);
+        }
       }
     }
     const criteria = criteriaOf(code);
