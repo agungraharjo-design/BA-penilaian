@@ -35,7 +35,10 @@ export async function POST(request: NextRequest) {
     }
 
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-    const publicUrl = `${supabaseUrl}/storage/v1/object/public/seminar-proposal/${storagePath}`
+    // ?v= cache-buster: the object path is reused on re-upload, so the CDN and
+    // browser would keep serving the previous image for up to an hour (max-age=3600)
+    // without a fresh URL.
+    const publicUrl = `${supabaseUrl}/storage/v1/object/public/seminar-proposal/${storagePath}?v=${Date.now()}`
     return NextResponse.json({ url: publicUrl })
   } catch (err) {
     console.error('SP image upload error:', err)
