@@ -30,11 +30,11 @@ begin
   end if;
 
   insert into public.pbl_assessors (group_id, assessor_role, display_name, nip, email, sequence_no)
-  values (gid, 'penguji_1', 'Chahya Kharin Herbawani, S.Keb.,Bd, M.K.M.', '', 'chahyakharin@upnvj.ac.id', 1)
+  values (gid, 'penguji_1', 'Chahya Kharin Herbawani, S.Keb.,Bd, M.K.M.', '199206302019032000', 'chahyakharin@upnvj.ac.id', 1)
   on conflict (group_id, assessor_role) do update set display_name = excluded.display_name, email = excluded.email, updated_at = now();
 
   insert into public.pbl_assessors (group_id, assessor_role, display_name, nip, email, sequence_no)
-  values (gid, 'pembimbing_1', 'Dr. Laily Hanifah, SKM., M.Kes.', '', 'laily.hanifah@upnvj.ac.id', 2)
+  values (gid, 'pembimbing_1', 'Dr. Laily Hanifah, SKM., M.Kes.', '197410202025212000', 'laily.hanifah@upnvj.ac.id', 2)
   on conflict (group_id, assessor_role) do update set display_name = excluded.display_name, email = excluded.email, updated_at = now();
 
   insert into public.pbl_group_members (group_id, nim, name, role)
@@ -76,7 +76,7 @@ begin
   on conflict (group_id, assessor_role) do update set display_name = excluded.display_name, email = excluded.email, updated_at = now();
 
   insert into public.pbl_assessors (group_id, assessor_role, display_name, nip, email, sequence_no)
-  values (gid, 'pembimbing_1', 'Cahya Arbitera, S.K.M., M.K.M.', '', 'cahyaarbitera@upnvj.ac.id', 2)
+  values (gid, 'pembimbing_1', 'Cahya Arbitera, S.K.M., M.K.M.', '198307172021211000', 'cahyaarbitera@upnvj.ac.id', 2)
   on conflict (group_id, assessor_role) do update set display_name = excluded.display_name, email = excluded.email, updated_at = now();
 
   insert into public.pbl_group_members (group_id, nim, name, role)
@@ -114,11 +114,11 @@ begin
   end if;
 
   insert into public.pbl_assessors (group_id, assessor_role, display_name, nip, email, sequence_no)
-  values (gid, 'penguji_1', 'Farahul Jannah, S.Kep., M.KKK.', '', 'farahuljannah@upnvj.ac.id', 1)
+  values (gid, 'penguji_1', 'Farahul Jannah, S.Kep., M.KKK.', '199309222024062000', 'farahuljannah@upnvj.ac.id', 1)
   on conflict (group_id, assessor_role) do update set display_name = excluded.display_name, email = excluded.email, updated_at = now();
 
   insert into public.pbl_assessors (group_id, assessor_role, display_name, nip, email, sequence_no)
-  values (gid, 'pembimbing_1', 'Afif Amir Amrullah, S.Kp, M.K.K.K', '', 'afif.amir@upnvj.ac.id', 2)
+  values (gid, 'pembimbing_1', 'Afif Amir Amrullah, S.Kp, M.K.K.K', '197005031996011000', 'afif.amir@upnvj.ac.id', 2)
   on conflict (group_id, assessor_role) do update set display_name = excluded.display_name, email = excluded.email, updated_at = now();
 
   insert into public.pbl_group_members (group_id, nim, name, role)
@@ -156,11 +156,11 @@ begin
   end if;
 
   insert into public.pbl_assessors (group_id, assessor_role, display_name, nip, email, sequence_no)
-  values (gid, 'penguji_1', 'Dr. Fathinah Ranggauni Hardy, SKM.M.Epid', '', 'fathinahranggaunihardy@gmail.com', 1)
+  values (gid, 'penguji_1', 'Dr. Fathinah Ranggauni Hardy, SKM.M.Epid', '199201272025212000', 'fathinahranggaunihardy@gmail.com', 1)
   on conflict (group_id, assessor_role) do update set display_name = excluded.display_name, email = excluded.email, updated_at = now();
 
   insert into public.pbl_assessors (group_id, assessor_role, display_name, nip, email, sequence_no)
-  values (gid, 'pembimbing_1', 'Prof. Dr. Acim Heri Iswanto, SKM. MARS', '', 'h.iswanto@upnvj.ac.id', 2)
+  values (gid, 'pembimbing_1', 'Prof. Dr. Acim Heri Iswanto, SKM. MARS', '197707062025211000', 'h.iswanto@upnvj.ac.id', 2)
   on conflict (group_id, assessor_role) do update set display_name = excluded.display_name, email = excluded.email, updated_at = now();
 
   insert into public.pbl_group_members (group_id, nim, name, role)
@@ -197,11 +197,11 @@ begin
   end if;
 
   insert into public.pbl_assessors (group_id, assessor_role, display_name, nip, email, sequence_no)
-  values (gid, 'penguji_1', 'Nayla Kamilia Fithri, S.KM., M.P.H.', '', 'naylakamiliafithri@upnvj.ac.id', 1)
+  values (gid, 'penguji_1', 'Nayla Kamilia Fithri, S.KM., M.P.H.', '198805152019032000', 'naylakamiliafithri@upnvj.ac.id', 1)
   on conflict (group_id, assessor_role) do update set display_name = excluded.display_name, email = excluded.email, updated_at = now();
 
   insert into public.pbl_assessors (group_id, assessor_role, display_name, nip, email, sequence_no)
-  values (gid, 'pembimbing_1', 'Dr. Fajaria Nurcandra, S.K.M., M.Epid.', '', 'fajarianurcandra@upnvj.ac.id', 2)
+  values (gid, 'pembimbing_1', 'Dr. Fajaria Nurcandra, S.K.M., M.Epid.', '199204102024062000', 'fajarianurcandra@upnvj.ac.id', 2)
   on conflict (group_id, assessor_role) do update set display_name = excluded.display_name, email = excluded.email, updated_at = now();
 
   insert into public.pbl_group_members (group_id, nim, name, role)
@@ -239,11 +239,11 @@ begin
   end if;
 
   insert into public.pbl_assessors (group_id, assessor_role, display_name, nip, email, sequence_no)
-  values (gid, 'penguji_1', 'Prof. Dr. Acim Heri Iswanto, SKM. MARS', '', 'h.iswanto@upnvj.ac.id', 1)
+  values (gid, 'penguji_1', 'Prof. Dr. Acim Heri Iswanto, SKM. MARS', '197707062025211000', 'h.iswanto@upnvj.ac.id', 1)
   on conflict (group_id, assessor_role) do update set display_name = excluded.display_name, email = excluded.email, updated_at = now();
 
   insert into public.pbl_assessors (group_id, assessor_role, display_name, nip, email, sequence_no)
-  values (gid, 'pembimbing_1', 'Dr. Fathinah Ranggauni Hardy, SKM.M.Epid', '', 'fathinahranggaunihardy@gmail.com', 2)
+  values (gid, 'pembimbing_1', 'Dr. Fathinah Ranggauni Hardy, SKM.M.Epid', '199201272025212000', 'fathinahranggaunihardy@gmail.com', 2)
   on conflict (group_id, assessor_role) do update set display_name = excluded.display_name, email = excluded.email, updated_at = now();
 
   insert into public.pbl_group_members (group_id, nim, name, role)
@@ -280,11 +280,11 @@ begin
   end if;
 
   insert into public.pbl_assessors (group_id, assessor_role, display_name, nip, email, sequence_no)
-  values (gid, 'penguji_1', 'Dr. Laily Hanifah, SKM., M.Kes.', '', 'laily.hanifah@upnvj.ac.id', 1)
+  values (gid, 'penguji_1', 'Dr. Laily Hanifah, SKM., M.Kes.', '197410202025212000', 'laily.hanifah@upnvj.ac.id', 1)
   on conflict (group_id, assessor_role) do update set display_name = excluded.display_name, email = excluded.email, updated_at = now();
 
   insert into public.pbl_assessors (group_id, assessor_role, display_name, nip, email, sequence_no)
-  values (gid, 'pembimbing_1', 'Chahya Kharin Herbawani, S.Keb.,Bd, M.K.M.', '', 'chahyakharin@upnvj.ac.id', 2)
+  values (gid, 'pembimbing_1', 'Chahya Kharin Herbawani, S.Keb.,Bd, M.K.M.', '199206302019032000', 'chahyakharin@upnvj.ac.id', 2)
   on conflict (group_id, assessor_role) do update set display_name = excluded.display_name, email = excluded.email, updated_at = now();
 
   insert into public.pbl_group_members (group_id, nim, name, role)
@@ -321,11 +321,11 @@ begin
   end if;
 
   insert into public.pbl_assessors (group_id, assessor_role, display_name, nip, email, sequence_no)
-  values (gid, 'penguji_1', 'Dr. Agus Joko Susanto, S.K.M., M.K.K.K', '', 'agusjoko@upnvj.ac.id', 1)
+  values (gid, 'penguji_1', 'Dr. Agus Joko Susanto, S.K.M., M.K.K.K', '197008251999031000', 'agusjoko@upnvj.ac.id', 1)
   on conflict (group_id, assessor_role) do update set display_name = excluded.display_name, email = excluded.email, updated_at = now();
 
   insert into public.pbl_assessors (group_id, assessor_role, display_name, nip, email, sequence_no)
-  values (gid, 'pembimbing_1', 'Dr. Ns. Dyah Utari, S.Kep.MKKK', '', 'dyahutari@upnvj.ac.id', 2)
+  values (gid, 'pembimbing_1', 'Dr. Ns. Dyah Utari, S.Kep.MKKK', '198304152009012000', 'dyahutari@upnvj.ac.id', 2)
   on conflict (group_id, assessor_role) do update set display_name = excluded.display_name, email = excluded.email, updated_at = now();
 
   insert into public.pbl_group_members (group_id, nim, name, role)
@@ -363,11 +363,11 @@ begin
   end if;
 
   insert into public.pbl_assessors (group_id, assessor_role, display_name, nip, email, sequence_no)
-  values (gid, 'penguji_1', 'Afif Amir Amrullah, S.Kp, M.K.K.K', '', 'afif.amir@upnvj.ac.id', 1)
+  values (gid, 'penguji_1', 'Afif Amir Amrullah, S.Kp, M.K.K.K', '197005031996011000', 'afif.amir@upnvj.ac.id', 1)
   on conflict (group_id, assessor_role) do update set display_name = excluded.display_name, email = excluded.email, updated_at = now();
 
   insert into public.pbl_assessors (group_id, assessor_role, display_name, nip, email, sequence_no)
-  values (gid, 'pembimbing_1', 'Farahul Jannah, S.Kep., M.KKK.', '', 'farahuljannah@upnvj.ac.id', 2)
+  values (gid, 'pembimbing_1', 'Farahul Jannah, S.Kep., M.KKK.', '199309222024062000', 'farahuljannah@upnvj.ac.id', 2)
   on conflict (group_id, assessor_role) do update set display_name = excluded.display_name, email = excluded.email, updated_at = now();
 
   insert into public.pbl_group_members (group_id, nim, name, role)
@@ -404,11 +404,11 @@ begin
   end if;
 
   insert into public.pbl_assessors (group_id, assessor_role, display_name, nip, email, sequence_no)
-  values (gid, 'penguji_1', 'Arga Buntara, S.K.M., M.P.H.', '', 'arga.buntara@upnvj.ac.id', 1)
+  values (gid, 'penguji_1', 'Arga Buntara, S.K.M., M.P.H.', '199012172018031000', 'arga.buntara@upnvj.ac.id', 1)
   on conflict (group_id, assessor_role) do update set display_name = excluded.display_name, email = excluded.email, updated_at = now();
 
   insert into public.pbl_assessors (group_id, assessor_role, display_name, nip, email, sequence_no)
-  values (gid, 'pembimbing_1', 'Muhammad Fadli Ramadhansyah, S.K.M., M.Kes.', '', 'fadliramadhansyah@upnvj.ac.id', 2)
+  values (gid, 'pembimbing_1', 'Muhammad Fadli Ramadhansyah, S.K.M., M.Kes.', '199801252024061001', 'fadliramadhansyah@upnvj.ac.id', 2)
   on conflict (group_id, assessor_role) do update set display_name = excluded.display_name, email = excluded.email, updated_at = now();
 
   insert into public.pbl_group_members (group_id, nim, name, role)
@@ -446,11 +446,11 @@ begin
   end if;
 
   insert into public.pbl_assessors (group_id, assessor_role, display_name, nip, email, sequence_no)
-  values (gid, 'penguji_1', 'Muhammad Fadli Ramadhansyah, S.K.M., M.Kes.', '', 'fadliramadhansyah@upnvj.ac.id', 1)
+  values (gid, 'penguji_1', 'Muhammad Fadli Ramadhansyah, S.K.M., M.Kes.', '199801252024061001', 'fadliramadhansyah@upnvj.ac.id', 1)
   on conflict (group_id, assessor_role) do update set display_name = excluded.display_name, email = excluded.email, updated_at = now();
 
   insert into public.pbl_assessors (group_id, assessor_role, display_name, nip, email, sequence_no)
-  values (gid, 'pembimbing_1', 'Arga Buntara, S.K.M., M.P.H.', '', 'arga.buntara@upnvj.ac.id', 2)
+  values (gid, 'pembimbing_1', 'Arga Buntara, S.K.M., M.P.H.', '199012172018031000', 'arga.buntara@upnvj.ac.id', 2)
   on conflict (group_id, assessor_role) do update set display_name = excluded.display_name, email = excluded.email, updated_at = now();
 
   insert into public.pbl_group_members (group_id, nim, name, role)
@@ -487,11 +487,11 @@ begin
   end if;
 
   insert into public.pbl_assessors (group_id, assessor_role, display_name, nip, email, sequence_no)
-  values (gid, 'penguji_1', 'Dr. Fajaria Nurcandra, S.K.M., M.Epid.', '', 'fajarianurcandra@upnvj.ac.id', 1)
+  values (gid, 'penguji_1', 'Dr. Fajaria Nurcandra, S.K.M., M.Epid.', '199204102024062000', 'fajarianurcandra@upnvj.ac.id', 1)
   on conflict (group_id, assessor_role) do update set display_name = excluded.display_name, email = excluded.email, updated_at = now();
 
   insert into public.pbl_assessors (group_id, assessor_role, display_name, nip, email, sequence_no)
-  values (gid, 'pembimbing_1', 'Nayla Kamilia Fithri, S.KM., M.P.H.', '', 'naylakamiliafithri@upnvj.ac.id', 2)
+  values (gid, 'pembimbing_1', 'Nayla Kamilia Fithri, S.KM., M.P.H.', '198805152019032000', 'naylakamiliafithri@upnvj.ac.id', 2)
   on conflict (group_id, assessor_role) do update set display_name = excluded.display_name, email = excluded.email, updated_at = now();
 
   insert into public.pbl_group_members (group_id, nim, name, role)
@@ -528,7 +528,7 @@ begin
   end if;
 
   insert into public.pbl_assessors (group_id, assessor_role, display_name, nip, email, sequence_no)
-  values (gid, 'penguji_1', 'Cahya Arbitera, S.K.M., M.K.M.', '', 'cahyaarbitera@upnvj.ac.id', 1)
+  values (gid, 'penguji_1', 'Cahya Arbitera, S.K.M., M.K.M.', '198307172021211000', 'cahyaarbitera@upnvj.ac.id', 1)
   on conflict (group_id, assessor_role) do update set display_name = excluded.display_name, email = excluded.email, updated_at = now();
 
   insert into public.pbl_assessors (group_id, assessor_role, display_name, nip, email, sequence_no)
@@ -569,11 +569,11 @@ begin
   end if;
 
   insert into public.pbl_assessors (group_id, assessor_role, display_name, nip, email, sequence_no)
-  values (gid, 'penguji_1', 'Dr. Ns. Dyah Utari, S.Kep.MKKK', '', 'dyahutari@upnvj.ac.id', 1)
+  values (gid, 'penguji_1', 'Dr. Ns. Dyah Utari, S.Kep.MKKK', '198304152009012000', 'dyahutari@upnvj.ac.id', 1)
   on conflict (group_id, assessor_role) do update set display_name = excluded.display_name, email = excluded.email, updated_at = now();
 
   insert into public.pbl_assessors (group_id, assessor_role, display_name, nip, email, sequence_no)
-  values (gid, 'pembimbing_1', 'Dr. Agus Joko Susanto, S.K.M., M.K.K.K', '', 'agusjoko@upnvj.ac.id', 2)
+  values (gid, 'pembimbing_1', 'Dr. Agus Joko Susanto, S.K.M., M.K.K.K', '197008251999031000', 'agusjoko@upnvj.ac.id', 2)
   on conflict (group_id, assessor_role) do update set display_name = excluded.display_name, email = excluded.email, updated_at = now();
 
   insert into public.pbl_group_members (group_id, nim, name, role)
