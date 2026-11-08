@@ -1311,7 +1311,7 @@ function DaftarHadirTab({
   onUpdateKehadiran: (patch: Partial<Pbl3Kehadiran>) => void;
   onSaveAssessorSignature: (id: string, path: string) => void;
 }) {
-  const rows: { role: Pbl3Role | 'koordinator'; jabatan: string; name: string; nip: string; sig: string | null; assessorId?: string }[] = [
+  const rows: { role: Pbl3Role; jabatan: string; name: string; nip: string; sig: string | null; assessorId?: string }[] = [
     {
       role: 'penguji_1', jabatan: 'Dosen Penguji',
       name: assessors.find((a) => a.assessor_role === 'penguji_1')?.display_name || '',
@@ -1326,7 +1326,6 @@ function DaftarHadirTab({
       sig: assessors.find((a) => a.assessor_role === 'pembimbing_1')?.signature_path || null,
       assessorId: assessors.find((a) => a.assessor_role === 'pembimbing_1')?.id,
     },
-    { role: 'koordinator', jabatan: 'Koordinator Program Studi', name: group.koordinator, nip: group.nip_koordinator, sig: group.koordinator_signature_path },
   ];
 
   return (
@@ -1351,18 +1350,16 @@ function DaftarHadirTab({
               <td className="py-3">{r.name || <span className="text-gray-400 italic">— isi di Berita Acara —</span>}</td>
               <td className="py-3">{r.nip || '—'}</td>
               <td className="py-3">
-                {r.role !== 'koordinator' ? (
-                  isDosen ? (
-                    <select
-                      value={kehadiran[r.role as Pbl3Role]}
-                      onChange={(e) => onUpdateKehadiran({ [r.role as Pbl3Role]: e.target.value as 'Hadir' | 'Tidak Hadir' })}
-                      className="border border-gray-300 rounded px-1 py-1 text-xs bg-white"
-                    >
-                      <option value="Hadir">Hadir</option>
-                      <option value="Tidak Hadir">Tidak Hadir</option>
-                    </select>
-                  ) : kehadiran[r.role as Pbl3Role]
-                ) : '—'}
+                {isDosen ? (
+                  <select
+                    value={kehadiran[r.role]}
+                    onChange={(e) => onUpdateKehadiran({ [r.role]: e.target.value as 'Hadir' | 'Tidak Hadir' })}
+                    className="border border-gray-300 rounded px-1 py-1 text-xs bg-white"
+                  >
+                    <option value="Hadir">Hadir</option>
+                    <option value="Tidak Hadir">Tidak Hadir</option>
+                  </select>
+                ) : kehadiran[r.role]}
               </td>
               <td className="py-3">
                 {r.assessorId && isDosen ? (
@@ -1917,20 +1914,11 @@ function Pbl3Preview({
                   </tr>
                 );
               })}
-              <tr>
-                <td className="text-center">3.</td>
-                <td>Koordinator Program Studi</td>
-                <td>{group.koordinator || '…………………………………'}</td>
-                <td>{group.nip_koordinator || ''}</td>
-                <td className="text-center">—</td>
-                <td className="text-center align-middle">
-                  {group.koordinator_signature_path ? (
-                    <img src={group.koordinator_signature_path} alt="TTD" className="mx-auto max-h-10 max-w-20 object-contain" />
-                  ) : ('')}
-                </td>
-              </tr>
             </tbody>
           </table>
+          <p className="mt-2 text-[10px] italic">
+            Koordinator Program Studi menandatangani Berita Acara dan tidak termasuk dalam daftar hadir dosen penguji/pembimbing seminar.
+          </p>
           {kehadiran.catatan && <p className="mt-2 text-[10px] italic">Catatan: {kehadiran.catatan}</p>}
         </section>
 
