@@ -1,37 +1,40 @@
 -- ============================================================
--- PBL 3 GROUPS SEED - 14 kelompok dari "Keputusan Rektor tentang Dosen
--- Penguji Praktik Belajar Lapangan 3 ... Semester Ganjil TA 2026/2027"
--- (sumber: tanggal KEPUTUSAN PENGUJI PRAKTEK PBL3.docx, lampiran).
+-- PBL 3 GROUPS SEED - 14 kelompok dari "05. SK PENGUJI PBL 3.xlsx"
+-- (Rancangan Dosen Penguji PBL 3, Semester Ganjil T.A. 2026/2027).
 --
 -- ADDITIVE ONLY: hanya membuat/memperbarui kelompok kode PBL3-01..PBL3-14
--- beserta dosen penguji (penguji_1) dan anggota mahasiswa. Tidak ada data
--- PBL 1 / PBL 2 / SP yang disentuh; tidak ada baris yang dihapus.
+-- beserta dosen penguji 1 (penguji_1), dosen pembimbing yang bertindak
+-- sebagai penguji 2 (pembimbing_1 - sumber input nilai 3AK/3LP/3SM), dan
+-- anggota mahasiswa. Tidak ada data PBL 1 / PBL 2 / SP yang disentuh;
+-- tidak ada baris yang dihapus.
 --
 -- CATATAN: pbl_groups.code TIDAK punya unique constraint di DB live, jadi
 -- penggabungan kelompok dilakukan manual (update bila kode sudah ada,
 -- insert bila belum) di dalam blok DO. Idempoten - aman dijalankan ulang.
--- Sudah dieksekusi live via REST pada 2026-11-08 (hasil identik);
--- file ini tetap disimpan sebagai sumber yang bisa dijalankan ulang.
 -- ============================================================
 
--- Kelompok 1 - Penguji: Chahya Kharin Herbawani, S.Keb.,Bd, M.K.M.
+-- Kelompok 1 - Penguji 1: Chahya Kharin Herbawani, S.Keb.,Bd, M.K.M. | Penguji 2 (Pembimbing): Dr. Laily Hanifah, SKM., M.Kes.
 do $$
 declare gid uuid;
 begin
   select id into gid from public.pbl_groups where code = 'PBL3-01' limit 1;
   if gid is null then
     insert into public.pbl_groups (code, name, title, semester, academic_year, status, hari_tanggal, venue, blueprint_version)
-    values ('PBL3-01', 'Kelompok 1', 'Seminar PBL 3', 'Ganjil', '2026/2027', 'scheduled', 'Senin, 30 November 2026', 'Kampus FIKES UPNVJ', 'pbl3-rps-v1')
+    values ('PBL3-01', 'Kelompok 1', 'Seminar PBL 3', 'Ganjil', '2026/2027', 'scheduled', '______________', 'Kampus FIKES UPNVJ', 'pbl3-rps-v1')
     returning id into gid;
   else
     update public.pbl_groups set name = 'Kelompok 1', title = 'Seminar PBL 3', semester = 'Ganjil',
-      academic_year = '2026/2027', status = 'scheduled', hari_tanggal = 'Senin, 30 November 2026', venue = 'Kampus FIKES UPNVJ',
+      academic_year = '2026/2027', status = 'scheduled', hari_tanggal = '______________', venue = 'Kampus FIKES UPNVJ',
       blueprint_version = 'pbl3-rps-v1', updated_at = now()
     where id = gid;
   end if;
 
   insert into public.pbl_assessors (group_id, assessor_role, display_name, nip, email, sequence_no)
   values (gid, 'penguji_1', 'Chahya Kharin Herbawani, S.Keb.,Bd, M.K.M.', '', 'chahyakharin@upnvj.ac.id', 1)
+  on conflict (group_id, assessor_role) do update set display_name = excluded.display_name, email = excluded.email, updated_at = now();
+
+  insert into public.pbl_assessors (group_id, assessor_role, display_name, nip, email, sequence_no)
+  values (gid, 'pembimbing_1', 'Dr. Laily Hanifah, SKM., M.Kes.', '', 'laily.hanifah@upnvj.ac.id', 2)
   on conflict (group_id, assessor_role) do update set display_name = excluded.display_name, email = excluded.email, updated_at = now();
 
   insert into public.pbl_group_members (group_id, nim, name, role)
@@ -52,24 +55,28 @@ begin
 end $$;
 
 
--- Kelompok 2 - Penguji: Dr. Putri Permatasari, SKM, MKM
+-- Kelompok 2 - Penguji 1: Dr. Putri Permatasari, SKM, MKM | Penguji 2 (Pembimbing): Cahya Arbitera, S.K.M., M.K.M.
 do $$
 declare gid uuid;
 begin
   select id into gid from public.pbl_groups where code = 'PBL3-02' limit 1;
   if gid is null then
     insert into public.pbl_groups (code, name, title, semester, academic_year, status, hari_tanggal, venue, blueprint_version)
-    values ('PBL3-02', 'Kelompok 2', 'Seminar PBL 3', 'Ganjil', '2026/2027', 'scheduled', 'Senin, 30 November 2026', 'Kampus FIKES UPNVJ', 'pbl3-rps-v1')
+    values ('PBL3-02', 'Kelompok 2', 'Seminar PBL 3', 'Ganjil', '2026/2027', 'scheduled', '______________', 'Kampus FIKES UPNVJ', 'pbl3-rps-v1')
     returning id into gid;
   else
     update public.pbl_groups set name = 'Kelompok 2', title = 'Seminar PBL 3', semester = 'Ganjil',
-      academic_year = '2026/2027', status = 'scheduled', hari_tanggal = 'Senin, 30 November 2026', venue = 'Kampus FIKES UPNVJ',
+      academic_year = '2026/2027', status = 'scheduled', hari_tanggal = '______________', venue = 'Kampus FIKES UPNVJ',
       blueprint_version = 'pbl3-rps-v1', updated_at = now()
     where id = gid;
   end if;
 
   insert into public.pbl_assessors (group_id, assessor_role, display_name, nip, email, sequence_no)
   values (gid, 'penguji_1', 'Dr. Putri Permatasari, SKM, MKM', '', 'putripermatasari@upnvj.ac.id', 1)
+  on conflict (group_id, assessor_role) do update set display_name = excluded.display_name, email = excluded.email, updated_at = now();
+
+  insert into public.pbl_assessors (group_id, assessor_role, display_name, nip, email, sequence_no)
+  values (gid, 'pembimbing_1', 'Cahya Arbitera, S.K.M., M.K.M.', '', 'cahyaarbitera@upnvj.ac.id', 2)
   on conflict (group_id, assessor_role) do update set display_name = excluded.display_name, email = excluded.email, updated_at = now();
 
   insert into public.pbl_group_members (group_id, nim, name, role)
@@ -90,24 +97,28 @@ begin
 end $$;
 
 
--- Kelompok 3 - Penguji: Farahul Jannah, S.Kep., M.KKK.
+-- Kelompok 3 - Penguji 1: Farahul Jannah, S.Kep., M.KKK. | Penguji 2 (Pembimbing): Afif Amir Amrullah, S.Kp, M.K.K.K
 do $$
 declare gid uuid;
 begin
   select id into gid from public.pbl_groups where code = 'PBL3-03' limit 1;
   if gid is null then
     insert into public.pbl_groups (code, name, title, semester, academic_year, status, hari_tanggal, venue, blueprint_version)
-    values ('PBL3-03', 'Kelompok 3', 'Seminar PBL 3', 'Ganjil', '2026/2027', 'scheduled', 'Senin, 30 November 2026', 'Kampus FIKES UPNVJ', 'pbl3-rps-v1')
+    values ('PBL3-03', 'Kelompok 3', 'Seminar PBL 3', 'Ganjil', '2026/2027', 'scheduled', '______________', 'Kampus FIKES UPNVJ', 'pbl3-rps-v1')
     returning id into gid;
   else
     update public.pbl_groups set name = 'Kelompok 3', title = 'Seminar PBL 3', semester = 'Ganjil',
-      academic_year = '2026/2027', status = 'scheduled', hari_tanggal = 'Senin, 30 November 2026', venue = 'Kampus FIKES UPNVJ',
+      academic_year = '2026/2027', status = 'scheduled', hari_tanggal = '______________', venue = 'Kampus FIKES UPNVJ',
       blueprint_version = 'pbl3-rps-v1', updated_at = now()
     where id = gid;
   end if;
 
   insert into public.pbl_assessors (group_id, assessor_role, display_name, nip, email, sequence_no)
   values (gid, 'penguji_1', 'Farahul Jannah, S.Kep., M.KKK.', '', 'farahuljannah@upnvj.ac.id', 1)
+  on conflict (group_id, assessor_role) do update set display_name = excluded.display_name, email = excluded.email, updated_at = now();
+
+  insert into public.pbl_assessors (group_id, assessor_role, display_name, nip, email, sequence_no)
+  values (gid, 'pembimbing_1', 'Afif Amir Amrullah, S.Kp, M.K.K.K', '', 'afif.amir@upnvj.ac.id', 2)
   on conflict (group_id, assessor_role) do update set display_name = excluded.display_name, email = excluded.email, updated_at = now();
 
   insert into public.pbl_group_members (group_id, nim, name, role)
@@ -128,24 +139,28 @@ begin
 end $$;
 
 
--- Kelompok 4 - Penguji: Dr. Fathinah Ranggauni Hardy, SKM.M.Epid
+-- Kelompok 4 - Penguji 1: Dr. Fathinah Ranggauni Hardy, SKM.M.Epid | Penguji 2 (Pembimbing): Prof. Dr. Acim Heri Iswanto, SKM. MARS
 do $$
 declare gid uuid;
 begin
   select id into gid from public.pbl_groups where code = 'PBL3-04' limit 1;
   if gid is null then
     insert into public.pbl_groups (code, name, title, semester, academic_year, status, hari_tanggal, venue, blueprint_version)
-    values ('PBL3-04', 'Kelompok 4', 'Seminar PBL 3', 'Ganjil', '2026/2027', 'scheduled', 'Senin, 30 November 2026', 'Kampus FIKES UPNVJ', 'pbl3-rps-v1')
+    values ('PBL3-04', 'Kelompok 4', 'Seminar PBL 3', 'Ganjil', '2026/2027', 'scheduled', '______________', 'Kampus FIKES UPNVJ', 'pbl3-rps-v1')
     returning id into gid;
   else
     update public.pbl_groups set name = 'Kelompok 4', title = 'Seminar PBL 3', semester = 'Ganjil',
-      academic_year = '2026/2027', status = 'scheduled', hari_tanggal = 'Senin, 30 November 2026', venue = 'Kampus FIKES UPNVJ',
+      academic_year = '2026/2027', status = 'scheduled', hari_tanggal = '______________', venue = 'Kampus FIKES UPNVJ',
       blueprint_version = 'pbl3-rps-v1', updated_at = now()
     where id = gid;
   end if;
 
   insert into public.pbl_assessors (group_id, assessor_role, display_name, nip, email, sequence_no)
   values (gid, 'penguji_1', 'Dr. Fathinah Ranggauni Hardy, SKM.M.Epid', '', 'fathinahranggaunihardy@gmail.com', 1)
+  on conflict (group_id, assessor_role) do update set display_name = excluded.display_name, email = excluded.email, updated_at = now();
+
+  insert into public.pbl_assessors (group_id, assessor_role, display_name, nip, email, sequence_no)
+  values (gid, 'pembimbing_1', 'Prof. Dr. Acim Heri Iswanto, SKM. MARS', '', 'h.iswanto@upnvj.ac.id', 2)
   on conflict (group_id, assessor_role) do update set display_name = excluded.display_name, email = excluded.email, updated_at = now();
 
   insert into public.pbl_group_members (group_id, nim, name, role)
@@ -165,24 +180,28 @@ begin
 end $$;
 
 
--- Kelompok 5 - Penguji: Nayla Kamilia Fithri, S.KM., M.P.H.
+-- Kelompok 5 - Penguji 1: Nayla Kamilia Fithri, S.KM., M.P.H. | Penguji 2 (Pembimbing): Dr. Fajaria Nurcandra, S.K.M., M.Epid.
 do $$
 declare gid uuid;
 begin
   select id into gid from public.pbl_groups where code = 'PBL3-05' limit 1;
   if gid is null then
     insert into public.pbl_groups (code, name, title, semester, academic_year, status, hari_tanggal, venue, blueprint_version)
-    values ('PBL3-05', 'Kelompok 5', 'Seminar PBL 3', 'Ganjil', '2026/2027', 'scheduled', 'Senin, 30 November 2026', 'Kampus FIKES UPNVJ', 'pbl3-rps-v1')
+    values ('PBL3-05', 'Kelompok 5', 'Seminar PBL 3', 'Ganjil', '2026/2027', 'scheduled', '______________', 'Kampus FIKES UPNVJ', 'pbl3-rps-v1')
     returning id into gid;
   else
     update public.pbl_groups set name = 'Kelompok 5', title = 'Seminar PBL 3', semester = 'Ganjil',
-      academic_year = '2026/2027', status = 'scheduled', hari_tanggal = 'Senin, 30 November 2026', venue = 'Kampus FIKES UPNVJ',
+      academic_year = '2026/2027', status = 'scheduled', hari_tanggal = '______________', venue = 'Kampus FIKES UPNVJ',
       blueprint_version = 'pbl3-rps-v1', updated_at = now()
     where id = gid;
   end if;
 
   insert into public.pbl_assessors (group_id, assessor_role, display_name, nip, email, sequence_no)
   values (gid, 'penguji_1', 'Nayla Kamilia Fithri, S.KM., M.P.H.', '', 'naylakamiliafithri@upnvj.ac.id', 1)
+  on conflict (group_id, assessor_role) do update set display_name = excluded.display_name, email = excluded.email, updated_at = now();
+
+  insert into public.pbl_assessors (group_id, assessor_role, display_name, nip, email, sequence_no)
+  values (gid, 'pembimbing_1', 'Dr. Fajaria Nurcandra, S.K.M., M.Epid.', '', 'fajarianurcandra@upnvj.ac.id', 2)
   on conflict (group_id, assessor_role) do update set display_name = excluded.display_name, email = excluded.email, updated_at = now();
 
   insert into public.pbl_group_members (group_id, nim, name, role)
@@ -203,24 +222,28 @@ begin
 end $$;
 
 
--- Kelompok 6 - Penguji: Prof. Dr. Acim Heri Iswanto, SKM. MARS
+-- Kelompok 6 - Penguji 1: Prof. Dr. Acim Heri Iswanto, SKM. MARS | Penguji 2 (Pembimbing): Dr. Fathinah Ranggauni Hardy, SKM.M.Epid
 do $$
 declare gid uuid;
 begin
   select id into gid from public.pbl_groups where code = 'PBL3-06' limit 1;
   if gid is null then
     insert into public.pbl_groups (code, name, title, semester, academic_year, status, hari_tanggal, venue, blueprint_version)
-    values ('PBL3-06', 'Kelompok 6', 'Seminar PBL 3', 'Ganjil', '2026/2027', 'scheduled', 'Senin, 30 November 2026', 'Kampus FIKES UPNVJ', 'pbl3-rps-v1')
+    values ('PBL3-06', 'Kelompok 6', 'Seminar PBL 3', 'Ganjil', '2026/2027', 'scheduled', '______________', 'Kampus FIKES UPNVJ', 'pbl3-rps-v1')
     returning id into gid;
   else
     update public.pbl_groups set name = 'Kelompok 6', title = 'Seminar PBL 3', semester = 'Ganjil',
-      academic_year = '2026/2027', status = 'scheduled', hari_tanggal = 'Senin, 30 November 2026', venue = 'Kampus FIKES UPNVJ',
+      academic_year = '2026/2027', status = 'scheduled', hari_tanggal = '______________', venue = 'Kampus FIKES UPNVJ',
       blueprint_version = 'pbl3-rps-v1', updated_at = now()
     where id = gid;
   end if;
 
   insert into public.pbl_assessors (group_id, assessor_role, display_name, nip, email, sequence_no)
   values (gid, 'penguji_1', 'Prof. Dr. Acim Heri Iswanto, SKM. MARS', '', 'h.iswanto@upnvj.ac.id', 1)
+  on conflict (group_id, assessor_role) do update set display_name = excluded.display_name, email = excluded.email, updated_at = now();
+
+  insert into public.pbl_assessors (group_id, assessor_role, display_name, nip, email, sequence_no)
+  values (gid, 'pembimbing_1', 'Dr. Fathinah Ranggauni Hardy, SKM.M.Epid', '', 'fathinahranggaunihardy@gmail.com', 2)
   on conflict (group_id, assessor_role) do update set display_name = excluded.display_name, email = excluded.email, updated_at = now();
 
   insert into public.pbl_group_members (group_id, nim, name, role)
@@ -240,24 +263,28 @@ begin
 end $$;
 
 
--- Kelompok 7 - Penguji: Dr. Laily Hanifah, SKM., M.Kes.
+-- Kelompok 7 - Penguji 1: Dr. Laily Hanifah, SKM., M.Kes. | Penguji 2 (Pembimbing): Chahya Kharin Herbawani, S.Keb.,Bd, M.K.M.
 do $$
 declare gid uuid;
 begin
   select id into gid from public.pbl_groups where code = 'PBL3-07' limit 1;
   if gid is null then
     insert into public.pbl_groups (code, name, title, semester, academic_year, status, hari_tanggal, venue, blueprint_version)
-    values ('PBL3-07', 'Kelompok 7', 'Seminar PBL 3', 'Ganjil', '2026/2027', 'scheduled', 'Senin, 30 November 2026', 'Kampus FIKES UPNVJ', 'pbl3-rps-v1')
+    values ('PBL3-07', 'Kelompok 7', 'Seminar PBL 3', 'Ganjil', '2026/2027', 'scheduled', '______________', 'Kampus FIKES UPNVJ', 'pbl3-rps-v1')
     returning id into gid;
   else
     update public.pbl_groups set name = 'Kelompok 7', title = 'Seminar PBL 3', semester = 'Ganjil',
-      academic_year = '2026/2027', status = 'scheduled', hari_tanggal = 'Senin, 30 November 2026', venue = 'Kampus FIKES UPNVJ',
+      academic_year = '2026/2027', status = 'scheduled', hari_tanggal = '______________', venue = 'Kampus FIKES UPNVJ',
       blueprint_version = 'pbl3-rps-v1', updated_at = now()
     where id = gid;
   end if;
 
   insert into public.pbl_assessors (group_id, assessor_role, display_name, nip, email, sequence_no)
   values (gid, 'penguji_1', 'Dr. Laily Hanifah, SKM., M.Kes.', '', 'laily.hanifah@upnvj.ac.id', 1)
+  on conflict (group_id, assessor_role) do update set display_name = excluded.display_name, email = excluded.email, updated_at = now();
+
+  insert into public.pbl_assessors (group_id, assessor_role, display_name, nip, email, sequence_no)
+  values (gid, 'pembimbing_1', 'Chahya Kharin Herbawani, S.Keb.,Bd, M.K.M.', '', 'chahyakharin@upnvj.ac.id', 2)
   on conflict (group_id, assessor_role) do update set display_name = excluded.display_name, email = excluded.email, updated_at = now();
 
   insert into public.pbl_group_members (group_id, nim, name, role)
@@ -277,24 +304,28 @@ begin
 end $$;
 
 
--- Kelompok 8 - Penguji: Dr. Agus Joko Susanto, S.K.M., M.K.K.K
+-- Kelompok 8 - Penguji 1: Dr. Agus Joko Susanto, S.K.M., M.K.K.K | Penguji 2 (Pembimbing): Dr. Ns. Dyah Utari, S.Kep.MKKK
 do $$
 declare gid uuid;
 begin
   select id into gid from public.pbl_groups where code = 'PBL3-08' limit 1;
   if gid is null then
     insert into public.pbl_groups (code, name, title, semester, academic_year, status, hari_tanggal, venue, blueprint_version)
-    values ('PBL3-08', 'Kelompok 8', 'Seminar PBL 3', 'Ganjil', '2026/2027', 'scheduled', 'Selasa, 1 Desember 2026', 'Kampus FIKES UPNVJ', 'pbl3-rps-v1')
+    values ('PBL3-08', 'Kelompok 8', 'Seminar PBL 3', 'Ganjil', '2026/2027', 'scheduled', '______________', 'Kampus FIKES UPNVJ', 'pbl3-rps-v1')
     returning id into gid;
   else
     update public.pbl_groups set name = 'Kelompok 8', title = 'Seminar PBL 3', semester = 'Ganjil',
-      academic_year = '2026/2027', status = 'scheduled', hari_tanggal = 'Selasa, 1 Desember 2026', venue = 'Kampus FIKES UPNVJ',
+      academic_year = '2026/2027', status = 'scheduled', hari_tanggal = '______________', venue = 'Kampus FIKES UPNVJ',
       blueprint_version = 'pbl3-rps-v1', updated_at = now()
     where id = gid;
   end if;
 
   insert into public.pbl_assessors (group_id, assessor_role, display_name, nip, email, sequence_no)
   values (gid, 'penguji_1', 'Dr. Agus Joko Susanto, S.K.M., M.K.K.K', '', 'agusjoko@upnvj.ac.id', 1)
+  on conflict (group_id, assessor_role) do update set display_name = excluded.display_name, email = excluded.email, updated_at = now();
+
+  insert into public.pbl_assessors (group_id, assessor_role, display_name, nip, email, sequence_no)
+  values (gid, 'pembimbing_1', 'Dr. Ns. Dyah Utari, S.Kep.MKKK', '', 'dyahutari@upnvj.ac.id', 2)
   on conflict (group_id, assessor_role) do update set display_name = excluded.display_name, email = excluded.email, updated_at = now();
 
   insert into public.pbl_group_members (group_id, nim, name, role)
@@ -315,24 +346,28 @@ begin
 end $$;
 
 
--- Kelompok 9 - Penguji: Afif Amir Amrullah, S.Kp, M.K.K.K
+-- Kelompok 9 - Penguji 1: Afif Amir Amrullah, S.Kp, M.K.K.K | Penguji 2 (Pembimbing): Farahul Jannah, S.Kep., M.KKK.
 do $$
 declare gid uuid;
 begin
   select id into gid from public.pbl_groups where code = 'PBL3-09' limit 1;
   if gid is null then
     insert into public.pbl_groups (code, name, title, semester, academic_year, status, hari_tanggal, venue, blueprint_version)
-    values ('PBL3-09', 'Kelompok 9', 'Seminar PBL 3', 'Ganjil', '2026/2027', 'scheduled', 'Selasa, 1 Desember 2026', 'Kampus FIKES UPNVJ', 'pbl3-rps-v1')
+    values ('PBL3-09', 'Kelompok 9', 'Seminar PBL 3', 'Ganjil', '2026/2027', 'scheduled', '______________', 'Kampus FIKES UPNVJ', 'pbl3-rps-v1')
     returning id into gid;
   else
     update public.pbl_groups set name = 'Kelompok 9', title = 'Seminar PBL 3', semester = 'Ganjil',
-      academic_year = '2026/2027', status = 'scheduled', hari_tanggal = 'Selasa, 1 Desember 2026', venue = 'Kampus FIKES UPNVJ',
+      academic_year = '2026/2027', status = 'scheduled', hari_tanggal = '______________', venue = 'Kampus FIKES UPNVJ',
       blueprint_version = 'pbl3-rps-v1', updated_at = now()
     where id = gid;
   end if;
 
   insert into public.pbl_assessors (group_id, assessor_role, display_name, nip, email, sequence_no)
   values (gid, 'penguji_1', 'Afif Amir Amrullah, S.Kp, M.K.K.K', '', 'afif.amir@upnvj.ac.id', 1)
+  on conflict (group_id, assessor_role) do update set display_name = excluded.display_name, email = excluded.email, updated_at = now();
+
+  insert into public.pbl_assessors (group_id, assessor_role, display_name, nip, email, sequence_no)
+  values (gid, 'pembimbing_1', 'Farahul Jannah, S.Kep., M.KKK.', '', 'farahuljannah@upnvj.ac.id', 2)
   on conflict (group_id, assessor_role) do update set display_name = excluded.display_name, email = excluded.email, updated_at = now();
 
   insert into public.pbl_group_members (group_id, nim, name, role)
@@ -352,24 +387,28 @@ begin
 end $$;
 
 
--- Kelompok 10 - Penguji: Arga Buntara, S.K.M., M.P.H.
+-- Kelompok 10 - Penguji 1: Arga Buntara, S.K.M., M.P.H. | Penguji 2 (Pembimbing): Muhammad Fadli Ramadhansyah, S.K.M., M.Kes.
 do $$
 declare gid uuid;
 begin
   select id into gid from public.pbl_groups where code = 'PBL3-10' limit 1;
   if gid is null then
     insert into public.pbl_groups (code, name, title, semester, academic_year, status, hari_tanggal, venue, blueprint_version)
-    values ('PBL3-10', 'Kelompok 10', 'Seminar PBL 3', 'Ganjil', '2026/2027', 'scheduled', 'Selasa, 1 Desember 2026', 'Kampus FIKES UPNVJ', 'pbl3-rps-v1')
+    values ('PBL3-10', 'Kelompok 10', 'Seminar PBL 3', 'Ganjil', '2026/2027', 'scheduled', '______________', 'Kampus FIKES UPNVJ', 'pbl3-rps-v1')
     returning id into gid;
   else
     update public.pbl_groups set name = 'Kelompok 10', title = 'Seminar PBL 3', semester = 'Ganjil',
-      academic_year = '2026/2027', status = 'scheduled', hari_tanggal = 'Selasa, 1 Desember 2026', venue = 'Kampus FIKES UPNVJ',
+      academic_year = '2026/2027', status = 'scheduled', hari_tanggal = '______________', venue = 'Kampus FIKES UPNVJ',
       blueprint_version = 'pbl3-rps-v1', updated_at = now()
     where id = gid;
   end if;
 
   insert into public.pbl_assessors (group_id, assessor_role, display_name, nip, email, sequence_no)
   values (gid, 'penguji_1', 'Arga Buntara, S.K.M., M.P.H.', '', 'arga.buntara@upnvj.ac.id', 1)
+  on conflict (group_id, assessor_role) do update set display_name = excluded.display_name, email = excluded.email, updated_at = now();
+
+  insert into public.pbl_assessors (group_id, assessor_role, display_name, nip, email, sequence_no)
+  values (gid, 'pembimbing_1', 'Muhammad Fadli Ramadhansyah, S.K.M., M.Kes.', '', 'fadliramadhansyah@upnvj.ac.id', 2)
   on conflict (group_id, assessor_role) do update set display_name = excluded.display_name, email = excluded.email, updated_at = now();
 
   insert into public.pbl_group_members (group_id, nim, name, role)
@@ -390,24 +429,28 @@ begin
 end $$;
 
 
--- Kelompok 11 - Penguji: Muhammad Fadli Ramadhansyah, S.K.M., M.Kes.
+-- Kelompok 11 - Penguji 1: Muhammad Fadli Ramadhansyah, S.K.M., M.Kes. | Penguji 2 (Pembimbing): Arga Buntara, S.K.M., M.P.H.
 do $$
 declare gid uuid;
 begin
   select id into gid from public.pbl_groups where code = 'PBL3-11' limit 1;
   if gid is null then
     insert into public.pbl_groups (code, name, title, semester, academic_year, status, hari_tanggal, venue, blueprint_version)
-    values ('PBL3-11', 'Kelompok 11', 'Seminar PBL 3', 'Ganjil', '2026/2027', 'scheduled', 'Selasa, 1 Desember 2026', 'Kampus FIKES UPNVJ', 'pbl3-rps-v1')
+    values ('PBL3-11', 'Kelompok 11', 'Seminar PBL 3', 'Ganjil', '2026/2027', 'scheduled', '______________', 'Kampus FIKES UPNVJ', 'pbl3-rps-v1')
     returning id into gid;
   else
     update public.pbl_groups set name = 'Kelompok 11', title = 'Seminar PBL 3', semester = 'Ganjil',
-      academic_year = '2026/2027', status = 'scheduled', hari_tanggal = 'Selasa, 1 Desember 2026', venue = 'Kampus FIKES UPNVJ',
+      academic_year = '2026/2027', status = 'scheduled', hari_tanggal = '______________', venue = 'Kampus FIKES UPNVJ',
       blueprint_version = 'pbl3-rps-v1', updated_at = now()
     where id = gid;
   end if;
 
   insert into public.pbl_assessors (group_id, assessor_role, display_name, nip, email, sequence_no)
   values (gid, 'penguji_1', 'Muhammad Fadli Ramadhansyah, S.K.M., M.Kes.', '', 'fadliramadhansyah@upnvj.ac.id', 1)
+  on conflict (group_id, assessor_role) do update set display_name = excluded.display_name, email = excluded.email, updated_at = now();
+
+  insert into public.pbl_assessors (group_id, assessor_role, display_name, nip, email, sequence_no)
+  values (gid, 'pembimbing_1', 'Arga Buntara, S.K.M., M.P.H.', '', 'arga.buntara@upnvj.ac.id', 2)
   on conflict (group_id, assessor_role) do update set display_name = excluded.display_name, email = excluded.email, updated_at = now();
 
   insert into public.pbl_group_members (group_id, nim, name, role)
@@ -427,24 +470,28 @@ begin
 end $$;
 
 
--- Kelompok 12 - Penguji: Dr. Fajaria Nurcandra, S.K.M., M.Epid.
+-- Kelompok 12 - Penguji 1: Dr. Fajaria Nurcandra, S.K.M., M.Epid. | Penguji 2 (Pembimbing): Nayla Kamilia Fithri, S.KM., M.P.H.
 do $$
 declare gid uuid;
 begin
   select id into gid from public.pbl_groups where code = 'PBL3-12' limit 1;
   if gid is null then
     insert into public.pbl_groups (code, name, title, semester, academic_year, status, hari_tanggal, venue, blueprint_version)
-    values ('PBL3-12', 'Kelompok 12', 'Seminar PBL 3', 'Ganjil', '2026/2027', 'scheduled', 'Selasa, 1 Desember 2026', 'Kampus FIKES UPNVJ', 'pbl3-rps-v1')
+    values ('PBL3-12', 'Kelompok 12', 'Seminar PBL 3', 'Ganjil', '2026/2027', 'scheduled', '______________', 'Kampus FIKES UPNVJ', 'pbl3-rps-v1')
     returning id into gid;
   else
     update public.pbl_groups set name = 'Kelompok 12', title = 'Seminar PBL 3', semester = 'Ganjil',
-      academic_year = '2026/2027', status = 'scheduled', hari_tanggal = 'Selasa, 1 Desember 2026', venue = 'Kampus FIKES UPNVJ',
+      academic_year = '2026/2027', status = 'scheduled', hari_tanggal = '______________', venue = 'Kampus FIKES UPNVJ',
       blueprint_version = 'pbl3-rps-v1', updated_at = now()
     where id = gid;
   end if;
 
   insert into public.pbl_assessors (group_id, assessor_role, display_name, nip, email, sequence_no)
   values (gid, 'penguji_1', 'Dr. Fajaria Nurcandra, S.K.M., M.Epid.', '', 'fajarianurcandra@upnvj.ac.id', 1)
+  on conflict (group_id, assessor_role) do update set display_name = excluded.display_name, email = excluded.email, updated_at = now();
+
+  insert into public.pbl_assessors (group_id, assessor_role, display_name, nip, email, sequence_no)
+  values (gid, 'pembimbing_1', 'Nayla Kamilia Fithri, S.KM., M.P.H.', '', 'naylakamiliafithri@upnvj.ac.id', 2)
   on conflict (group_id, assessor_role) do update set display_name = excluded.display_name, email = excluded.email, updated_at = now();
 
   insert into public.pbl_group_members (group_id, nim, name, role)
@@ -464,24 +511,28 @@ begin
 end $$;
 
 
--- Kelompok 13 - Penguji: Cahya Arbitera, S.K.M., M.K.M.
+-- Kelompok 13 - Penguji 1: Cahya Arbitera, S.K.M., M.K.M. | Penguji 2 (Pembimbing): Dr. Putri Permatasari, SKM, MKM
 do $$
 declare gid uuid;
 begin
   select id into gid from public.pbl_groups where code = 'PBL3-13' limit 1;
   if gid is null then
     insert into public.pbl_groups (code, name, title, semester, academic_year, status, hari_tanggal, venue, blueprint_version)
-    values ('PBL3-13', 'Kelompok 13', 'Seminar PBL 3', 'Ganjil', '2026/2027', 'scheduled', 'Selasa, 1 Desember 2026', 'Kampus FIKES UPNVJ', 'pbl3-rps-v1')
+    values ('PBL3-13', 'Kelompok 13', 'Seminar PBL 3', 'Ganjil', '2026/2027', 'scheduled', '______________', 'Kampus FIKES UPNVJ', 'pbl3-rps-v1')
     returning id into gid;
   else
     update public.pbl_groups set name = 'Kelompok 13', title = 'Seminar PBL 3', semester = 'Ganjil',
-      academic_year = '2026/2027', status = 'scheduled', hari_tanggal = 'Selasa, 1 Desember 2026', venue = 'Kampus FIKES UPNVJ',
+      academic_year = '2026/2027', status = 'scheduled', hari_tanggal = '______________', venue = 'Kampus FIKES UPNVJ',
       blueprint_version = 'pbl3-rps-v1', updated_at = now()
     where id = gid;
   end if;
 
   insert into public.pbl_assessors (group_id, assessor_role, display_name, nip, email, sequence_no)
   values (gid, 'penguji_1', 'Cahya Arbitera, S.K.M., M.K.M.', '', 'cahyaarbitera@upnvj.ac.id', 1)
+  on conflict (group_id, assessor_role) do update set display_name = excluded.display_name, email = excluded.email, updated_at = now();
+
+  insert into public.pbl_assessors (group_id, assessor_role, display_name, nip, email, sequence_no)
+  values (gid, 'pembimbing_1', 'Dr. Putri Permatasari, SKM, MKM', '', 'putripermatasari@upnvj.ac.id', 2)
   on conflict (group_id, assessor_role) do update set display_name = excluded.display_name, email = excluded.email, updated_at = now();
 
   insert into public.pbl_group_members (group_id, nim, name, role)
@@ -501,24 +552,28 @@ begin
 end $$;
 
 
--- Kelompok 14 - Penguji: Dr. Ns. Dyah Utari, S.Kep.MKKK
+-- Kelompok 14 - Penguji 1: Dr. Ns. Dyah Utari, S.Kep.MKKK | Penguji 2 (Pembimbing): Dr. Agus Joko Susanto, S.K.M., M.K.K.K
 do $$
 declare gid uuid;
 begin
   select id into gid from public.pbl_groups where code = 'PBL3-14' limit 1;
   if gid is null then
     insert into public.pbl_groups (code, name, title, semester, academic_year, status, hari_tanggal, venue, blueprint_version)
-    values ('PBL3-14', 'Kelompok 14', 'Seminar PBL 3', 'Ganjil', '2026/2027', 'scheduled', 'Selasa, 1 Desember 2026', 'Kampus FIKES UPNVJ', 'pbl3-rps-v1')
+    values ('PBL3-14', 'Kelompok 14', 'Seminar PBL 3', 'Ganjil', '2026/2027', 'scheduled', '______________', 'Kampus FIKES UPNVJ', 'pbl3-rps-v1')
     returning id into gid;
   else
     update public.pbl_groups set name = 'Kelompok 14', title = 'Seminar PBL 3', semester = 'Ganjil',
-      academic_year = '2026/2027', status = 'scheduled', hari_tanggal = 'Selasa, 1 Desember 2026', venue = 'Kampus FIKES UPNVJ',
+      academic_year = '2026/2027', status = 'scheduled', hari_tanggal = '______________', venue = 'Kampus FIKES UPNVJ',
       blueprint_version = 'pbl3-rps-v1', updated_at = now()
     where id = gid;
   end if;
 
   insert into public.pbl_assessors (group_id, assessor_role, display_name, nip, email, sequence_no)
   values (gid, 'penguji_1', 'Dr. Ns. Dyah Utari, S.Kep.MKKK', '', 'dyahutari@upnvj.ac.id', 1)
+  on conflict (group_id, assessor_role) do update set display_name = excluded.display_name, email = excluded.email, updated_at = now();
+
+  insert into public.pbl_assessors (group_id, assessor_role, display_name, nip, email, sequence_no)
+  values (gid, 'pembimbing_1', 'Dr. Agus Joko Susanto, S.K.M., M.K.K.K', '', 'agusjoko@upnvj.ac.id', 2)
   on conflict (group_id, assessor_role) do update set display_name = excluded.display_name, email = excluded.email, updated_at = now();
 
   insert into public.pbl_group_members (group_id, nim, name, role)
@@ -539,5 +594,5 @@ end $$;
 
 -- Verifikasi ringkas:
 -- select code, name, hari_tanggal from public.pbl_groups where code like 'PBL3-%' order by code;
--- select g.code, a.display_name, a.email from public.pbl_assessors a join public.pbl_groups g on g.id=a.group_id where g.code like 'PBL3-%' order by g.code;
+-- select g.code, a.assessor_role, a.display_name, a.email from public.pbl_assessors a join public.pbl_groups g on g.id=a.group_id where g.code like 'PBL3-%' order by g.code, a.assessor_role;
 -- select g.code, count(m.id) from public.pbl_groups g join public.pbl_group_members m on m.group_id=g.id where g.code like 'PBL3-%' group by g.code order by g.code;
