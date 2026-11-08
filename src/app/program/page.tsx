@@ -150,6 +150,42 @@ export default function ProgramPage() {
             </div>
           </Link>
 
+          {/* PBL 3 Card */}
+          <Link
+            href="/pbl3/sessions"
+            className={`group block bg-white rounded-xl shadow-lg p-8 border border-gray-200 transition-all duration-300 ${
+              !isDosen ? 'opacity-50 pointer-events-none cursor-not-allowed' : 'hover:shadow-xl hover:border-teal-300'
+            }`}
+          >
+            <div className="flex items-start gap-4">
+              <div className="flex-shrink-0 w-14 h-14 bg-teal-100 rounded-xl flex items-center justify-center group-hover:bg-teal-800 group-hover:text-white transition-colors">
+                <svg className="w-7 h-7 text-teal-700 group-hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-gray-900 font-serif uppercase">PBL 3 Kesmas</h3>
+                <p className="text-sm text-gray-600 mt-1 font-serif">
+                  Pengalaman Belajar Lapangan 3 — Praktik Lapangan &amp; Seminar Laporan (6 SKS)
+                </p>
+                <p className="text-xs text-gray-500 mt-3 font-sans">
+                  {isDosen ? 'Penilaian aktivitas, laporan & seminar berbasis rubrik' : 'Akses terbatas untuk dosen'}
+                </p>
+              </div>
+            </div>
+            <div className="mt-6 pt-4 border-t border-gray-100">
+              {isDosen ? (
+                <span className="inline-flex items-center px-4 py-2 bg-teal-800 text-white text-sm font-medium rounded-lg group-hover:bg-teal-700 transition-colors">
+                  Buka PBL 3 →
+                </span>
+              ) : (
+                <span className="inline-flex items-center px-4 py-2 bg-gray-300 text-gray-500 text-sm font-medium rounded-lg cursor-not-allowed">
+                  Dalam Pengembangan
+                </span>
+              )}
+            </div>
+          </Link>
+
           {/* S2 Card */}
           <Link
             href="/s2/sessions"
