@@ -70,6 +70,20 @@ function formatWeightTotal(criteria: { weight: number }[]): string {
   return `${Number((total * 100).toFixed(2))}%`;
 }
 
+// "Jakarta, ..." date on signature blocks: follows Tanggal Pengujian
+// automatically. If tanggal_ba is filled it wins; otherwise the date part of
+// hari_tanggal is used ("Senin, 30 November 2026" -> "30 November 2026").
+function tanggalBaFromHariTanggal(hariTanggal: string): string {
+  const ht = (hariTanggal || '').trim();
+  if (!ht) return '';
+  const idx = ht.indexOf(',');
+  return idx >= 0 ? ht.slice(idx + 1).trim() : ht;
+}
+
+function tanggalBaDisplay(group: PblGroup): string {
+  return (group.tanggal_ba || '').trim() || tanggalBaFromHariTanggal(group.hari_tanggal) || '______________';
+}
+
 export interface CriterionWithLevels {
   id: string;
   code: string;
@@ -849,6 +863,11 @@ const BeritaAcaraTab = memo(function BeritaAcaraTab({
         <p>Jakarta,{' '}
           <input value={group.tanggal_ba} onChange={(e) => onUpdate('tanggal_ba', e.target.value)} className="border-b border-gray-400 bg-transparent w-40 text-center" disabled={!isDosen} />
         </p>
+        {!group.tanggal_ba && tanggalBaFromHariTanggal(group.hari_tanggal) && (
+          <p className="text-[11px] text-gray-500 font-sans mt-1 no-print">
+            Kosong = otomatis mengikuti Tanggal Pengujian ({tanggalBaFromHariTanggal(group.hari_tanggal)}).
+          </p>
+        )}
         <p className="mt-4">Koordinator Program Studi</p>
         <S2SignatureUpload value={group.koordinator_signature_path} onChange={(v) => onUpdate('koordinator_signature_path', v || '')} label="Koordinator Prodi" />
         <div className="h-8"></div>
@@ -1728,7 +1747,7 @@ function Pbl3Preview({
 
   const renderSignatureBlock = (label: string, name?: string, nip?: string, sig?: string | null) => (
     <div className="ml-auto mt-5 w-[240px] signature-block text-left">
-      <p>Jakarta, {group.tanggal_ba || '______________'}</p>
+      <p>Jakarta, {tanggalBaDisplay(group)}</p>
       <p className="mt-2">{label}</p>
       <div className="flex h-12 items-end">
         {sig ? <img src={sig} alt="TTD" className="max-h-12 max-w-32 object-contain" /> : null}
@@ -1852,7 +1871,7 @@ function Pbl3Preview({
           </p>
 
           <div className="mt-8 break-inside-avoid text-right">
-            <p>Jakarta, {group.tanggal_ba || '______________'}</p>
+            <p>Jakarta, {tanggalBaDisplay(group)}</p>
             <p className="mt-4">Koordinator Program Studi Kesehatan Masyarakat Program Sarjana</p>
             {group.koordinator_signature_path ? (
               <img src={group.koordinator_signature_path} alt="TTD Koordinator" className="my-2 ml-auto max-h-16 max-w-32 object-contain" />
