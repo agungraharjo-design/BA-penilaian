@@ -29,16 +29,14 @@ export default function PblSessionsPage() {
       console.error('Error loading PBL groups:', error)
       setGroups([])
     } else {
-      // Only show PBL 1 groups. Exclude PBL 2 (live on /pbl2/sessions) and
-      // Seminar Proposal Skripsi (live on /seminar-proposal/sessions) — all three
-      // share pbl_groups, discriminated by code prefix.
+      // Only show PBL 1 groups. All modules share pbl_groups, discriminated by
+      // code prefix / blueprint_version (PBL1-xx + pbl1-rps-v1, PBL2-xx, PBL3-xx,
+      // SIDANG-xx, SP-xx) — whitelist PBL 1 so later modules never leak in here.
       const rows = (data as PblGroup[]) || []
-      setGroups(rows.filter((g) => !(
-        g.code?.toUpperCase().startsWith('PBL2') ||
-        g.title?.toUpperCase().includes('PBL 2') ||
-        g.code?.toUpperCase().startsWith('SP-') ||
-        g.blueprint_version === 'sp-rps-v1'
-      )))
+      setGroups(rows.filter((g) =>
+        g.code?.toUpperCase().startsWith('PBL1') ||
+        g.blueprint_version === 'pbl1-rps-v1'
+      ))
     }
     setLoading(false)
   }
